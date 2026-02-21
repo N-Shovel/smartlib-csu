@@ -7,7 +7,7 @@ export const getData = (key, defaultValue = null) => {
   if (raw === null) return defaultValue;
   try {
     return JSON.parse(raw);
-  } catch (error) {
+  } catch {
     return defaultValue;
   }
 };
