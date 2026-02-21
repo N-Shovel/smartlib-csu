@@ -1,0 +1,85 @@
+ROOT & CONFIG
+    index.html                  - Vite HTML entry template
+    vite.config.js              - Vite build/dev server configuration
+    package.json                - Project scripts and dependencies
+    package-lock.json           - Locked dependency versions
+    Note.txt                    - Project notes / structure reference
+    dist/                       - Production build output
+    public/                     - Static assets copied as-is
+
+SOURCE (src)
+============
+
+CORE
+    src/main.jsx                - React app bootstrap and root render
+    src/App.jsx                 - Main app entry with route usage
+    src/index.css               - Global styles and design tokens
+
+APP LAYER
+    src/app/AppRoutes.jsx       - Central route definitions
+    src/app/AppProviders.jsx    - App-level provider wrappers
+
+COMPONENTS
+    src/components/BookCard.jsx         - Book item UI card
+    src/components/Header.jsx           - Top header/navigation
+    src/components/Layout.jsx           - Shared page shell
+    src/components/ProtectedRoute.jsx   - Route guard by auth/role
+    src/components/Sidebar.jsx          - Side navigation menu
+    src/components/AuthCard.jsx         - Shared auth card wrapper
+    src/components/StaffSummaryCards.jsx- Staff dashboard summary cards
+
+PAGES - AUTH
+    src/pages/auth/Login.jsx            - Login form and logic
+    src/pages/auth/Signup.jsx           - Signup form and logic
+
+PAGES - BORROWER
+    src/pages/borrower/BrowseBooks.jsx      - Browse/search books view
+    src/pages/borrower/BookDetails.jsx      - Book details and actions
+    src/pages/borrower/RoomReservation.jsx  - Room reservation form
+
+PAGES - STAFF
+    src/pages/staff/Dashboard.jsx            - Staff dashboard overview
+    src/pages/staff/Approvals.jsx            - Reservation approvals
+    src/pages/staff/BorrowerTracking.jsx     - Borrowing status/history
+    src/pages/staff/StaffAndBorrowerList.jsx - Borrower signup list
+
+PAGES - ERROR
+    src/pages/NotFound.jsx             - 404 page
+
+CONTEXT
+    src/context/AuthContext.jsx        - Auth state/provider hooks
+
+SERVICES
+    src/services/authService.js         - Login/signup/current user helpers
+    src/services/bookService.js         - Book borrowing data helpers
+    src/services/reservationService.js  - Reservation data helpers
+    src/services/exportService.js       - CSV export helpers
+    src/services/localStorageService.js - localStorage wrapper utilities
+
+DATA
+    src/data/activityLogs.js            - Seed activity logs
+    src/data/books.js                   - Seed books catalog
+    src/data/borrowers.js               - Seed borrowers
+    src/data/borrowersHistory.js        - Seed borrower history
+    src/data/reservations.js            - Seed reservations
+    src/data/reservationHistory.js      - Seed reservation history
+    src/data/exportBorrowersHistory.js  - Borrower history export mapping
+    src/data/exportReservations.js      - Reservation export mapping
+
+CONFIG & CONSTANTS
+    src/config/rooms.js                 - Room metadata/configuration
+    src/constants/roles.js              - Role constants
+    src/constants/status.js             - Status constants/enums
+
+UTILS
+    src/utils/dateUtils.js              - Date/time format helpers
+    src/utils/notification.js           - Toast/notification helpers
+
+ASSETS
+    src/assets/react.svg                - React logo asset
+    src/assets/image                    - Image asset file (current filename)
+
+CREDENTIALS
+===========
+staff@library.com / 1234
+borrower@library.com / 1234

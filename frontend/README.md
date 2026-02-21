@@ -1,16 +1,121 @@
-# React + Vite
+# SmartLib Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + Vite frontend for **SmartLib**, a library management system for Caraga State University.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Role-based authentication (`staff` and `borrower`)
+- Book browsing and book details page
+- Borrow and return flow with borrower history tracking
+- Room reservation with approval workflow
+- Staff dashboard, approvals, borrower tracking, and borrower list views
+- CSV export utilities for reports
+- Protected routes by role
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React 19
+- React Router 7
+- Vite 7
+- ESLint 9
 
-## Expanding the ESLint configuration
+## Getting Started
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Prerequisites
+
+- Node.js 18+ (LTS recommended)
+- npm 9+
+
+### Install
+
+```bash
+npm install
+```
+
+### Run Development Server
+
+```bash
+npm run dev
+```
+
+The app runs on Vite's default local URL (usually `http://localhost:5173`).
+
+### Build for Production
+
+```bash
+npm run build
+```
+
+### Preview Production Build
+
+```bash
+npm run preview
+```
+
+### Lint
+
+```bash
+npm run lint
+```
+
+## Demo Accounts
+
+Pre-seeded users are available through local storage initialization:
+
+- **Staff**: `staff@library.com` / `1234`
+- **Borrower**: `borrower@library.com` / `1234`
+
+## App Routes
+
+### Public
+
+- `/login`
+- `/signup`
+
+### Borrower (protected)
+
+- `/borrower/browse`
+- `/borrower/book/:id`
+- `/borrower/reserve`
+
+### Staff (protected)
+
+- `/staff/dashboard`
+- `/staff/approvals`
+- `/staff/tracking`
+- `/staff/borrowers`
+
+## Data and Persistence
+
+Current frontend behavior is mock-data driven and persisted in browser `localStorage`.
+
+Main storage keys:
+
+- `library_users`
+- `library_current_user`
+- `library_books`
+- `library_activity_logs`
+- `library_borrow_history`
+- `library_reservations`
+- `library_reservation_history`
+
+To reset app state, clear site storage in your browser.
+
+## Project Structure (Frontend)
+
+```text
+src/
+	app/            # app-level providers and routes
+	components/     # shared UI components
+	constants/      # app constants (roles, statuses)
+	context/        # auth context
+	data/           # seed/mock data
+	pages/          # route pages (auth, borrower, staff)
+	services/       # domain logic and localStorage access
+	utils/          # utility functions
+```
+
+## Notes
+
+- This frontend currently works without requiring a live backend API.
+- A backend exists in the repository and can be integrated later for persistent server-side data.
