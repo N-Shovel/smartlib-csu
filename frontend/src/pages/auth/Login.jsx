@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { showError, showSuccess } from "../../utils/notification";
 import { ROLES } from "../../constants/roles";
 import AuthCard from "../../components/AuthCard";
 
@@ -17,10 +16,8 @@ const Login = () => {
     const result = loginUser(email, password);
     if (!result.ok) {
       setError(result.error);
-      showError(result.error);
       return;
-    }
-    showSuccess("Welcome back!");
+    };
     navigate(
       result.user.role === ROLES.STAFF ? "/staff/dashboard" : "/borrower/browse"
     );
@@ -31,19 +28,21 @@ const Login = () => {
       title="Welcome back"
       subtitle="Sign in to manage books and reservations."
     >
-        <label className="label">Email</label>
+        <label className="label" htmlFor="login-email">Email</label>
         <input
           className="input"
           type="email"
+          id="login-email"
           autoComplete="email"
           placeholder="you@library.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        <label className="label">Password</label>
+        <label className="label" htmlFor="login-password">Password</label>
         <input
           className="input"
           type="password"
+          id="login-password"
           autoComplete="current-password"
           placeholder="Enter your password"
           value={password}

@@ -13,16 +13,17 @@ export const exportToCSV = (data, filename) => {
     headers.map((key) => escapeValue(row[key])).join(",")
   );
   const csvContent =
-    "data:text/csv;charset=utf-8," +
-    headers.join(",") +
+    headers.map((h) => escapeValue(h)).join(",") +
     "\n" +
     rows.join("\n");
-
-  const encodedUri = encodeURI(csvContent);
+  
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const encodedUri = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.setAttribute("href", encodedUri);
   link.setAttribute("download", filename);
   document.body.appendChild(link);
   link.click();
+  document.body.removeChild(link);
   return true;
 };

@@ -1,4 +1,10 @@
-const hasStorage = () => typeof window !== "undefined" && !!window.localStorage;
+const hasStorage = () => {
+  try {
+    return typeof window !== "undefined" && !!window.localStorage;
+  } catch {
+    return false;
+  }
+};
 
 export const saveData = (key, data) => {
   if (!hasStorage()) return;

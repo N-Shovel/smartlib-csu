@@ -5,6 +5,7 @@ import {
 import { exportToCSV } from "../../services/exportService";
 import { formatDateTime } from "../../utils/dateUtils";
 import { getBorrowHistoryExport } from "../../data/exportBorrowersHistory";
+import { getBorrowerSummaryExport } from "../../data/exportBorrowerSummary";
 
 const BorrowerTracking = () => {
   const borrowers = getBorrowerSummary();
@@ -13,7 +14,7 @@ const BorrowerTracking = () => {
 
   const handleExport = () => {
     if (borrowers.length === 0) return;
-    exportToCSV(borrowers, "borrower-summary.csv");
+    exportToCSV(getBorrowerSummaryExport(borrowers), "borrower-summary.csv");
   };
 
   const handleHistoryExport = () => {

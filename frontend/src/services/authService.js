@@ -56,11 +56,10 @@ export const signup = (email, password, role, profile = {}) => {
 
   if (role === ROLES.BORROWER) {
     const requiredBorrowerFields = [
-      "id",
       "firstName",
       "lastName",
       "collegeCourse",
-      "yearLevel",
+      "id",
       "contactInfo",
       "currentAddress"
     ];
@@ -78,11 +77,10 @@ export const signup = (email, password, role, profile = {}) => {
     email: normalized,
     password,
     role,
-    id: String(profile.id || "").trim(),
     firstName: String(profile.firstName || "").trim(),
     lastName: String(profile.lastName || "").trim(),
     collegeCourse: String(profile.collegeCourse || "").trim(),
-    yearLevel: String(profile.yearLevel || "").trim(),
+    id: String(profile.id || "").trim(),
     contactInfo: String(profile.contactInfo || "").trim(),
     currentAddress: String(profile.currentAddress || "").trim()
   };
@@ -102,11 +100,10 @@ export const getBorrowerSignups = () => {
   const toBorrowerSignup = (user) => ({
     email: user.email,
     role: user.role,
-    id: user.id || "",
     firstName: user.firstName || "",
     lastName: user.lastName || "",
     collegeCourse: user.collegeCourse || "",
-    yearLevel: user.yearLevel || "",
+    id: user.id || "",
     contactInfo: user.contactInfo || "",
     currentAddress: user.currentAddress || ""
   });

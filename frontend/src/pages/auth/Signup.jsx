@@ -9,8 +9,7 @@ const Signup = () => {
   const [id, setId] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [collegeCourse, setCollegeCourse] = useState("");
-  const [yearLevel, setYearLevel] = useState("");
+  const [coursAndYear, setCoursAndYear] = useState("");
   const [contactInfo, setContactInfo] = useState("");
   const [currentAddress, setCurrentAddress] = useState("");
   const [email, setEmail] = useState("");
@@ -22,11 +21,10 @@ const Signup = () => {
   const handleSignup = () => {
     setError("");
     const profile = {
-      id,
       firstName,
       lastName,
-      collegeCourse,
-      yearLevel,
+      collegeCourse: coursAndYear,
+      id,
       contactInfo,
       currentAddress
     };
@@ -49,16 +47,6 @@ const Signup = () => {
       formClassName="signup-form"
     >
       <div className="signup-field">
-        <label className="label">ID</label>
-        <input
-          className="input"
-          placeholder="241-01234"
-          value={id}
-          onChange={(e) => setId(e.target.value)}
-        />
-      </div>
-
-      <div className="signup-field">
         <label className="label">First Name</label>
         <input
           className="input"
@@ -79,22 +67,22 @@ const Signup = () => {
       </div>
 
       <div className="signup-field">
-        <label className="label">College Course</label>
+        <label className="label">Course & Year Level</label>
         <input
           className="input"
-          placeholder="BS Information Technology"
-          value={collegeCourse}
-          onChange={(e) => setCollegeCourse(e.target.value)}
+          placeholder="BSCS-2nd Year"
+          value={coursAndYear}
+          onChange={(e) => setCoursAndYear(e.target.value)}
         />
       </div>
 
       <div className="signup-field">
-        <label className="label">Year Level</label>
+        <label className="label">ID</label>
         <input
           className="input"
-          placeholder="3rd Year"
-          value={yearLevel}
-          onChange={(e) => setYearLevel(e.target.value)}
+          placeholder="241-01234"
+          value={id}
+          onChange={(e) => setId(e.target.value)}
         />
       </div>
 
