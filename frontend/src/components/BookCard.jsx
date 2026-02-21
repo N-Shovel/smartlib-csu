@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-const BookCard = ({ book, canBorrow, canReturn, onBorrow, onReturn }) => {
+const BookCard = ({ book, canBorrow, canReturn, onBorrow, onReturn, showBorrower = false }) => {
 	return (
 		<article className="card book-card">
 			<div className="book-card__header">
@@ -11,7 +11,7 @@ const BookCard = ({ book, canBorrow, canReturn, onBorrow, onReturn }) => {
 			</div>
 			<p className="muted">{book.author}</p>
 			<p className="book-card__desc">{book.description}</p>
-			{!book.available && book.borrowedBy ? (
+			{showBorrower && !book.available && book.borrowedBy ? (
 				<p className="micro">Borrowed by {book.borrowedBy}</p>
 			) : null}
 			<div className="book-card__actions">

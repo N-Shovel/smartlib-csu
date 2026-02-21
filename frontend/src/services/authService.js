@@ -60,7 +60,6 @@ export const signup = (email, password, role, profile = {}) => {
       "lastName",
       "collegeCourse",
       "id",
-      "contactInfo",
       "currentAddress"
     ];
 
@@ -69,7 +68,7 @@ export const signup = (email, password, role, profile = {}) => {
     );
 
     if (hasMissingField) {
-      return { ok: false, error: "Please complete all borrower details" };
+      return { ok: false, error: "Please complete all required fields" };
     }
   }
 

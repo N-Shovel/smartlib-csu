@@ -36,7 +36,7 @@ const Dashboard = () => {
               <div className="table__row" key={entry.id}>
                 <span>{formatAction(entry.action)}</span>
                 <span>{entry.borrowerEmail || "-"}</span>
-                <span>{entry.bookId || "-"}</span>
+                <span>{entry.bookId ? `No. ${entry.bookId}` : "-"}</span>
                 <span>{formatDateTime(entry.timestamp)}</span>
               </div>
             ))}
