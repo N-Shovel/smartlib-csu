@@ -1,4 +1,4 @@
-const logs = [
+const activityLogs = [
   {
     id: 1,
     action: "BORROW_BOOK",
@@ -7,4 +7,4 @@ const logs = [
   }
 ];
 
-export default logs;
+export default activityLogs;

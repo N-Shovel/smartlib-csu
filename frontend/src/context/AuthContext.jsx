@@ -18,8 +18,7 @@ export const AuthProvider = ({ children }) => {
 	};
 
 	const signupUser = (email, password, role, profile) => {
-		const result = signup(email, password, role, profile);
-		return result;
+		return signup(email, password, role, profile);
 	};
 
 	const logoutUser = () => {

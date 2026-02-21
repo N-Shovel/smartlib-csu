@@ -40,14 +40,18 @@ export const login = (email, password) => {
 };
 
 export const signup = (email, password, role, profile = {}) => {
+  if (!hasValue(email) || !hasValue(password)) {
+    return { ok: false, error: "Email and password are required" };
+  }
+
+  if (!role) {
+    return { ok: false, error: "Role is required" };
+  }
+
   const normalized = normalizeEmail(email);
   const users = loadUsers();
   const exists = users.some((u) => u.email === normalized);
   if (exists) return { ok: false, error: "Email already in use" };
-
-  if (!hasValue(email) || !hasValue(password)) {
-    return { ok: false, error: "Email and password are required" };
-  }
 
   if (role === ROLES.BORROWER) {
     const requiredBorrowerFields = [
@@ -92,17 +96,18 @@ export const getCurrentUser = () => getData(CURRENT_USER_KEY, null);
 
 export const getBorrowerSignups = () => {
   const users = loadUsers();
+  const toBorrowerSignup = (user) => ({
+    email: user.email,
+    role: user.role,
+    firstName: user.firstName || "",
+    lastName: user.lastName || "",
+    collegeCourse: user.collegeCourse || "",
+    yearLevel: user.yearLevel || "",
+    contactInfo: user.contactInfo || "",
+    currentAddress: user.currentAddress || ""
+  });
 
   return users
     .filter((user) => user.role === ROLES.BORROWER)
-    .map((user) => ({
-      email: user.email,
-      role: user.role,
-      firstName: user.firstName || "",
-      lastName: user.lastName || "",
-      collegeCourse: user.collegeCourse || "",
-      yearLevel: user.yearLevel || "",
-      contactInfo: user.contactInfo || "",
-      currentAddress: user.currentAddress || ""
-    }));
+    .map(toBorrowerSignup);
 };

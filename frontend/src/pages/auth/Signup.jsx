@@ -77,7 +77,7 @@ const Signup = () => {
       </div>
 
       <div className="signup-field">
-        <label className="label">Year LVL</label>
+        <label className="label">Year Level</label>
         <input
           className="input"
           placeholder="3rd Year"
@@ -100,6 +100,8 @@ const Signup = () => {
         <label className="label">Email</label>
         <input
           className="input"
+          type="email"
+          autoComplete="email"
           placeholder="you@library.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -121,6 +123,7 @@ const Signup = () => {
         <input
           className="input"
           type="password"
+          autoComplete="new-password"
           placeholder="Create a password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}

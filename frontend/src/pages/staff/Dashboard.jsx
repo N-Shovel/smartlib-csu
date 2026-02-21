@@ -4,6 +4,7 @@ import StaffSummaryCards from "../../components/StaffSummaryCards";
 
 const Dashboard = () => {
   const logs = getActivityLogs().slice(0, 4);
+  const formatAction = (action) => action.replace(/_/g, " ");
 
   return (
     <section>
@@ -33,7 +34,7 @@ const Dashboard = () => {
             </div>
             {logs.map((entry) => (
               <div className="table__row" key={entry.id}>
-                <span>{entry.action.replace("_", " ")}</span>
+                <span>{formatAction(entry.action)}</span>
                 <span>{entry.borrowerEmail || "-"}</span>
                 <span>{entry.bookId || "-"}</span>
                 <span>{formatDateTime(entry.timestamp)}</span>

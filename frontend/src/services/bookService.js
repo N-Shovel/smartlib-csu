@@ -1,6 +1,6 @@
 import books from "../data/books";
 import logs from "../data/activityLogs";
-import borrowersHistory from "../data/borrowersHIstory";
+import borrowersHistory from "../data/borrowersHistory";
 import { getData, saveData } from "./localStorageService";
 import { getIsoTimestamp } from "../utils/dateUtils";
 

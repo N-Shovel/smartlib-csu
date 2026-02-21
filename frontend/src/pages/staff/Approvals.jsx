@@ -13,6 +13,7 @@ import { getReservationHistoryExport } from "../../data/exportReservations";
 const Approvals = () => {
   const [reservations, setReservations] = useState(getReservations());
   const [history, setHistory] = useState(getReservationHistory());
+  const formatAction = (action) => action.replace(/_/g, " ");
 
   const refresh = () => {
     setReservations(getReservations());
@@ -105,7 +106,7 @@ const Approvals = () => {
               <div className="table__row" key={entry.id}>
                 <span>{entry.room}</span>
                 <span>{entry.requestedBy}</span>
-                <span>{entry.action.replace("_", " ")}</span>
+                <span>{formatAction(entry.action)}</span>
                 <span>{entry.status}</span>
                 <span>{formatDateTime(entry.timestamp)}</span>
               </div>

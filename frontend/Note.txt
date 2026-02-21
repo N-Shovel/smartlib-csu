@@ -14,7 +14,6 @@ CORE
     src/main.jsx                - React app bootstrap and root render
     src/App.jsx                 - Main app entry with route usage
     src/index.css               - Global styles and design tokens
-    src/App.css                 - App-level styles
 
 APP LAYER
     src/app/AppRoutes.jsx       - Central route definitions
@@ -61,7 +60,7 @@ DATA
     src/data/activityLogs.js            - Seed activity logs
     src/data/books.js                   - Seed books catalog
     src/data/borrowers.js               - Seed borrowers
-    src/data/borrowersHIstory.js        - Seed borrower history (current filename)
+    src/data/borrowersHistory.js        - Seed borrower history
     src/data/reservations.js            - Seed reservations
     src/data/reservationHistory.js      - Seed reservation history
     src/data/exportBorrowersHistory.js  - Borrower history export mapping

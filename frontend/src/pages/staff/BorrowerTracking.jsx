@@ -9,6 +9,7 @@ import { getBorrowHistoryExport } from "../../data/exportBorrowersHistory";
 const BorrowerTracking = () => {
   const borrowers = getBorrowerSummary();
   const history = getBorrowHistory();
+  const formatAction = (action) => action.replace(/_/g, " ");
 
   const handleExport = () => {
     if (borrowers.length === 0) return;
@@ -82,7 +83,7 @@ const BorrowerTracking = () => {
               <div className="table__row" key={entry.id}>
                 <span>{entry.borrowerEmail}</span>
                 <span>{entry.title}</span>
-                <span>{entry.action.replace("_", " ")}</span>
+                <span>{formatAction(entry.action)}</span>
                 <span>{formatDateTime(entry.timestamp)}</span>
               </div>
             ))}

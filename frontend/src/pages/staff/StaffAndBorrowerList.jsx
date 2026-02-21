@@ -41,7 +41,7 @@ const StaffAndBorrowerList = () => {
 							<span>First Name</span>
 							<span>Last Name</span>
 							<span>Course</span>
-							<span>Year LVL</span>
+							<span>Year Level</span>
 							<span>Contact</span>
 							<span>Address</span>
 							<span>Email</span>
