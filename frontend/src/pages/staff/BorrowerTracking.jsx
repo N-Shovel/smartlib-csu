@@ -18,7 +18,7 @@ const BorrowerTracking = () => {
 
   const handleHistoryExport = () => {
     if (history.length === 0) return;
-    exportToCSV(getBorrowHistoryExport(history), "borrow-history.csv");
+    exportToCSV(getBorrowHistoryExport(history.slice(0, 6)), "borrow-history.csv");
   };
 
   return (
@@ -58,7 +58,7 @@ const BorrowerTracking = () => {
       <div className="page-header" style={{ marginTop: "2rem" }}>
         <div>
           <h2>Borrow History</h2>
-          <p className="muted">Recent book activity for borrowers.</p>
+          <p className="muted">Latest 6 book activity entries for borrowers.</p>
         </div>
         <button
           className="btn btn--ghost"

@@ -6,6 +6,7 @@ import { ROLES } from "../../constants/roles";
 import AuthCard from "../../components/AuthCard";
 
 const Signup = () => {
+  const [id, setId] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [collegeCourse, setCollegeCourse] = useState("");
@@ -21,6 +22,7 @@ const Signup = () => {
   const handleSignup = () => {
     setError("");
     const profile = {
+      id,
       firstName,
       lastName,
       collegeCourse,
@@ -46,6 +48,16 @@ const Signup = () => {
       className="auth-card--signup"
       formClassName="signup-form"
     >
+      <div className="signup-field">
+        <label className="label">ID</label>
+        <input
+          className="input"
+          placeholder="241-01234"
+          value={id}
+          onChange={(e) => setId(e.target.value)}
+        />
+      </div>
+
       <div className="signup-field">
         <label className="label">First Name</label>
         <input

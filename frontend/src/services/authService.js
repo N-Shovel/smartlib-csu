@@ -44,8 +44,9 @@ export const signup = (email, password, role, profile = {}) => {
     return { ok: false, error: "Email and password are required" };
   }
 
-  if (!role) {
-    return { ok: false, error: "Role is required" };
+  const validRoles = Object.values(ROLES);
+  if (!role || !validRoles.includes(role)) {
+    return { ok: false, error: "Invalid role" };
   }
 
   const normalized = normalizeEmail(email);
@@ -55,6 +56,7 @@ export const signup = (email, password, role, profile = {}) => {
 
   if (role === ROLES.BORROWER) {
     const requiredBorrowerFields = [
+      "id",
       "firstName",
       "lastName",
       "collegeCourse",
@@ -76,6 +78,7 @@ export const signup = (email, password, role, profile = {}) => {
     email: normalized,
     password,
     role,
+    id: String(profile.id || "").trim(),
     firstName: String(profile.firstName || "").trim(),
     lastName: String(profile.lastName || "").trim(),
     collegeCourse: String(profile.collegeCourse || "").trim(),
@@ -99,6 +102,7 @@ export const getBorrowerSignups = () => {
   const toBorrowerSignup = (user) => ({
     email: user.email,
     role: user.role,
+    id: user.id || "",
     firstName: user.firstName || "",
     lastName: user.lastName || "",
     collegeCourse: user.collegeCourse || "",

@@ -29,13 +29,15 @@ const Approvals = () => {
     if (result.ok) {
       showSuccess("Reservation approved");
       refresh();
+    } else {
+      alert(result.error ?? "Failed to approve reservation.");
     }
   };
 
   const handleHistoryExport = () => {
     if (history.length === 0) return;
     exportToCSV(
-      getReservationHistoryExport(history),
+      getReservationHistoryExport(history.slice(0, 6)),
       "reservation-history.csv"
     );
   };
@@ -80,7 +82,7 @@ const Approvals = () => {
       <div className="page-header" style={{ marginTop: "2rem" }}>
         <div>
           <h2>Reservation History</h2>
-          <p className="muted">Latest reservation updates.</p>
+          <p className="muted">Latest 6 reservation updates.</p>
         </div>
         <button
           className="btn btn--ghost"
