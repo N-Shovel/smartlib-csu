@@ -2,11 +2,13 @@ import { useState } from "react";
 import {
   getReservations,
   approveReservation,
-  getReservationHistory
+  getReservationHistory,
+  formatReservationHour,
+  closeReservation
 } from "../../services/reservationService";
 import { RESERVATION_STATUS } from "../../constants/status";
 import { formatDateTime } from "../../utils/dateUtils";
-import { showSuccess } from "../../utils/notification";
+import { showError, showSuccess } from "../../utils/notification";
 import { exportToCSV } from "../../services/exportService";
 import { getReservationHistoryExport } from "../../data/exportReservations";
 
@@ -23,6 +25,9 @@ const Approvals = () => {
   const pending = reservations.filter(
     (reservation) => reservation.status === RESERVATION_STATUS.PENDING
   );
+  const currentReservations = reservations.filter(
+    (reservation) => reservation.status === RESERVATION_STATUS.APPROVED
+  );
 
   const handleApprove = (id) => {
     const result = approveReservation(id);
@@ -30,7 +35,17 @@ const Approvals = () => {
       showSuccess("Reservation approved");
       refresh();
     } else {
-      alert(result.error ?? "Failed to approve reservation.");
+      showError(result.error ?? "Failed to approve reservation.");
+    }
+  };
+
+  const handleClose = (id) => {
+    const result = closeReservation(id);
+    if (result.ok) {
+      showSuccess("Reservation closed");
+      refresh();
+    } else {
+      showError(result.error ?? "Failed to close reservation.");
     }
   };
 
@@ -57,6 +72,7 @@ const Approvals = () => {
           <div className="table">
             <div className="table__row table__head">
               <span>Room</span>
+              <span>Time Slot</span>
               <span>Requester</span>
               <span>Notes</span>
               <span>Requested</span>
@@ -65,6 +81,7 @@ const Approvals = () => {
             {pending.map((reservation) => (
               <div className="table__row" key={reservation.id}>
                 <span>{reservation.room}</span>
+                <span>{formatReservationHour(reservation.reservationHour)}</span>
                 <span>{reservation.requestedBy}</span>
                 <span>{reservation.notes || "-"}</span>
                 <span>{formatDateTime(reservation.createdAt)}</span>
@@ -79,6 +96,49 @@ const Approvals = () => {
           </div>
         </div>
       )}
+
+      <div className="page-header" style={{ marginTop: "2rem" }}>
+        <div>
+          <h2>Current Reservations</h2>
+          <p className="muted">Approved reservations currently in use.</p>
+        </div>
+      </div>
+      {currentReservations.length === 0 ? (
+        <div className="empty-state">No current approved reservations.</div>
+      ) : (
+        <div className="card">
+          <div className="table">
+            <div className="table__row table__head">
+              <span>Room</span>
+              <span>Time Slot</span>
+              <span>Requester</span>
+              <span>Notes</span>
+              <span>Status</span>
+              <span>Action</span>
+            </div>
+            {currentReservations.map((reservation) => (
+              <div className="table__row" key={reservation.id}>
+                <span>{reservation.room}</span>
+                <span>{formatReservationHour(reservation.reservationHour)}</span>
+                <span>{reservation.requestedBy}</span>
+                <span>{reservation.notes || "-"}</span>
+                <span>
+                  {reservation.cancellationRequested
+                    ? "approved · cancellation requested"
+                    : reservation.status}
+                </span>
+                <button
+                  className="btn btn--ghost"
+                  onClick={() => handleClose(reservation.id)}
+                >
+                  Close
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="page-header" style={{ marginTop: "2rem" }}>
         <div>
           <h2>Reservation History</h2>
@@ -99,6 +159,7 @@ const Approvals = () => {
           <div className="table">
             <div className="table__row table__head">
               <span>Room</span>
+              <span>Time Slot</span>
               <span>Requester</span>
               <span>Action</span>
               <span>Status</span>
@@ -107,6 +168,7 @@ const Approvals = () => {
             {history.slice(0, 6).map((entry) => (
               <div className="table__row" key={entry.id}>
                 <span>{entry.room}</span>
+                <span>{formatReservationHour(entry.reservationHour)}</span>
                 <span>{entry.requestedBy}</span>
                 <span>{formatAction(entry.action)}</span>
                 <span>{entry.status}</span>

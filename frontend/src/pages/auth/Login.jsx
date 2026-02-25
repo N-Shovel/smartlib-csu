@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { ROLES } from "../../constants/roles";
 import AuthCard from "../../components/AuthCard";
+import { showError, showSuccess } from "../../utils/notification";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -16,8 +17,16 @@ const Login = () => {
     const result = loginUser(email, password);
     if (!result.ok) {
       setError(result.error);
+      showError(result.error);
       return;
-    };
+    }
+
+    showSuccess(
+      result.user.role === ROLES.STAFF
+        ? "Logged in as staff"
+        : "Logged in as borrower"
+    );
+
     navigate(
       result.user.role === ROLES.STAFF ? "/staff/dashboard" : "/borrower/browse"
     );

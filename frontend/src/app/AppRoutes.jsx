@@ -4,6 +4,7 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import { ROLES } from "../constants/roles";
 import Login from "../pages/auth/Login";
 import Signup from "../pages/auth/Signup";
+import ActivityLog from "../pages/borrower/ActivityLog";
 import BookDetails from "../pages/borrower/BookDetails";
 import BrowseBooks from "../pages/borrower/BrowseBooks";
 import RoomReservation from "../pages/borrower/RoomReservation";
@@ -27,6 +28,17 @@ const AppRoutes = () => {
 						<ProtectedRoute role={ROLES.BORROWER}>
 							<Layout>
 								<BrowseBooks />
+							</Layout>
+						</ProtectedRoute>
+					}
+				/>
+
+				<Route
+					path="/borrower/activity"
+					element={
+						<ProtectedRoute role={ROLES.BORROWER}>
+							<Layout>
+								<ActivityLog />
 							</Layout>
 						</ProtectedRoute>
 					}

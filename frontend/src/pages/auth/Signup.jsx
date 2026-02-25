@@ -25,7 +25,7 @@ const Signup = () => {
     setError("");
     
     // Check required fields
-    if (!firstName || !lastName || !coursAndYear || !id || !email || !currentAddress || !password || !confirmPassword) {
+    if (!firstName || !lastName || !coursAndYear || !id || !contactInfo || !email || !currentAddress || !password || !confirmPassword) {
       const errorMsg = "Please fill up all required fields";
       setError(errorMsg);
       showError(errorMsg);
@@ -119,12 +119,15 @@ const Signup = () => {
       </div>
 
       <div className="signup-field">
-        <label className="label">Contact Info</label>
+        <label className="label">
+          Contact Number <span className="required">*</span>
+        </label>
         <input
           className="input"
           placeholder="09XXXXXXXXX"
           value={contactInfo}
           onChange={(e) => setContactInfo(e.target.value)}
+          required
         />
       </div>
 

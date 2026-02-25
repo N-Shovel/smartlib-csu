@@ -60,6 +60,7 @@ export const signup = (email, password, role, profile = {}) => {
       "lastName",
       "collegeCourse",
       "id",
+      "contactInfo",
       "currentAddress"
     ];
 

@@ -83,3 +83,6 @@ CREDENTIALS
 ===========
 staff@library.com / 1234
 borrower@library.com / 1234
+
+toaster library
+lucide react
