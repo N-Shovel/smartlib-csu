@@ -1,3 +1,5 @@
+// Purpose: Role-aware sidebar navigation with active/interactive states.
+// Parts: nav config, active item tracking, interaction handlers, nav render.
 import { useEffect, useRef, useState } from "react";
 import { Menu } from "lucide-react";
 import { NavLink } from "react-router-dom";

@@ -1,3 +1,5 @@
+// Purpose: Modal form for thesis permission-code input and submission.
+// Parts: field props, validation/error display, submit/cancel controls.
 const ThesisPermissionModal = ({
   isOpen,
   code,

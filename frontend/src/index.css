@@ -1,3 +1,5 @@
+/* Purpose: Global design system and shared UI styles for the whole app.
+  Parts: theme/base rules, layout containers, component states, responsive rules. */
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:wght@700&display=swap");
 
 :root {

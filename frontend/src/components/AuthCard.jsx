@@ -1,3 +1,5 @@
+// Purpose: Reusable auth page container with title/subtitle and form slot.
+// Parts: props contract, heading block, children/form render.
 const AuthCard = ({ title, subtitle, children, className = "", formClassName = "" }) => {
 	return (
 		<div className={`auth-card ${className}`.trim()}>

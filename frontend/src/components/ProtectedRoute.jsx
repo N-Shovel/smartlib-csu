@@ -1,3 +1,5 @@
+// Purpose: Role-based route gate to protect restricted pages.
+// Parts: auth check, role validation, redirect behavior.
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 

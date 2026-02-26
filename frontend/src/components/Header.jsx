@@ -1,3 +1,5 @@
+// Purpose: Top navigation bar with auth-aware user actions.
+// Parts: auth/user lookup, logout handler, nav/action rendering.
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 

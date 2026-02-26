@@ -1,3 +1,5 @@
+// Purpose: Auth domain service for login/signup/current-user persistence.
+// Parts: storage keys/default users, helper lookups, login/signup flows, borrower queries.
 import { ROLES } from "../constants/roles";
 import { getData, removeData, saveData } from "./localStorageService";
 

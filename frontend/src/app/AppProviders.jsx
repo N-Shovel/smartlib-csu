@@ -1,3 +1,5 @@
+// Purpose: Wraps the application with global context providers.
+// Parts: provider imports, provider nesting, children passthrough.
 import { AuthProvider } from "../context/AuthContext";
 import ToasterHost from "../components/ToasterHost";
 

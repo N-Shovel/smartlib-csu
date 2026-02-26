@@ -1,3 +1,5 @@
+// Purpose: Generic CSV export utility for browser download actions.
+// Parts: value escaping helper, CSV assembly, blob download and cleanup.
 const escapeValue = (value) => {
   if (value === null || value === undefined) return "";
   const stringValue = String(value);

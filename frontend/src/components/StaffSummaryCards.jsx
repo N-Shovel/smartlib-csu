@@ -1,3 +1,5 @@
+// Purpose: Reusable metric card list used on staff dashboard views.
+// Parts: default card model, props override logic, card mapping render.
 const defaultCards = [
 	{ label: "Pending approvals", value: "Check the queue" },
 	{ label: "Borrower status", value: "Track active loans" },

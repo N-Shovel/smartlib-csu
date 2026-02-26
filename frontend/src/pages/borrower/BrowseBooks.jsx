@@ -1,3 +1,5 @@
+// Purpose: Searchable borrower catalog split by regular and thesis books.
+// Parts: local state, derived filtered lists, borrow/return/thesis handlers, modal render.
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import BookCard from "../../components/BookCard";

@@ -1,3 +1,5 @@
+// Purpose: Shared date/time helpers for consistent app formatting.
+// Parts: timestamp generation, display formatting utilities.
 export const getIsoTimestamp = () => new Date().toISOString();
 
 export const formatDateTime = (isoString) => {

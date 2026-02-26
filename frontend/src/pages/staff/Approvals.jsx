@@ -1,3 +1,5 @@
+// Purpose: Staff reservation approvals and reservation-history management page.
+// Parts: reservation datasets, formatting helpers, approve/close handlers, export/table render.
 import { useState } from "react";
 import {
   getReservations,

@@ -1,3 +1,5 @@
+// Purpose: Staff page for viewing borrower signups and exporting lists.
+// Parts: data loading, helper formatting, export handler, table render.
 import { getBorrowerSignups } from "../../services/authService";
 import { exportToCSV } from "../../services/exportService";
 import { getBorrowerSignupsExport } from "../../data/exportBorrowerSignups";

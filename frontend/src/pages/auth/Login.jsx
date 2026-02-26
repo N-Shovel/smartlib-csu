@@ -1,3 +1,5 @@
+// Purpose: Login page handling borrower/staff authentication flow.
+// Parts: form state, submit handler, validation/errors, render.
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";

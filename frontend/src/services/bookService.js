@@ -1,3 +1,5 @@
+// Purpose: Book domain service for borrow/return, logs, and borrower summaries.
+// Parts: storage adapters, business rules, mutation handlers, activity/history helpers.
 import books from "../data/books";
 import logs from "../data/activityLogs";
 import borrowersHistory from "../data/borrowersHistory";

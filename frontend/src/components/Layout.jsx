@@ -1,3 +1,5 @@
+// Purpose: Shared page layout that combines sidebar, header, and content area.
+// Parts: shell structure, content slot placement, page spacing.
 import Header from "./Header";
 import Sidebar from "./Sidebar";
 

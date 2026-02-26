@@ -1,3 +1,5 @@
+// Purpose: Displays a single book with availability and quick actions.
+// Parts: metadata display, status tags, borrow/return/details actions.
 const BookCard = ({
 	book,
 	canBorrow,

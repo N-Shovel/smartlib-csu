@@ -1,3 +1,5 @@
+// Purpose: Central route table for public and role-protected pages.
+// Parts: public routes, borrower routes, staff routes, fallback routes.
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Layout from "../components/Layout";
 import ProtectedRoute from "../components/ProtectedRoute";

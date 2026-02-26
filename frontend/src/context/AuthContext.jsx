@@ -1,3 +1,5 @@
+// Purpose: Auth context/provider exposing current user and auth actions.
+// Parts: context shape, provider state/actions, memoized value, consumer hook.
 import { createContext, useContext, useMemo, useState } from "react";
 import {
 	login,

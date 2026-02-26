@@ -1,3 +1,5 @@
+// Purpose: Seed catalog of books with metadata and availability state.
+// Parts: book schema, category samples, exported dataset.
 const books = [
   {
     id: 1,

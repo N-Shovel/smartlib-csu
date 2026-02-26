@@ -1,3 +1,5 @@
+// Purpose: Detailed single-book page with borrower actions.
+// Parts: selected book state, borrow/return handlers, thesis flow, detail render.
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getBookById, borrowBook, returnBook } from "../../services/bookService";

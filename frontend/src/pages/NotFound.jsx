@@ -1,3 +1,5 @@
+// Purpose: 404 fallback page for unknown routes.
+// Parts: not-found message, recovery link/button, page layout.
 import { Link } from "react-router-dom";
 
 const NotFound = () => (

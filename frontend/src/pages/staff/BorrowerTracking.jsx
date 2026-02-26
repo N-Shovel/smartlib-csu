@@ -1,3 +1,5 @@
+// Purpose: Staff borrower monitoring with active records and history export.
+// Parts: borrower data transforms, helpers, export actions, summary/history render.
 import {
   getBorrowerSummary,
   getBorrowHistory

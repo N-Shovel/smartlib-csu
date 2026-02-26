@@ -1,3 +1,5 @@
+// Purpose: Safe localStorage wrapper with serialization and fallback behavior.
+// Parts: storage availability check, write/read/remove helpers, error-safe defaults.
 const hasStorage = () => {
   try {
     return typeof window !== "undefined" && !!window.localStorage;

@@ -1,3 +1,5 @@
+// Purpose: Reservation domain service for slot validation and lifecycle updates.
+// Parts: constants/helpers, storage adapters, conflict validation, create/approve/close actions.
 import reservations from "../data/reservations";
 import reservationHistory from "../data/reservationHistory";
 import { RESERVATION_STATUS } from "../constants/status";

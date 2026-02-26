@@ -1,3 +1,5 @@
+// Purpose: Borrower activity timeline for reservations and borrowing actions.
+// Parts: source data selection, derived filters, action handlers, table/list render.
 import { useState } from "react";
 import { getBorrowHistory } from "../../services/bookService";
 import {

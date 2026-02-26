@@ -1,3 +1,5 @@
+// Purpose: Borrower page to request and track room reservations.
+// Parts: form state, slot derivations, submit workflow, reservations render.
 import { useMemo, useState } from "react";
 import {
   addReservation,
