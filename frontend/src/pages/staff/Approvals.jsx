@@ -58,7 +58,7 @@ const Approvals = () => {
   };
 
   return (
-    <section>
+    <section className="staff-page staff-approvals-page">
       <div className="page-header">
         <div>
           <h2>Reservations</h2>
@@ -68,8 +68,8 @@ const Approvals = () => {
       {pending.length === 0 ? (
         <div className="empty-state">No pending reservations.</div>
       ) : (
-        <div className="card">
-          <div className="table">
+        <div className="card staff-table-card">
+          <div className="table table--staff-pending">
             <div className="table__row table__head">
               <span>Room</span>
               <span>Time Slot</span>
@@ -106,8 +106,8 @@ const Approvals = () => {
       {currentReservations.length === 0 ? (
         <div className="empty-state">No current approved reservations.</div>
       ) : (
-        <div className="card">
-          <div className="table">
+        <div className="card staff-table-card">
+          <div className="table table--staff-current">
             <div className="table__row table__head">
               <span>Room</span>
               <span>Time Slot</span>
@@ -155,8 +155,8 @@ const Approvals = () => {
       {history.length === 0 ? (
         <div className="empty-state">No reservation history yet.</div>
       ) : (
-        <div className="card">
-          <div className="table">
+        <div className="card staff-table-card">
+          <div className="table table--staff-history">
             <div className="table__row table__head">
               <span>Room</span>
               <span>Time Slot</span>

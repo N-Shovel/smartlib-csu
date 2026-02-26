@@ -35,7 +35,7 @@ const Login = () => {
   return (
     <AuthCard
       title="Welcome back"
-      subtitle="Sign in to manage books and reservations."
+      subtitle="Sign in with your CSU account to manage books and reservations."
     >
         <label className="label" htmlFor="login-email">Email</label>
         <input
@@ -43,7 +43,7 @@ const Login = () => {
           type="email"
           id="login-email"
           autoComplete="email"
-          placeholder="you@library.com"
+          placeholder="you@carsu.edu.ph"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />

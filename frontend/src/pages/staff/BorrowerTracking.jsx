@@ -23,7 +23,7 @@ const BorrowerTracking = () => {
   };
 
   return (
-    <section>
+    <section className="staff-page staff-tracking-page">
       <div className="page-header">
         <div>
           <h2>Borrower Tracking</h2>
@@ -72,8 +72,8 @@ const BorrowerTracking = () => {
       {history.length === 0 ? (
         <div className="empty-state">No history yet.</div>
       ) : (
-        <div className="card">
-          <div className="table">
+        <div className="card staff-table-card">
+          <div className="table table--staff-borrow-history">
             <div className="table__row table__head">
               <span>User</span>
               <span>Book</span>

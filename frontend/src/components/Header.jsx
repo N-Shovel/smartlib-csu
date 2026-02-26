@@ -14,7 +14,7 @@ const Header = () => {
     <header className="header">
       <div className="header__brand">
         <Link to="/" className="brand">
-          LibraryFlow
+          SmartLib CSU
         </Link>
       </div>
       <nav className="header__nav">

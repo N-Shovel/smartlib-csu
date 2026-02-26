@@ -7,8 +7,22 @@ import { getIsoTimestamp } from "../utils/dateUtils";
 const BOOKS_KEY = "library_books";
 const LOGS_KEY = "library_activity_logs";
 const HISTORY_KEY = "library_borrow_history";
+const THESIS_PERMISSION_CODE = "24101234";
 
 const copyBook = (book) => ({ ...book });
+
+const mergeMissingSeedBooks = (storedBooks) => {
+  const existingIds = new Set(storedBooks.map((book) => book.id));
+  const missingSeedBooks = books.filter((book) => !existingIds.has(book.id));
+
+  if (missingSeedBooks.length === 0) {
+    return storedBooks;
+  }
+
+  const mergedBooks = [...storedBooks, ...missingSeedBooks];
+  saveData(BOOKS_KEY, mergedBooks);
+  return mergedBooks;
+};
 
 const loadBooks = () => {
   const stored = getData(BOOKS_KEY, null);
@@ -16,7 +30,7 @@ const loadBooks = () => {
     saveData(BOOKS_KEY, books);
     return [...books];
   }
-  return stored;
+  return mergeMissingSeedBooks(stored);
 };
 
 const saveBooks = (nextBooks) => saveData(BOOKS_KEY, nextBooks);
@@ -68,10 +82,20 @@ export const getBookById = (id) => {
   return book ? copyBook(book) : null;
 };
 
-export const borrowBook = (id, borrowerEmail) => {
+export const borrowBook = (id, borrowerEmail, permissionCode = "") => {
   const currentBooks = loadBooks();
   const book = currentBooks.find((item) => item.id === parseInt(id, 10));
   if (!book) return { ok: false, error: "Book not found" };
+  const isThesis = String(book.category || "").toLowerCase() === "thesis";
+
+  if (isThesis && !String(permissionCode).trim()) {
+    return { ok: false, error: "Permission slip code is required for thesis application." };
+  }
+
+  if (isThesis && String(permissionCode).trim() !== THESIS_PERMISSION_CODE) {
+    return { ok: false, error: "Invalid permission slip code." };
+  }
+
   if (!book.available) return { ok: false, error: "Book unavailable" };
 
   book.available = false;

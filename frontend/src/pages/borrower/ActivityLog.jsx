@@ -52,7 +52,7 @@ const ActivityLog = () => {
   };
 
   return (
-    <section>
+    <section className="activity-log-page">
       <div className="page-header">
         <div>
           <h2>Activity Log</h2>
@@ -69,7 +69,7 @@ const ActivityLog = () => {
       {myReservations.length === 0 ? (
         <div className="empty-state">No active reservations available for cancellation.</div>
       ) : (
-        <div className="card">
+        <div className="card activity-log-table-card">
           <div className="table table--reservation-actions">
             <div className="table__row table__head">
               <span>Room</span>
@@ -108,7 +108,7 @@ const ActivityLog = () => {
       {reservationUpdates.length === 0 ? (
         <div className="empty-state">No reservation updates yet.</div>
       ) : (
-        <div className="card table-scroll table-scroll--five">
+        <div className="card table-scroll table-scroll--five activity-log-table-card">
           <div className="table table--reservation-updates">
             <div className="table__row table__head">
               <span>Room</span>
@@ -139,8 +139,8 @@ const ActivityLog = () => {
       {borrowedHistory.length === 0 ? (
         <div className="empty-state">No borrowing history yet.</div>
       ) : (
-        <div className="card table-scroll table-scroll--five">
-          <div className="table">
+        <div className="card table-scroll table-scroll--five activity-log-table-card">
+          <div className="table table--borrow-history">
             <div className="table__row table__head">
               <span>Book</span>
               <span>Action</span>

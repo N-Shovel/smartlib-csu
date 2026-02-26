@@ -17,7 +17,7 @@ const StaffAndBorrowerList = () => {
 	};
 
 	return (
-		<section>
+		<section className="staff-page staff-signups-page">
 			<div className="page-header">
 				<div>
 					<h2>Borrower Signups</h2>
@@ -35,8 +35,8 @@ const StaffAndBorrowerList = () => {
 			{borrowers.length === 0 ? (
 				<div className="empty-state">No borrower signups yet.</div>
 			) : (
-				<div className="card">
-					<div className="table">
+				<div className="card staff-table-card">
+					<div className="table table--staff-signups">
 						<div className="table__row table__head">
 							<span>First Name</span>
 							<span>Last Name</span>

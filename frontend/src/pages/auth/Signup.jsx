@@ -62,7 +62,7 @@ const Signup = () => {
   return (
     <AuthCard
       title="Create account"
-      subtitle="Join the library and start borrowing."
+      subtitle="Create your CSU library account and start borrowing."
       className="auth-card--signup"
       formClassName="signup-form"
     >
@@ -94,7 +94,7 @@ const Signup = () => {
 
       <div className="signup-field">
         <label className="label">
-          Course & Year Level <span className="required">*</span>
+          Program & Year Level <span className="required">*</span>
         </label>
         <input
           className="input"
@@ -107,7 +107,7 @@ const Signup = () => {
 
       <div className="signup-field">
         <label className="label">
-          ID <span className="required">*</span>
+          Student ID <span className="required">*</span>
         </label>
         <input
           className="input"
@@ -139,7 +139,7 @@ const Signup = () => {
           className="input"
           type="email"
           autoComplete="email"
-          placeholder="you@library.com"
+          placeholder="you@carsu.edu.ph"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
