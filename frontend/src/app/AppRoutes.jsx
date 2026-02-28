@@ -3,7 +3,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Layout from "../components/Layout";
 import ProtectedRoute from "../components/ProtectedRoute";
-import { ROLES } from "../constants/roles";
 import Login from "../pages/auth/Login";
 import Signup from "../pages/auth/Signup";
 import ActivityLog from "../pages/borrower/ActivityLog";
@@ -15,22 +14,34 @@ import Approvals from "../pages/staff/Approvals";
 import BorrowerTracking from "../pages/staff/BorrowerTracking";
 import Dashboard from "../pages/staff/Dashboard";
 import StaffAndBorrowerList from "../pages/staff/StaffAndBorrowerList";
+import { useStore } from "../store/useAuthStore";
+import { useEffect } from "react";
+import PageLoader from "../components/PageLoader";
 
 const AppRoutes = () => {
+
+    const {user, studentAuth, isCheckingAuth} = useStore();
+    
+    useEffect(() => {
+        studentAuth();
+    }, [studentAuth])
+    
+    if(isCheckingAuth) return <PageLoader/>  
+
 	return (
 		<BrowserRouter>
 			<Routes>
 				{/* Default entry redirects to login. */}
 				<Route path="/" element={<Navigate to="/login" replace />} />
 				{/* Public authentication routes. */}
-				<Route path="/login" element={<Login />} />
-				<Route path="/signup" element={<Signup />} />
+				<Route path="/login" element={!user? <Login /> : <Navigate to={"/borrower/browse"}/>} />
+				<Route path="/signup" element={!user? <Signup /> : <Navigate to={"/borrower/browse"}/>}/>
 
 				{/* Borrower-only routes guarded by role check. */}
 				<Route
 					path="/borrower/browse"
 					element={
-						<ProtectedRoute role={ROLES.BORROWER}>
+						<ProtectedRoute>
 							<Layout>
 								<BrowseBooks />
 							</Layout>
@@ -41,7 +52,7 @@ const AppRoutes = () => {
 				<Route
 					path="/borrower/activity"
 					element={
-						<ProtectedRoute role={ROLES.BORROWER}>
+						<ProtectedRoute>
 							<Layout>
 								<ActivityLog />
 							</Layout>
@@ -52,7 +63,7 @@ const AppRoutes = () => {
 				<Route
 					path="/borrower/book/:id"
 					element={
-						<ProtectedRoute role={ROLES.BORROWER}>
+						<ProtectedRoute>
 							<Layout>
 								<BookDetails />
 							</Layout>
@@ -63,7 +74,7 @@ const AppRoutes = () => {
 				<Route
 					path="/borrower/reserve"
 					element={
-						<ProtectedRoute role={ROLES.BORROWER}>
+						<ProtectedRoute>
 							<Layout>
 								<RoomReservation />
 							</Layout>
@@ -75,7 +86,7 @@ const AppRoutes = () => {
 				<Route
 					path="/staff/dashboard"
 					element={
-						<ProtectedRoute role={ROLES.STAFF}>
+						<ProtectedRoute>
 							<Layout>
 								<Dashboard />
 							</Layout>
@@ -86,7 +97,7 @@ const AppRoutes = () => {
 				<Route
 					path="/staff/approvals"
 					element={
-						<ProtectedRoute role={ROLES.STAFF}>
+						<ProtectedRoute>
 							<Layout>
 								<Approvals />
 							</Layout>
@@ -97,7 +108,7 @@ const AppRoutes = () => {
 				<Route
 					path="/staff/tracking"
 					element={
-						<ProtectedRoute role={ROLES.STAFF}>
+						<ProtectedRoute>
 							<Layout>
 								<BorrowerTracking />
 							</Layout>
@@ -108,7 +119,7 @@ const AppRoutes = () => {
 				<Route
 					path="/staff/borrowers"
 					element={
-						<ProtectedRoute role={ROLES.STAFF}>
+						<ProtectedRoute>
 							<Layout>
 								<StaffAndBorrowerList />
 							</Layout>
