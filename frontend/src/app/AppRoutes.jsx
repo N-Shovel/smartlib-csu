@@ -1,9 +1,12 @@
+// Purpose: Central route table for public and role-protected pages.
+// Parts: public routes, borrower routes, staff routes, fallback routes.
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Layout from "../components/Layout";
 import ProtectedRoute from "../components/ProtectedRoute";
 import { ROLES } from "../constants/roles";
 import Login from "../pages/auth/Login";
 import Signup from "../pages/auth/Signup";
+import ActivityLog from "../pages/borrower/ActivityLog";
 import BookDetails from "../pages/borrower/BookDetails";
 import BrowseBooks from "../pages/borrower/BrowseBooks";
 import RoomReservation from "../pages/borrower/RoomReservation";
@@ -17,16 +20,30 @@ const AppRoutes = () => {
 	return (
 		<BrowserRouter>
 			<Routes>
+				{/* Default entry redirects to login. */}
 				<Route path="/" element={<Navigate to="/login" replace />} />
+				{/* Public authentication routes. */}
 				<Route path="/login" element={<Login />} />
 				<Route path="/signup" element={<Signup />} />
 
+				{/* Borrower-only routes guarded by role check. */}
 				<Route
 					path="/borrower/browse"
 					element={
 						<ProtectedRoute role={ROLES.BORROWER}>
 							<Layout>
 								<BrowseBooks />
+							</Layout>
+						</ProtectedRoute>
+					}
+				/>
+
+				<Route
+					path="/borrower/activity"
+					element={
+						<ProtectedRoute role={ROLES.BORROWER}>
+							<Layout>
+								<ActivityLog />
 							</Layout>
 						</ProtectedRoute>
 					}
@@ -54,6 +71,7 @@ const AppRoutes = () => {
 					}
 				/>
 
+				{/* Staff-only routes guarded by role check. */}
 				<Route
 					path="/staff/dashboard"
 					element={
@@ -98,6 +116,7 @@ const AppRoutes = () => {
 					}
 				/>
 
+				{/* Catch-all fallback for unknown URLs. */}
 				<Route path="*" element={<NotFound />} />
 			</Routes>
 		</BrowserRouter>

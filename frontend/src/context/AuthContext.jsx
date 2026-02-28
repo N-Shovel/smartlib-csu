@@ -1,3 +1,5 @@
+// Purpose: Auth context/provider exposing current user and auth actions.
+// Parts: context shape, provider state/actions, memoized value, consumer hook.
 import { createContext, useContext, useMemo, useState } from "react";
 import {
 	login,
@@ -9,10 +11,12 @@ import {
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
+	// Initialize from persisted session so refresh keeps user logged in.
 	const [user, setUser] = useState(getCurrentUser());
 
 	const loginUser = (email, password) => {
 		const result = login(email, password);
+		// Update in-memory auth state only on successful login.
 		if (result.ok) setUser(result.user);
 		return result;
 	};
@@ -22,10 +26,12 @@ export const AuthProvider = ({ children }) => {
 	};
 
 	const logoutUser = () => {
+		// Clear persistent auth and reset context user.
 		logout();
 		setUser(null);
 	};
 
+	// Memoize context value so consumers only rerender when user changes.
 	const value = useMemo(
 		() => ({
 			user,

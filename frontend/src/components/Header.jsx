@@ -1,3 +1,5 @@
+// Purpose: Top navigation bar with auth-aware user actions.
+// Parts: auth/user lookup, logout handler, nav/action rendering.
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
@@ -6,6 +8,7 @@ const Header = () => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
+    // Clear auth state then return the user to login screen.
     logoutUser();
     navigate("/login");
   };
@@ -14,10 +17,11 @@ const Header = () => {
     <header className="header">
       <div className="header__brand">
         <Link to="/" className="brand">
-          LibraryFlow
+          SmartLib CSU
         </Link>
       </div>
       <nav className="header__nav">
+        {/* Render account info/actions when authenticated; otherwise show entry actions. */}
         {user ? (
           <div className="header__meta">
             <span className="pill">{user.role}</span>

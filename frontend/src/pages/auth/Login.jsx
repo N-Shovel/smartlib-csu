@@ -1,8 +1,11 @@
+// Purpose: Login page handling borrower/staff authentication flow.
+// Parts: form state, submit handler, validation/errors, render.
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { ROLES } from "../../constants/roles";
 import AuthCard from "../../components/AuthCard";
+import { showError, showSuccess } from "../../utils/notification";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -12,12 +15,23 @@ const Login = () => {
   const { loginUser } = useAuth();
 
   const handleLogin = () => {
+    // Reset previous validation/auth messages before a new attempt.
     setError("");
     const result = loginUser(email, password);
     if (!result.ok) {
       setError(result.error);
+      showError(result.error);
       return;
-    };
+    }
+
+    // Success message varies by role to make the redirect context explicit.
+    showSuccess(
+      result.user.role === ROLES.STAFF
+        ? "Logged in as staff"
+        : "Logged in as borrower"
+    );
+
+    // Navigate users to their role-specific landing page.
     navigate(
       result.user.role === ROLES.STAFF ? "/staff/dashboard" : "/borrower/browse"
     );
@@ -26,7 +40,7 @@ const Login = () => {
   return (
     <AuthCard
       title="Welcome back"
-      subtitle="Sign in to manage books and reservations."
+      subtitle="Sign in with your CSU account to manage books and reservations."
     >
         <label className="label" htmlFor="login-email">Email</label>
         <input
@@ -34,7 +48,7 @@ const Login = () => {
           type="email"
           id="login-email"
           autoComplete="email"
-          placeholder="you@library.com"
+          placeholder="you@carsu.edu.ph"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />

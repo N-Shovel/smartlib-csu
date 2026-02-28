@@ -1,3 +1,5 @@
+// Purpose: Signup page for creating borrower accounts.
+// Parts: form model, validation logic, submit handler, grouped form render.
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -22,17 +24,18 @@ const Signup = () => {
   const { signupUser } = useAuth();
 
   const handleSignup = () => {
+    // Clear stale errors before validating fresh input.
     setError("");
     
-    // Check required fields
-    if (!firstName || !lastName || !coursAndYear || !id || !email || !currentAddress || !password || !confirmPassword) {
+    // Guard: all required borrower fields must be present.
+    if (!firstName || !lastName || !coursAndYear || !id || !contactInfo || !email || !currentAddress || !password || !confirmPassword) {
       const errorMsg = "Please fill up all required fields";
       setError(errorMsg);
       showError(errorMsg);
       return;
     }
 
-    // Check password match
+    // Guard: prevent account creation when password confirmation does not match.
     if (password !== confirmPassword) {
       const errorMsg = "Passwords do not match";
       setError(errorMsg);
@@ -40,6 +43,7 @@ const Signup = () => {
       return;
     }
 
+    // Package form fields into a borrower profile payload for signup service.
     const profile = {
       firstName,
       lastName,
@@ -49,12 +53,14 @@ const Signup = () => {
       currentAddress
     };
 
+    // Persist new account via auth context/service.
     const result = signupUser(email, password, ROLES.BORROWER, profile);
     if (!result.ok) {
       setError(result.error);
       showError(result.error);
       return;
     }
+    // On success, direct the user to login so they can authenticate.
     showSuccess("Account created!");
     navigate("/login");
   };
@@ -62,7 +68,7 @@ const Signup = () => {
   return (
     <AuthCard
       title="Create account"
-      subtitle="Join the library and start borrowing."
+      subtitle="Create your CSU library account and start borrowing."
       className="auth-card--signup"
       formClassName="signup-form"
     >
@@ -94,7 +100,7 @@ const Signup = () => {
 
       <div className="signup-field">
         <label className="label">
-          Course & Year Level <span className="required">*</span>
+          Program & Year Level <span className="required">*</span>
         </label>
         <input
           className="input"
@@ -107,7 +113,7 @@ const Signup = () => {
 
       <div className="signup-field">
         <label className="label">
-          ID <span className="required">*</span>
+          Student ID <span className="required">*</span>
         </label>
         <input
           className="input"
@@ -119,12 +125,15 @@ const Signup = () => {
       </div>
 
       <div className="signup-field">
-        <label className="label">Contact Info</label>
+        <label className="label">
+          Contact Number <span className="required">*</span>
+        </label>
         <input
           className="input"
           placeholder="09XXXXXXXXX"
           value={contactInfo}
           onChange={(e) => setContactInfo(e.target.value)}
+          required
         />
       </div>
 
@@ -136,7 +145,7 @@ const Signup = () => {
           className="input"
           type="email"
           autoComplete="email"
-          placeholder="you@library.com"
+          placeholder="you@carsu.edu.ph"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required

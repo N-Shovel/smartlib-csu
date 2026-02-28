@@ -1,8 +1,11 @@
+// Purpose: Staff page for viewing borrower signups and exporting lists.
+// Parts: data loading, helper formatting, export handler, table render.
 import { getBorrowerSignups } from "../../services/authService";
 import { exportToCSV } from "../../services/exportService";
 import { getBorrowerSignupsExport } from "../../data/exportBorrowerSignups";
 
 const truncateText = (value, maxLength) => {
+	// Keep table columns compact while preserving full value in title tooltip.
 	const text = String(value || "-");
 	if (text.length <= maxLength) return text;
 	return `${text.slice(0, maxLength)}...`;
@@ -13,11 +16,12 @@ const StaffAndBorrowerList = () => {
 
 	const handleExport = () => {
 		if (borrowers.length === 0) return;
+		// Export all borrower signup rows in one CSV file.
 		exportToCSV(getBorrowerSignupsExport(borrowers), "borrower-signups.csv");
 	};
 
 	return (
-		<section>
+		<section className="staff-page staff-signups-page">
 			<div className="page-header">
 				<div>
 					<h2>Borrower Signups</h2>
@@ -35,8 +39,8 @@ const StaffAndBorrowerList = () => {
 			{borrowers.length === 0 ? (
 				<div className="empty-state">No borrower signups yet.</div>
 			) : (
-				<div className="card">
-					<div className="table">
+				<div className="card staff-table-card">
+					<div className="table table--staff-signups">
 						<div className="table__row table__head">
 							<span>First Name</span>
 							<span>Last Name</span>

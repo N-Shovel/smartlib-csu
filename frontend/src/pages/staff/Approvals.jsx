@@ -1,12 +1,16 @@
+// Purpose: Staff reservation approvals and reservation-history management page.
+// Parts: reservation datasets, formatting helpers, approve/close handlers, export/table render.
 import { useState } from "react";
 import {
   getReservations,
   approveReservation,
-  getReservationHistory
+  getReservationHistory,
+  formatReservationHour,
+  closeReservation
 } from "../../services/reservationService";
 import { RESERVATION_STATUS } from "../../constants/status";
 import { formatDateTime } from "../../utils/dateUtils";
-import { showSuccess } from "../../utils/notification";
+import { showError, showSuccess } from "../../utils/notification";
 import { exportToCSV } from "../../services/exportService";
 import { getReservationHistoryExport } from "../../data/exportReservations";
 
@@ -15,27 +19,45 @@ const Approvals = () => {
   const [history, setHistory] = useState(getReservationHistory());
   const formatAction = (action) => action.replace(/_/g, " ");
 
+  // Pull fresh reservation and history snapshots after each state-changing action.
   const refresh = () => {
     setReservations(getReservations());
     setHistory(getReservationHistory());
   };
 
+  // Split data for dedicated pending and active sections.
   const pending = reservations.filter(
     (reservation) => reservation.status === RESERVATION_STATUS.PENDING
   );
+  const currentReservations = reservations.filter(
+    (reservation) => reservation.status === RESERVATION_STATUS.APPROVED
+  );
 
   const handleApprove = (id) => {
+    // Approval also performs conflict checks in service layer.
     const result = approveReservation(id);
     if (result.ok) {
       showSuccess("Reservation approved");
       refresh();
     } else {
-      alert(result.error ?? "Failed to approve reservation.");
+      showError(result.error ?? "Failed to approve reservation.");
+    }
+  };
+
+  const handleClose = (id) => {
+    // Closing ends an approved reservation and records history.
+    const result = closeReservation(id);
+    if (result.ok) {
+      showSuccess("Reservation closed");
+      refresh();
+    } else {
+      showError(result.error ?? "Failed to close reservation.");
     }
   };
 
   const handleHistoryExport = () => {
     if (history.length === 0) return;
+    // Export latest six updates to keep report lightweight and focused.
     exportToCSV(
       getReservationHistoryExport(history.slice(0, 6)),
       "reservation-history.csv"
@@ -43,7 +65,7 @@ const Approvals = () => {
   };
 
   return (
-    <section>
+    <section className="staff-page staff-approvals-page">
       <div className="page-header">
         <div>
           <h2>Reservations</h2>
@@ -53,10 +75,11 @@ const Approvals = () => {
       {pending.length === 0 ? (
         <div className="empty-state">No pending reservations.</div>
       ) : (
-        <div className="card">
-          <div className="table">
+        <div className="card staff-table-card">
+          <div className="table table--staff-pending">
             <div className="table__row table__head">
               <span>Room</span>
+              <span>Time Slot</span>
               <span>Requester</span>
               <span>Notes</span>
               <span>Requested</span>
@@ -65,6 +88,7 @@ const Approvals = () => {
             {pending.map((reservation) => (
               <div className="table__row" key={reservation.id}>
                 <span>{reservation.room}</span>
+                <span>{formatReservationHour(reservation.reservationHour)}</span>
                 <span>{reservation.requestedBy}</span>
                 <span>{reservation.notes || "-"}</span>
                 <span>{formatDateTime(reservation.createdAt)}</span>
@@ -79,6 +103,49 @@ const Approvals = () => {
           </div>
         </div>
       )}
+
+      <div className="page-header" style={{ marginTop: "2rem" }}>
+        <div>
+          <h2>Current Reservations</h2>
+          <p className="muted">Approved reservations currently in use.</p>
+        </div>
+      </div>
+      {currentReservations.length === 0 ? (
+        <div className="empty-state">No current approved reservations.</div>
+      ) : (
+        <div className="card staff-table-card">
+          <div className="table table--staff-current">
+            <div className="table__row table__head">
+              <span>Room</span>
+              <span>Time Slot</span>
+              <span>Requester</span>
+              <span>Notes</span>
+              <span>Status</span>
+              <span>Action</span>
+            </div>
+            {currentReservations.map((reservation) => (
+              <div className="table__row" key={reservation.id}>
+                <span>{reservation.room}</span>
+                <span>{formatReservationHour(reservation.reservationHour)}</span>
+                <span>{reservation.requestedBy}</span>
+                <span>{reservation.notes || "-"}</span>
+                <span>
+                  {reservation.cancellationRequested
+                    ? "approved · cancellation requested"
+                    : reservation.status}
+                </span>
+                <button
+                  className="btn btn--ghost"
+                  onClick={() => handleClose(reservation.id)}
+                >
+                  Close
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="page-header" style={{ marginTop: "2rem" }}>
         <div>
           <h2>Reservation History</h2>
@@ -95,10 +162,11 @@ const Approvals = () => {
       {history.length === 0 ? (
         <div className="empty-state">No reservation history yet.</div>
       ) : (
-        <div className="card">
-          <div className="table">
+        <div className="card staff-table-card">
+          <div className="table table--staff-history">
             <div className="table__row table__head">
               <span>Room</span>
+              <span>Time Slot</span>
               <span>Requester</span>
               <span>Action</span>
               <span>Status</span>
@@ -107,6 +175,7 @@ const Approvals = () => {
             {history.slice(0, 6).map((entry) => (
               <div className="table__row" key={entry.id}>
                 <span>{entry.room}</span>
+                <span>{formatReservationHour(entry.reservationHour)}</span>
                 <span>{entry.requestedBy}</span>
                 <span>{formatAction(entry.action)}</span>
                 <span>{entry.status}</span>

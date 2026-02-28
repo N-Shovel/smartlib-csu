@@ -1,8 +1,11 @@
+// Purpose: Staff dashboard showing summary metrics and recent activity.
+// Parts: metric derivation, formatting helpers, summary cards, activity list render.
 import { getActivityLogs } from "../../services/bookService";
 import { formatDateTime } from "../../utils/dateUtils";
 import StaffSummaryCards from "../../components/StaffSummaryCards";
 
 const Dashboard = () => {
+  // Show a short, recent feed to keep dashboard quick to scan.
   const logs = getActivityLogs().slice(0, 4);
   const formatAction = (action) => action.replace(/_/g, " ");
 

@@ -1,3 +1,5 @@
+// Purpose: Seed/mock activity log entries used by dashboard and history views.
+// Parts: record schema, seeded log entries, exported dataset.
 const activityLogs = [
   {
     id: 1,
