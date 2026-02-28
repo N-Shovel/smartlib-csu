@@ -1,4 +1,4 @@
-import { ENV } from "./ENV"
+import { ENV } from "./ENV.ts"
 import type { Response } from "express";
 
 export const setCookies = (res: Response, access_token: String | undefined, refresh_token: String | undefined, expires_in: number | undefined): void =>{

@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { ENV } from "./ENV";
+import { ENV } from "./ENV.ts";
 
 
 if(!ENV.SUPABASE_URL || !ENV.SUPABASE_PUB_KEY){
