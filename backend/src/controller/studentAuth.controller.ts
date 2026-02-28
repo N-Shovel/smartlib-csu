@@ -1,5 +1,5 @@
-import { supabase } from "../lib/supabaseClient.ts"
-import { setCookies } from "../lib/utils.ts";
+import { supabase } from "../lib/supabaseClient"
+import { setCookies } from "../lib/utils";
 import type {Request, Response} from "express";
 
 export const signupController = async (req: Request, res: Response) => {

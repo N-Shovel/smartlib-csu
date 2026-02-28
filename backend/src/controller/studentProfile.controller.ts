@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import {supabaseForRequest } from "../lib/supabaseClient.ts";
+import {supabaseForRequest } from "../lib/supabaseClient";
 
 export const studentProfile = async(req: Request, res: Response) =>{
     try {
