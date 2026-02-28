@@ -1,7 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { ENV } from "./ENV.ts";
-import jwt from "jsonwebtoken"
-import jwksClient from "jwks-rsa";
+import { ENV } from "./ENV.js";
 
 
 if(!ENV.SUPABASE_URL || !ENV.SUPABASE_PUB_KEY){
