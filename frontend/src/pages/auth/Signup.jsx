@@ -1,10 +1,9 @@
 // Purpose: Signup page for creating borrower accounts.
 // Parts: form model, validation logic, submit handler, grouped form render.
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
-import { showError, showSuccess } from "../../utils/notification";
-import { ROLES } from "../../constants/roles";
+import { useStore } from "../../store/useAuthStore";
+import { showError } from "../../utils/notification";
 import AuthCard from "../../components/AuthCard";
 
 const Signup = () => {
@@ -21,48 +20,49 @@ const Signup = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const { signupUser } = useAuth();
+  const { studentSignUp, isLoading } = useStore();
 
-  const handleSignup = () => {
-    // Clear stale errors before validating fresh input.
-    setError("");
-    
-    // Guard: all required borrower fields must be present.
-    if (!firstName || !lastName || !coursAndYear || !id || !contactInfo || !email || !currentAddress || !password || !confirmPassword) {
-      const errorMsg = "Please fill up all required fields";
-      setError(errorMsg);
-      showError(errorMsg);
-      return;
-    }
+  const handleSignup = async () => {
 
-    // Guard: prevent account creation when password confirmation does not match.
-    if (password !== confirmPassword) {
-      const errorMsg = "Passwords do not match";
-      setError(errorMsg);
-      showError(errorMsg);
-      return;
-    }
+      // Clear stale errors before validating fresh input.
+      setError("");
+      
+      // Guard: all required borrower fields must be present.
+      if (!firstName || !lastName || !coursAndYear || !id || !contactInfo || !email || !currentAddress || !password || !confirmPassword) {
+        const errorMsg = "Please fill up all required fields";
+        setError(errorMsg);
+        showError(errorMsg);
+        return;
+      }
 
-    // Package form fields into a borrower profile payload for signup service.
-    const profile = {
-      firstName,
-      lastName,
-      collegeCourse: coursAndYear,
-      id,
-      contactInfo,
-      currentAddress
-    };
+      // Guard: prevent account creation when password confirmation does not match.
+      if (password !== confirmPassword) {
+        const errorMsg = "Passwords do not match";
+        setError(errorMsg);
+        showError(errorMsg);
+        return;
+      }
 
-    // Persist new account via auth context/service.
-    const result = signupUser(email, password, ROLES.BORROWER, profile);
-    if (!result.ok) {
-      setError(result.error);
-      showError(result.error);
-      return;
-    }
-    // On success, direct the user to login so they can authenticate.
-    showSuccess("Account created!");
-    navigate("/login");
+      // Call the store's signup method
+      const success = await studentSignUp(
+        email,
+        password,
+        id,
+        firstName,
+        lastName,
+        null, // suffix - optional
+        coursAndYear,        
+        contactInfo,
+        currentAddress
+      );
+
+      if (!success) {
+        setError("Signup failed. Please try again.");
+        return;
+      }
+
+      // On success, direct the user to login so they can authenticate.
+      navigate("/login"); 
   };
 
   return (
@@ -81,6 +81,7 @@ const Signup = () => {
           placeholder="Juan"
           value={firstName}
           onChange={(e) => setFirstName(e.target.value)}
+          disabled={isLoading}
           required
         />
       </div>
@@ -94,6 +95,7 @@ const Signup = () => {
           placeholder="Dela Cruz"
           value={lastName}
           onChange={(e) => setLastName(e.target.value)}
+          disabled={isLoading}
           required
         />
       </div>
@@ -107,6 +109,7 @@ const Signup = () => {
           placeholder="BSCS-2nd Year"
           value={coursAndYear}
           onChange={(e) => setCoursAndYear(e.target.value)}
+          disabled={isLoading}
           required
         />
       </div>
@@ -120,6 +123,7 @@ const Signup = () => {
           placeholder="241-01234"
           value={id}
           onChange={(e) => setId(e.target.value)}
+          disabled={isLoading}
           required
         />
       </div>
@@ -133,6 +137,7 @@ const Signup = () => {
           placeholder="09XXXXXXXXX"
           value={contactInfo}
           onChange={(e) => setContactInfo(e.target.value)}
+          disabled={isLoading}
           required
         />
       </div>
@@ -148,6 +153,7 @@ const Signup = () => {
           placeholder="you@carsu.edu.ph"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          disabled={isLoading}
           required
         />
       </div>
@@ -161,6 +167,7 @@ const Signup = () => {
           placeholder="Enter your current address"
           value={currentAddress}
           onChange={(e) => setCurrentAddress(e.target.value)}
+          disabled={isLoading}
           required
         />
       </div>
@@ -177,12 +184,14 @@ const Signup = () => {
             placeholder="Create a password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            disabled={isLoading}
             required
           />
           <button
             type="button"
             className="password-toggle"
             onClick={() => setShowPassword(!showPassword)}
+            disabled={isLoading}
           >
             {showPassword ? "Hide" : "Show"}
           </button>
@@ -201,12 +210,14 @@ const Signup = () => {
             placeholder="Confirm your password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
+            disabled={isLoading}
             required
           />
           <button
             type="button"
             className="password-toggle"
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            disabled={isLoading}
           >
             {showConfirmPassword ? "Hide" : "Show"}
           </button>
@@ -215,8 +226,12 @@ const Signup = () => {
 
       <div className="signup-field signup-field--full">
         {error ? <div className="alert">{error}</div> : null}
-        <button className="btn btn--primary" onClick={handleSignup}>
-          Signup
+        <button 
+          className={`btn ${isLoading? "bg-gray-500" :  "btn--primary"}`} 
+          onClick={handleSignup}
+          disabled={isLoading}
+        >
+          {isLoading ? "Creating account..." : "Signup"}
         </button>
         <p className="muted auth-card__switch">
           Already have an account? <Link to="/login">Login</Link>

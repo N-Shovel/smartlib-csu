@@ -1,0 +1,58 @@
+Hello, this is the return type from the backend, please setup frontend based only from this json file
+
+user = {
+    "profile": {
+        "user_id": "0654b6c7-2acf-4dee-9b7f-17a71ed3cc57",
+        "id_number": "231-023122",
+        "first_name": "Mhegan",
+        "last_name": "Niez",
+        "suffix": null,
+        "program": "BSCS-2",
+        "contact_number": "09123456789",
+        "address": "Bayugan",
+        "created_at": "2026-02-28T15:41:15.552547+00:00"
+    },
+    "user": {
+        "id": "0654b6c7-2acf-4dee-9b7f-17a71ed3cc57",
+        "aud": "authenticated",
+        "role": "authenticated",
+        "email": "test@gmail.com",
+        "email_confirmed_at": "2026-02-28T15:41:15.163806Z",
+        "phone": "",
+        "confirmed_at": "2026-02-28T15:41:15.163806Z",
+        "last_sign_in_at": "2026-02-28T15:45:53.689515Z",
+        "app_metadata": {
+            "provider": "email",
+            "providers": [
+                "email"
+            ]
+        },
+        "user_metadata": {
+            "email": "test@gmail.com",
+            "email_verified": true,
+            "phone_verified": false,
+            "sub": "0654b6c7-2acf-4dee-9b7f-17a71ed3cc57"
+        },
+        "identities": [
+            {
+                "identity_id": "2b174326-b3be-457c-a850-0ee18b3bbc2a",
+                "id": "0654b6c7-2acf-4dee-9b7f-17a71ed3cc57",
+                "user_id": "0654b6c7-2acf-4dee-9b7f-17a71ed3cc57",
+                "identity_data": {
+                    "email": "test@gmail.com",
+                    "email_verified": false,
+                    "phone_verified": false,
+                    "sub": "0654b6c7-2acf-4dee-9b7f-17a71ed3cc57"
+                },
+                "provider": "email",
+                "last_sign_in_at": "2026-02-28T15:41:15.160493Z",
+                "created_at": "2026-02-28T15:41:15.160545Z",
+                "updated_at": "2026-02-28T15:41:15.160545Z",
+                "email": "test@gmail.com"
+            }
+        ],
+        "created_at": "2026-02-28T15:41:15.154995Z",
+        "updated_at": "2026-02-28T15:45:53.706314Z",
+        "is_anonymous": false
+    }
+}

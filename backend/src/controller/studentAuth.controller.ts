@@ -1,7 +1,8 @@
-import { supabase } from "../lib/supabaseClient.js"
-import { setCookies } from "../lib/utils.js";
+import { supabase } from "../lib/supabaseClient.ts"
+import { setCookies } from "../lib/utils.ts";
+import type {Request, Response} from "express";
 
-export const signupController = async (req, res) => {
+export const signupController = async (req: Request, res: Response) => {
     const {
         email,
         password,
@@ -12,7 +13,6 @@ export const signupController = async (req, res) => {
         lastName,
         suffix,
         program,
-        yearLevel,
         contactNumber,
         address,
     } = req.body;
@@ -24,9 +24,6 @@ export const signupController = async (req, res) => {
 
     if (!idNumber) return res.status(400).json({ message: "ID Number is required" });
     if (!program) return res.status(400).json({ message: "Program is required" });
-    if (yearLevel === undefined || yearLevel === null || yearLevel === "") {
-        return res.status(400).json({ message: "Year level is required" });
-    }
 
     if (!email || !password) {
         return res.status(400).json({ message: "Email and password are required" });
@@ -41,12 +38,19 @@ export const signupController = async (req, res) => {
         return res.status(400).json({ message: "Password must be at least 8 characters" });
     }
 
-    const parsedYearLevel = Number(yearLevel);
-    if (!Number.isInteger(parsedYearLevel) || parsedYearLevel < 1) {
-        return res.status(400).json({ message: "Year level must be a positive integer" });
-    }
 
     try {
+        // Check if user already exists in student_profiles
+        const { data: existingProfile } = await supabase
+            .from("student_profiles")
+            .select("user_id")
+            .eq("id_number", String(idNumber).trim())
+            .single();
+        
+        if (existingProfile) {
+            return res.status(400).json({ message: "Student ID already registered" });
+        }
+
         // 1) Create auth user (Supabase Auth)
         const { data, error } = await supabase.auth.signUp({
             email,
@@ -54,6 +58,12 @@ export const signupController = async (req, res) => {
         });
 
         if (error) {
+            // Check if user already exists in auth
+            if (error.message.includes("already registered") || error.message.includes("already exists")) {
+                return res.status(400).json({ 
+                    message: "Email already registered. If you're having trouble logging in, please contact support." 
+                });
+            }
             return res.status(400).json({ message: error.message });
         }
 
@@ -72,20 +82,21 @@ export const signupController = async (req, res) => {
                     last_name: String(lastName).trim(),
                     suffix: suffix ? String(suffix).trim() : null,
                     program: String(program).trim(),
-                    year_level: parsedYearLevel,
                     contact_number: contactNumber ? String(contactNumber).trim() : null,
                     address: address ? String(address).trim() : null,
                 },
             ])
             .select(
-                "user_id, id_number, first_name, last_name, suffix, program, year_level, contact_number, address, created_at"
+                "user_id, id_number, first_name, last_name, suffix, program, contact_number, address, created_at"
             )
             .single();
 
         if (profileError) {
-            // Optional cleanup: delete auth user if profile insert fails (requires admin/service role)
-            // For now, just return the error:
-            return res.status(400).json({ message: profileError.message });
+            console.error("Profile creation error:", profileError);
+            // Return a helpful message for the user
+            return res.status(400).json({ 
+                message: profileError.message 
+            });
         }
 
         // 3) Set cookies if session exists (depends on your Supabase email confirmation settings)
@@ -106,11 +117,11 @@ export const signupController = async (req, res) => {
     }
 };
 
-export const loginController = async (req, res) => {
+export const loginController = async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    return res.status(400).json({ error: "Email and password are required" });
+    return res.status(400).json({ message: "Email and password are required" });
   }
 
   try {
@@ -120,7 +131,7 @@ export const loginController = async (req, res) => {
     });
 
     if (error) {
-      return res.status(401).json({ error: error.message });
+      return res.status(401).json({ message: error.message });
     }
 
     const userId = data.user?.id;
@@ -129,13 +140,17 @@ export const loginController = async (req, res) => {
     const { data: profileData, error: profileError } = await supabase
       .from("student_profiles")
       .select(
-        "user_id, id_number, first_name, last_name, suffix, program, year_level, contact_number, address"
+        "user_id, id_number, first_name, last_name, suffix, program,  contact_number, address"
       )
       .eq("user_id", userId)
       .single();
 
     if (profileError || !profileData) {
-      return res.status(404).json({ message: "Student profile not found" });
+      console.error("Profile lookup error:", profileError);
+      return res.status(404).json({ 
+        message: "Student profile not found. Your account may be incomplete. Please contact support or try signing up again with a different email.",
+        userId: userId // Include userId for debugging
+      });
     }
 
     const { refresh_token, access_token, expires_in } = data.session || {};
@@ -150,22 +165,48 @@ export const loginController = async (req, res) => {
     });
   } catch (err) {
     console.error("Error in login controller: ", err);
-    return res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-export const logoutController = async (_, res) => {
-  try {
-    await supabase.auth.signOut();
-
-    res.clearCookie("access_token");
-    res.clearCookie("refresh_token");
-
-    return res.status(200).json({ message: "Logout Successfully" });
-  } catch (error) {
-    console.log("Error in logout Controller: ", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
 
+export const logoutController = async (_: any, res: Response) => {
+    try {
 
+        await supabase.auth.signOut();
+        res.clearCookie("access_token");
+        res.clearCookie("refresh_token");
+
+        return res.status(200).json({ message: "Logout successfully" });
+    } catch (error) {
+        console.log("Error in logout Controller: ", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const refreshController = async (req: Request, res: Response) => {
+    try {
+        const refresh_token = req.cookies?.refresh_token;
+        if (!refresh_token) {
+            return res.status(401).json({ message: "Missing refresh token" });
+        }
+
+        const { data, error } = await supabase.auth.refreshSession({ refresh_token });
+
+        if (error || !data.session) {
+            return res.status(401).json({ message: error?.message ?? "Could not refresh session" });
+        }
+
+        const { access_token, refresh_token: new_refresh_token, expires_in } = data.session;
+
+        // overwrite cookies with the new tokens
+        setCookies(res, access_token, new_refresh_token, expires_in);
+
+        return res.status(200).json({
+            message: "Session refreshed",
+            user: data.user,
+        });
+    } catch (e) {
+        console.error("refreshController error:", e);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
