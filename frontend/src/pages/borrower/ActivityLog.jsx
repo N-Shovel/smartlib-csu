@@ -1,11 +1,12 @@
 // Purpose: Borrower activity timeline for reservations and borrowing actions.
 // Parts: source data selection, derived filters, action handlers, table/list render.
 import { useState } from "react";
-import { getBorrowHistory } from "../../services/bookService";
+import { getBorrowHistory, getBorrowRequestsByBorrower } from "../../services/bookService";
 import {
   formatReservationHour,
   getReservationHistory,
   getReservations,
+  isReservationTimePassed,
   requestReservationCancellation
 } from "../../services/reservationService";
 import { useAuth } from "../../context/AuthContext";
@@ -27,7 +28,8 @@ const ActivityLog = () => {
     getReservations().filter(
       (entry) =>
         entry.requestedBy?.toLowerCase() === userEmail.toLowerCase() &&
-        entry.status !== RESERVATION_STATUS.CLOSED
+        entry.status !== RESERVATION_STATUS.CLOSED &&
+        !isReservationTimePassed(entry)
     );
 
   const getUserBorrowedHistory = () =>
@@ -35,10 +37,14 @@ const ActivityLog = () => {
       (entry) => entry.borrowerEmail?.toLowerCase() === userEmail.toLowerCase()
     );
 
+  const getUserBorrowUpdates = () =>
+    getBorrowRequestsByBorrower(userEmail);
+
   const [reservationUpdates, setReservationUpdates] = useState(
     getUserReservationUpdates
   );
   const [myReservations, setMyReservations] = useState(getUserActiveReservations);
+  const [borrowUpdates, setBorrowUpdates] = useState(getUserBorrowUpdates);
   const [borrowedHistory] = useState(getUserBorrowedHistory);
 
   // Convert action enum labels like RESERVATION_CREATED into readable text.
@@ -55,6 +61,7 @@ const ActivityLog = () => {
     // Refresh local view from source data after successful mutation.
     setMyReservations(getUserActiveReservations());
     setReservationUpdates(getUserReservationUpdates());
+    setBorrowUpdates(getUserBorrowUpdates());
   };
 
   return (
@@ -68,68 +75,27 @@ const ActivityLog = () => {
 
       <div className="page-header" style={{ marginTop: "1rem" }}>
         <div>
-          <h2>Request Reservation Cancellation</h2>
-          <p className="muted">Apply to cancel your active reservations.</p>
+          <h2>Book Borrow Update</h2>
+          <p className="muted">Track your borrow request status and release updates.</p>
         </div>
       </div>
-      {myReservations.length === 0 ? (
-        <div className="empty-state">No active reservations available for cancellation.</div>
-      ) : (
-        <div className="card activity-log-table-card">
-          <div className="table table--reservation-actions">
-            <div className="table__row table__head">
-              <span>Room</span>
-              <span>Time Slot</span>
-              <span>Status</span>
-              <span>Action</span>
-            </div>
-            {myReservations.map((entry) => (
-              <div className="table__row" key={entry.id}>
-                <span>{entry.room}</span>
-                <span>{formatReservationHour(entry.reservationHour)}</span>
-                <span>
-                  {entry.cancellationRequested
-                    ? "cancellation requested"
-                    : entry.status}
-                </span>
-                <button
-                  className="btn btn--ghost"
-                  onClick={() => handleCancellationRequest(entry.id)}
-                  disabled={entry.cancellationRequested}
-                >
-                  {entry.cancellationRequested ? "Requested" : "Apply Cancellation"}
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="page-header" style={{ marginTop: "2rem" }}>
-        <div>
-          <h2>Reservation Updates</h2>
-          <p className="muted">Latest updates for your room reservation requests.</p>
-        </div>
-      </div>
-      {reservationUpdates.length === 0 ? (
-        <div className="empty-state">No reservation updates yet.</div>
+      {borrowUpdates.length === 0 ? (
+        <div className="empty-state">No borrow updates yet.</div>
       ) : (
         <div className="card table-scroll table-scroll--five activity-log-table-card">
-          <div className="table table--reservation-updates">
+          <div className="table table--borrow-updates">
             <div className="table__row table__head">
-              <span>Room</span>
-              <span>Time Slot</span>
-              <span>Action</span>
+              <span>Book</span>
               <span>Status</span>
+              <span>Requested</span>
               <span>Updated</span>
             </div>
-            {reservationUpdates.map((entry) => (
+            {borrowUpdates.map((entry) => (
               <div className="table__row" key={entry.id}>
-                <span>{entry.room}</span>
-                <span>{formatReservationHour(entry.reservationHour)}</span>
-                <span>{formatAction(entry.action)}</span>
+                <span>{entry.title || "-"}</span>
                 <span>{entry.status || "-"}</span>
-                <span>{formatDateTime(entry.timestamp)}</span>
+                <span>{formatDateTime(entry.requestedAt)}</span>
+                <span>{formatDateTime(entry.receivedAt || entry.requestedAt)}</span>
               </div>
             ))}
           </div>
@@ -156,6 +122,76 @@ const ActivityLog = () => {
               <div className="table__row" key={entry.id}>
                 <span>{entry.title || "-"}</span>
                 <span>{formatAction(entry.action)}</span>
+                <span>{formatDateTime(entry.timestamp)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="page-header" style={{ marginTop: "2rem" }}>
+        <div>
+          <h2>Request Reservation Update</h2>
+          <p className="muted">Request updates for your active reservations.</p>
+        </div>
+      </div>
+      {myReservations.length === 0 ? (
+        <div className="empty-state">No active reservations available for cancellation.</div>
+      ) : (
+        <div className="card table-scroll table-scroll--five activity-log-table-card">
+          <div className="table table--reservation-actions">
+            <div className="table__row table__head">
+              <span>Room</span>
+              <span>Time Slot</span>
+              <span>Status</span>
+              <span>Action</span>
+            </div>
+            {myReservations.map((entry) => (
+              <div className="table__row" key={entry.id}>
+                <span>{entry.room}</span>
+                <span>{formatReservationHour(entry.reservationHour)}</span>
+                <span>
+                  {entry.cancellationRequested
+                    ? "cancellation requested"
+                    : entry.status}
+                </span>
+                <button
+                  className="btn btn--danger"
+                  onClick={() => handleCancellationRequest(entry.id)}
+                  disabled={entry.cancellationRequested}
+                >
+                  {entry.cancellationRequested ? "Canceled" : "Cancel"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="page-header" style={{ marginTop: "2rem" }}>
+        <div>
+          <h2>Reservation History</h2>
+          <p className="muted">Latest updates for your room reservation requests.</p>
+        </div>
+      </div>
+      {reservationUpdates.length === 0 ? (
+        <div className="empty-state">No reservation updates yet.</div>
+      ) : (
+        <div className="card table-scroll table-scroll--five activity-log-table-card">
+          <div className="table table--reservation-updates">
+            <div className="table__row table__head">
+              <span>Room</span>
+              <span>Time Slot</span>
+              <span>Action</span>
+              <span>Status</span>
+              <span>Updated</span>
+            </div>
+            {reservationUpdates.map((entry) => (
+              <div className="table__row" key={entry.id}>
+                <span>{entry.room}</span>
+                <span>{formatReservationHour(entry.reservationHour)}</span>
+                <span>{formatAction(entry.action)}</span>
+                <span>{entry.status || "-"}</span>
                 <span>{formatDateTime(entry.timestamp)}</span>
               </div>
             ))}

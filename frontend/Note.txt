@@ -82,7 +82,22 @@ ASSETS
 CREDENTIALS
 ===========
 staff@library.com / 1234
-borrower@library.com / 1234
+    Name: Maria Santos
+    Course: Library and Information Science
+    Year Level: N/A
+    ID: STF-0001
+    Contact: 09171234567
+    Address: CSU Main Campus, Ampayon, Butuan City
 
+borrower@library.com / 1234
+    Name: Juan Dela Cruz
+    Course: BSCS
+    Year Level: 2nd Year
+    ID: 241-01234
+    Contact: 09991234567
+    Address: Purok 4, Libertad, Butuan City
+
+DEPENDENCIES / TOOLS NOTES
+==========================
 toaster library
 lucide react

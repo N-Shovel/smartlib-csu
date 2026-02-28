@@ -1,29 +1,65 @@
 // Purpose: Staff borrower monitoring with active records and history export.
-// Parts: borrower data transforms, helpers, export actions, summary/history render.
+// Parts: pending borrow requests, current borrower table, history export table.
+import { useState } from "react";
 import {
-  getBorrowerSummary,
-  getBorrowHistory
+  getBooks,
+  getBorrowHistory,
+  getBorrowRequests,
+  receiveBorrowRequest
 } from "../../services/bookService";
 import { exportToCSV } from "../../services/exportService";
 import { formatDateTime } from "../../utils/dateUtils";
 import { getBorrowHistoryExport } from "../../data/exportBorrowersHistory";
-import { getBorrowerSummaryExport } from "../../data/exportBorrowerSummary";
+import { showError, showSuccess } from "../../utils/notification";
+import { getUserProfileByEmail } from "../../services/authService";
 
 const BorrowerTracking = () => {
-  // Derived service snapshots used to render active borrowers and audit trail.
-  const borrowers = getBorrowerSummary();
-  const history = getBorrowHistory();
-  const formatAction = (action) => action.replace(/_/g, " ");
+  const [books, setBooks] = useState(getBooks());
+  const [history, setHistory] = useState(getBorrowHistory());
+  const [borrowRequests, setBorrowRequests] = useState(getBorrowRequests());
+  const getStudentIdByEmail = (email) =>
+    getUserProfileByEmail(email)?.id || "-";
 
-  const handleExport = () => {
-    if (borrowers.length === 0) return;
-    // Export active borrower summary as CSV.
-    exportToCSV(getBorrowerSummaryExport(borrowers), "borrower-summary.csv");
+  const pendingRequests = borrowRequests.filter((entry) => entry.status === "pending");
+
+  const currentBorrowers = books
+    .filter((book) => !book.available && book.borrowedBy)
+    .map((book) => {
+      const borrowEvent = history.find(
+        (entry) =>
+          entry.bookId === book.id &&
+          entry.borrowerEmail === book.borrowedBy &&
+          entry.action === "BORROW_BOOK"
+      );
+
+      return {
+        user: book.borrowedBy,
+        studentId: getStudentIdByEmail(book.borrowedBy),
+        book: book.title,
+        bookId: book.id,
+        time: borrowEvent?.timestamp || null
+      };
+    });
+
+  const refresh = () => {
+    setBooks(getBooks());
+    setHistory(getBorrowHistory());
+    setBorrowRequests(getBorrowRequests());
+  };
+
+  const handleReceive = (requestId) => {
+    const result = receiveBorrowRequest(requestId);
+    if (!result.ok) {
+      showError(result.error || "Unable to receive borrow request.");
+      return;
+    }
+
+    showSuccess("Book release received and recorded.");
+    refresh();
   };
 
   const handleHistoryExport = () => {
     if (history.length === 0) return;
-    // Export a concise slice of latest borrow/return events.
     exportToCSV(getBorrowHistoryExport(history.slice(0, 6)), "borrow-history.csv");
   };
 
@@ -32,35 +68,72 @@ const BorrowerTracking = () => {
       <div className="page-header">
         <div>
           <h2>Borrower Tracking</h2>
-          <p className="muted">Current borrowed books by borrower.</p>
+          <p className="muted">Track borrower requests and current book releases.</p>
         </div>
-        <button
-          className="btn btn--ghost"
-          onClick={handleExport}
-          disabled={borrowers.length === 0}
-        >
-          Export CSV
-        </button>
       </div>
-      {borrowers.length === 0 ? (
-        <div className="empty-state">No active borrowings.</div>
+
+      <div className="page-header" style={{ marginTop: "1rem" }}>
+        <div>
+          <h2>Pending Borrow Requests</h2>
+          <p className="muted">Confirm book pickup by clicking receive.</p>
+        </div>
+      </div>
+      {pendingRequests.length === 0 ? (
+        <div className="empty-state">No pending borrow requests.</div>
       ) : (
-        <div className="book-grid">
-          {borrowers.map((borrower) => (
-            <div key={borrower.email} className="card">
-              <h3>{borrower.email}</h3>
-              <p className="muted">
-                Borrowed Books: {borrower.borrowedCount}
-              </p>
-              <ul className="list">
-                {borrower.titles.map((title, index) => (
-                  <li key={`${borrower.email}-${index}`}>{title}</li>
-                ))}
-              </ul>
+        <div className="card table-scroll table-scroll--five staff-table-card">
+          <div className="table table--staff-borrow-requests">
+            <div className="table__row table__head">
+              <span>User</span>
+              <span>Student ID</span>
+              <span>Book</span>
+              <span>Requested</span>
+              <span>Action</span>
             </div>
-          ))}
+            {pendingRequests.map((entry) => (
+              <div className="table__row" key={entry.id}>
+                <span>{entry.borrowerEmail}</span>
+                <span>{getStudentIdByEmail(entry.borrowerEmail)}</span>
+                <span>{entry.title}</span>
+                <span>{formatDateTime(entry.requestedAt)}</span>
+                <button className="btn btn--success" onClick={() => handleReceive(entry.id)}>
+                  Receive
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
+
+      <div className="page-header" style={{ marginTop: "2rem" }}>
+        <div>
+          <h2>Current Borrower</h2>
+          <p className="muted">Books currently picked up by borrowers.</p>
+        </div>
+      </div>
+      {currentBorrowers.length === 0 ? (
+        <div className="empty-state">No current borrowers.</div>
+      ) : (
+        <div className="card table-scroll table-scroll--five staff-table-card">
+          <div className="table table--staff-current-borrowers">
+            <div className="table__row table__head">
+              <span>User</span>
+              <span>Student ID</span>
+              <span>Book</span>
+              <span>Time</span>
+            </div>
+            {currentBorrowers.map((entry) => (
+              <div className="table__row" key={`${entry.user}-${entry.bookId}`}>
+                <span>{entry.user}</span>
+                <span>{entry.studentId}</span>
+                <span>{entry.book}</span>
+                <span>{formatDateTime(entry.time)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="page-header" style={{ marginTop: "2rem" }}>
         <div>
           <h2>Borrow History</h2>
@@ -77,19 +150,19 @@ const BorrowerTracking = () => {
       {history.length === 0 ? (
         <div className="empty-state">No history yet.</div>
       ) : (
-        <div className="card staff-table-card">
+        <div className="card table-scroll table-scroll--five staff-table-card">
           <div className="table table--staff-borrow-history">
             <div className="table__row table__head">
               <span>User</span>
+              <span>Student ID</span>
               <span>Book</span>
-              <span>Action</span>
               <span>Time</span>
             </div>
             {history.slice(0, 6).map((entry) => (
               <div className="table__row" key={entry.id}>
                 <span>{entry.borrowerEmail}</span>
+                <span>{getStudentIdByEmail(entry.borrowerEmail)}</span>
                 <span>{entry.title}</span>
-                <span>{formatAction(entry.action)}</span>
                 <span>{formatDateTime(entry.timestamp)}</span>
               </div>
             ))}

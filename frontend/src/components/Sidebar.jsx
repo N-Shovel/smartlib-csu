@@ -2,31 +2,23 @@
 // Parts: nav config, active item tracking, interaction handlers, nav render.
 import { useEffect, useRef, useState } from "react";
 import { Menu } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { ROLES } from "../constants/roles";
 import { useAuth } from "../context/AuthContext";
 
 const Sidebar = () => {
-	const { user } = useAuth();
+	const { user, logoutUser } = useAuth();
+	const navigate = useNavigate();
 	const [isCollapsed, setIsCollapsed] = useState(false);
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 	const [isMobileMoving, setIsMobileMoving] = useState(false);
 	const movementTimeoutRef = useRef(null);
 
-	// Sidebar links are derived from the authenticated user's role.
-	const links =
-		user.role === ROLES.STAFF
-			? [
-					{ to: "/staff/dashboard", label: "Dashboard" },
-					{ to: "/staff/approvals", label: "Approvals" },
-					{ to: "/staff/tracking", label: "Borrowers" },
-					{ to: "/staff/borrowers", label: "Borrower Signups" }
-				]
-			: [
-					{ to: "/borrower/browse", label: "Browse" },
-					{ to: "/borrower/reserve", label: "Reserve Room" },
-					{ to: "/borrower/activity", label: "Activity Log" }
-				];
+	const handleLogout = () => {
+		logoutUser();
+		setIsMobileMenuOpen(false);
+		navigate("/login");
+	};
 
 	useEffect(() => {
 		if (!user) return;
@@ -61,6 +53,23 @@ const Sidebar = () => {
 
 	if (!user) return null;
 
+	// Sidebar links are derived from the authenticated user's role.
+	const links =
+		user.role === ROLES.STAFF
+			? [
+					{ to: "/staff/dashboard", label: "Dashboard" },
+					{ to: "/staff/tracking", label: "Borrowers" },
+					{ to: "/staff/reservation", label: "Reservation" },
+					{ to: "/staff/books", label: "Book Management" },
+					{ to: "/staff/borrowers", label: "Borrowers Signup" }
+				]
+			: [
+					{ to: "/borrower/browse", label: "Browse" },
+					{ to: "/borrower/reserve", label: "Reserve Room" },
+					{ to: "/borrower/activity", label: "Activity Log" },
+					{ to: "/borrower/account", label: "Account" }
+				];
+
 	return (
 		<>
 			<button
@@ -71,7 +80,6 @@ const Sidebar = () => {
 				aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
 			>
 				<Menu size={18} strokeWidth={2.35} />
-				<span>{isMobileMenuOpen ? "Close" : "Menu"}</span>
 			</button>
 
 			<aside
@@ -105,6 +113,11 @@ const Sidebar = () => {
 							<span className="sidebar__link-label">{link.label}</span>
 						</NavLink>
 					))}
+				</div>
+				<div className="sidebar__footer">
+					<button type="button" className="btn btn--ghost sidebar__logout" onClick={handleLogout}>
+						Logout
+					</button>
 				</div>
 			</aside>
 		</>

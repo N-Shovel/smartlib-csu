@@ -1,6 +1,6 @@
 // Purpose: Toast notification dispatcher using custom browser events.
 // Parts: event contract, emit helper, success/error/info shortcuts.
-const TOAST_EVENT_NAME = "app:toast";
+export const TOAST_EVENT_NAME = "app:toast";
 
 const emitToast = (type, message) => {
 	// Ignore empty notifications to avoid rendering blank toasts.

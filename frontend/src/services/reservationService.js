@@ -11,6 +11,7 @@ const RESERVATION_HISTORY_KEY = "library_reservation_history";
 const RESERVATION_START_HOUR = 8;
 const RESERVATION_END_HOUR = 18;
 const LUNCH_BREAK_HOURS = [11, 12];
+const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
 
 const toHourNumber = (hour) => {
   // Normalize values from form inputs and stored data.
@@ -34,6 +35,36 @@ export const formatReservationHour = (hour) => {
     return "-";
   }
   return `${getHourLabel(parsedHour)} - ${getHourLabel(parsedHour + 1)}`;
+};
+
+const toDateOnly = (date) =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+export const isReservationTimePassed = (reservation) => {
+  // We treat each reservation as a 1-hour slot and consider it "passed" once the slot ends.
+  const reservationHour = toHourNumber(reservation?.reservationHour);
+  if (reservationHour === null) return false;
+
+  const now = new Date();
+  const createdAt = reservation?.createdAt ? new Date(reservation.createdAt) : null;
+
+  // Fallback for legacy items without timestamp: rely on same-day hour-only check.
+  if (!createdAt || Number.isNaN(createdAt.getTime())) {
+    return now.getHours() >= reservationHour + 1;
+  }
+
+  const today = toDateOnly(now);
+  const createdDate = toDateOnly(createdAt);
+
+  if (today.getTime() > createdDate.getTime()) {
+    return true;
+  }
+
+  if (today.getTime() < createdDate.getTime()) {
+    return false;
+  }
+
+  return now.getHours() >= reservationHour + 1;
 };
 
 const isValidReservationHour = (hour) =>
@@ -111,6 +142,50 @@ const loadReservationHistory = () => {
 const saveReservationHistory = (nextHistory) =>
   saveData(RESERVATION_HISTORY_KEY, nextHistory);
 
+const autoClosePassedReservations = () => {
+  // Auto-maintenance step: close expired reservations before returning list consumers.
+  const currentReservations = loadReservations();
+  const nowTimestamp = getIsoTimestamp();
+
+  const expiredReservations = currentReservations.filter(
+    (entry) => entry.status !== RESERVATION_STATUS.CLOSED && isReservationTimePassed(entry)
+  );
+
+  if (expiredReservations.length === 0) {
+    return currentReservations;
+  }
+
+  // Keep reservation record and history consistent in one pass.
+  const nextReservations = currentReservations.map((entry) =>
+    entry.status !== RESERVATION_STATUS.CLOSED && isReservationTimePassed(entry)
+      ? {
+          ...entry,
+          status: RESERVATION_STATUS.CLOSED,
+          closedAt: nowTimestamp,
+          cancellationRequested: false
+        }
+      : entry
+  );
+
+  saveReservations(nextReservations);
+
+  const historyIdSeed = Date.now();
+  const autoClosedHistoryEntries = expiredReservations.map((entry, index) => ({
+    // Deterministic per-batch ID generation avoids random collisions.
+    id: historyIdSeed + index,
+    reservationId: entry.id,
+    room: entry.room,
+    reservationHour: entry.reservationHour,
+    requestedBy: entry.requestedBy,
+    action: "RESERVATION_AUTO_CLOSED",
+    status: RESERVATION_STATUS.CLOSED,
+    timestamp: nowTimestamp
+  }));
+
+  saveReservationHistory([...autoClosedHistoryEntries, ...loadReservationHistory()]);
+  return nextReservations;
+};
+
 export const getReservationHistory = () =>
   loadReservationHistory().map((entry) => ({ ...entry }));
 
@@ -161,7 +236,7 @@ export const addReservation = (reservation) => {
 };
 
 export const getReservations = () =>
-  loadReservations().map((r) => ({
+  autoClosePassedReservations().map((r) => ({
     ...r,
     cancellationRequested: Boolean(r.cancellationRequested)
   }));
@@ -250,12 +325,17 @@ export const requestReservationCancellation = (id, requesterEmail) => {
   if (index === -1) return { ok: false, error: "Reservation not found" };
 
   const selected = current[index];
+  const normalizedRequestedBy = String(selected.requestedBy || "").trim().toLowerCase();
+  const normalizedRequesterEmail = String(requesterEmail || "").trim().toLowerCase();
   // Enforce ownership check so users can request cancellation only for their own records.
-  if (selected.requestedBy !== requesterEmail) {
+  if (normalizedRequestedBy !== normalizedRequesterEmail) {
     return { ok: false, error: "You can only request cancellation for your own reservation." };
   }
   if (selected.status === RESERVATION_STATUS.CLOSED) {
     return { ok: false, error: "This reservation is already closed." };
+  }
+  if (isReservationTimePassed(selected)) {
+    return { ok: false, error: "This reservation time has already passed." };
   }
   if (selected.cancellationRequested) {
     return { ok: false, error: "Cancellation request already submitted." };
@@ -284,4 +364,33 @@ export const requestReservationCancellation = (id, requesterEmail) => {
   ]);
 
   return { ok: true };
+};
+
+export const replaceReservationRequesterEmail = (previousEmail, nextEmail) => {
+  const normalizedPreviousEmail = normalizeEmail(previousEmail);
+  const normalizedNextEmail = normalizeEmail(nextEmail);
+
+  if (!normalizedPreviousEmail || !normalizedNextEmail) {
+    return { ok: false, error: "Both previous and next email are required." };
+  }
+
+  if (normalizedPreviousEmail === normalizedNextEmail) {
+    return { ok: true, changed: false };
+  }
+
+  const nextReservations = loadReservations().map((entry) =>
+    normalizeEmail(entry.requestedBy) === normalizedPreviousEmail
+      ? { ...entry, requestedBy: normalizedNextEmail }
+      : entry
+  );
+  saveReservations(nextReservations);
+
+  const nextHistory = loadReservationHistory().map((entry) =>
+    normalizeEmail(entry.requestedBy) === normalizedPreviousEmail
+      ? { ...entry, requestedBy: normalizedNextEmail }
+      : entry
+  );
+  saveReservationHistory(nextHistory);
+
+  return { ok: true, changed: true };
 };

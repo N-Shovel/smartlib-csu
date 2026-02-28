@@ -7,14 +7,16 @@ import { ROLES } from "../constants/roles";
 import Login from "../pages/auth/Login";
 import Signup from "../pages/auth/Signup";
 import ActivityLog from "../pages/borrower/ActivityLog";
+import Account from "../pages/borrower/Account";
 import BookDetails from "../pages/borrower/BookDetails";
 import BrowseBooks from "../pages/borrower/BrowseBooks";
 import RoomReservation from "../pages/borrower/RoomReservation";
 import NotFound from "../pages/NotFound";
-import Approvals from "../pages/staff/Approvals";
+import Reservation from "../pages/staff/Reservation";
 import BorrowerTracking from "../pages/staff/BorrowerTracking";
 import Dashboard from "../pages/staff/Dashboard";
 import StaffAndBorrowerList from "../pages/staff/StaffAndBorrowerList";
+import BookManagement from "../pages/staff/BookManagement";
 
 const AppRoutes = () => {
 	return (
@@ -71,6 +73,17 @@ const AppRoutes = () => {
 					}
 				/>
 
+				<Route
+					path="/borrower/account"
+					element={
+						<ProtectedRoute role={ROLES.BORROWER}>
+							<Layout>
+								<Account />
+							</Layout>
+						</ProtectedRoute>
+					}
+				/>
+
 				{/* Staff-only routes guarded by role check. */}
 				<Route
 					path="/staff/dashboard"
@@ -84,14 +97,19 @@ const AppRoutes = () => {
 				/>
 
 				<Route
-					path="/staff/approvals"
+					path="/staff/reservation"
 					element={
 						<ProtectedRoute role={ROLES.STAFF}>
 							<Layout>
-								<Approvals />
+								<Reservation />
 							</Layout>
 						</ProtectedRoute>
 					}
+				/>
+
+				<Route
+					path="/staff/approvals"
+					element={<Navigate to="/staff/reservation" replace />}
 				/>
 
 				<Route
@@ -111,6 +129,17 @@ const AppRoutes = () => {
 						<ProtectedRoute role={ROLES.STAFF}>
 							<Layout>
 								<StaffAndBorrowerList />
+							</Layout>
+						</ProtectedRoute>
+					}
+				/>
+
+				<Route
+					path="/staff/books"
+					element={
+						<ProtectedRoute role={ROLES.STAFF}>
+							<Layout>
+								<BookManagement />
 							</Layout>
 						</ProtectedRoute>
 					}
