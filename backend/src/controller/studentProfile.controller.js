@@ -1,13 +1,12 @@
-import type { Request, Response } from "express";
-import {supabaseForRequest } from "../lib/supabaseClient.ts";
+import {supabaseForRequest } from "../lib/supabaseClient.js";
 
-export const studentProfile = async(req: Request, res: Response) =>{
+export const studentProfile = async(req, res) =>{
     try {
         const accessToken = req.cookies?.access_token;
         if (!accessToken) return res.status(401).json({ message: "Unauthorized" });
 
-        const userId = (req as any).user?.id;
-        const user = (req as any).user;
+        const userId = req.user?.id;
+        const user = req.user;
 
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
@@ -29,7 +28,7 @@ export const studentProfile = async(req: Request, res: Response) =>{
     }
 }
 
-export const changePassword = async (req: Request, res: Response) => {
+export const changePassword = async (req, res) => {
     try {
         
         const access_token = req.cookies?.access_token;
@@ -43,7 +42,7 @@ export const changePassword = async (req: Request, res: Response) => {
             
         const supabaseUser = supabaseForRequest(access_token);
 
-        const email = (req as any).user?.email;
+        const email = req.user?.email;
 
         if(!email) return res.status(404).json({message: "User email not found"});
 
@@ -70,7 +69,7 @@ export const changePassword = async (req: Request, res: Response) => {
     }
 }
 
-export const changeEmail = async (req: Request, res: Response) => {
+export const changeEmail = async (req, res) => {
   try {
     const access_token = req.cookies?.access_token;
     const refresh_token = req.cookies?.refresh_token;

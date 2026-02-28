@@ -1,11 +1,11 @@
 import express from "express"
-import { ENV } from "./lib/ENV.ts";
+import { ENV } from "./lib/ENV.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 
 
-import studentAuthRoutes from "./routes/studentAuth.routes.ts";
-import studentProfileRoutes from "./routes/studentProfile.route.ts";
+import studentAuthRoutes from "./routes/studentAuth.routes.js";
+import studentProfileRoutes from "./routes/studentProfile.route.js";
 
 const app = express()
 

@@ -1,8 +1,7 @@
-import { supabase } from "../lib/supabaseClient.ts"
-import { setCookies } from "../lib/utils.ts";
-import type {Request, Response} from "express";
+import { supabase } from "../lib/supabaseClient.js"
+import { setCookies } from "../lib/utils.js";
 
-export const signupController = async (req: Request, res: Response) => {
+export const signupController = async (req, res) => {
     const {
         email,
         password,
@@ -117,7 +116,7 @@ export const signupController = async (req: Request, res: Response) => {
     }
 };
 
-export const loginController = async (req: Request, res: Response) => {
+export const loginController = async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -169,7 +168,7 @@ export const loginController = async (req: Request, res: Response) => {
   }
 };
 
-export const logoutController = async (_: any, res: Response) => {
+export const logoutController = async (_, res) => {
     try {
 
         await supabase.auth.signOut();
@@ -183,7 +182,7 @@ export const logoutController = async (_: any, res: Response) => {
     }
 };
 
-export const refreshController = async (req: Request, res: Response) => {
+export const refreshController = async (req, res) => {
     try {
         const refresh_token = req.cookies?.refresh_token;
         if (!refresh_token) {

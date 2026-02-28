@@ -1,8 +1,7 @@
-import { supabase } from "../lib/supabaseClient.ts";
-import type { Request, Response, NextFunction } from "express";
+import { supabase } from "../lib/supabaseClient.js";
 
 
-const protectRoute = async (req: Request, res: Response, next: NextFunction) =>{
+const protectRoute = async (req, res, next) =>{
     try {
 
         const token = req.cookies.access_token;
@@ -13,7 +12,7 @@ const protectRoute = async (req: Request, res: Response, next: NextFunction) =>{
 
         if(error || !data?.user) return res.status(401).json({message: "Invalid token"});
 
-        (req as any).user = data.user;
+        req.user = data.user;
 
         next();
 

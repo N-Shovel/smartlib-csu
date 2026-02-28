@@ -1,6 +1,6 @@
 import express from "express";
-import protectRoute from "../middleware/protectRoute.ts";
-import { changeEmail, changePassword, studentProfile } from "../controller/studentProfile.controller.ts";
+import protectRoute from "../middleware/protectRoute.js";
+import { changeEmail, changePassword, studentProfile } from "../controller/studentProfile.controller.js";
 
 const router = express.Router();
 
