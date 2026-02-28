@@ -1,6 +1,7 @@
 // Purpose: Modal view that shows full details of a selected book.
 // Parts: open/close guard, details content, modal actions.
 const BookDetailsModal = ({ isOpen, book, onClose }) => {
+  // Prevent rendering when modal is closed or no selected book exists.
   if (!isOpen || !book) return null;
 
   return (

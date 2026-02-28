@@ -18,6 +18,7 @@ const BrowseBooks = () => {
   const [permissionError, setPermissionError] = useState("");
   const [selectedBook, setSelectedBook] = useState(null);
 
+  // Match query against title, author, or category in a case-insensitive way.
   const filteredBooks = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return books;
@@ -29,6 +30,7 @@ const BrowseBooks = () => {
     );
   }, [books, searchQuery]);
 
+  // Keep regular books and theses in separate sections for clearer UX.
   const regularBooks = useMemo(
     () =>
       filteredBooks.filter(
@@ -45,6 +47,7 @@ const BrowseBooks = () => {
     [filteredBooks]
   );
 
+  // Reload latest catalog state after borrow/return mutations.
   const refresh = () => setBooks(getBooks());
 
   const submitBorrow = (id, code = "") => {
@@ -63,6 +66,7 @@ const BrowseBooks = () => {
   const handleBorrow = (book) => {
     if (!user) return;
 
+    // Thesis items trigger permission-code modal instead of immediate borrow.
     const isThesis = String(book.category || "").toLowerCase() === "thesis";
     if (isThesis) {
       setPendingThesisBookId(book.id);
@@ -71,6 +75,7 @@ const BrowseBooks = () => {
       return;
     }
 
+    // Non-thesis can be borrowed immediately.
     submitBorrow(book.id);
   };
 
@@ -90,6 +95,7 @@ const BrowseBooks = () => {
 
   const handleReturn = (id) => {
     if (!user) return;
+    // Service validates whether current user is allowed to return this item.
     const result = returnBook(id, user.email);
     if (!result.ok) {
       showError(result.error);

@@ -3,10 +3,13 @@
 const TOAST_EVENT_NAME = "app:toast";
 
 const emitToast = (type, message) => {
+	// Ignore empty notifications to avoid rendering blank toasts.
 	if (!message) return;
 
+	// Safeguard for non-browser environments.
 	if (typeof window === "undefined") return;
 
+	// Broadcast toast payload; ToasterHost listens for this custom event.
 	window.dispatchEvent(
 		new CustomEvent(TOAST_EVENT_NAME, {
 			detail: {

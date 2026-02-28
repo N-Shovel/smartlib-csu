@@ -13,6 +13,7 @@ const RESERVATION_END_HOUR = 18;
 const LUNCH_BREAK_HOURS = [11, 12];
 
 const toHourNumber = (hour) => {
+  // Normalize values from form inputs and stored data.
   const parsedHour = Number(hour);
   return Number.isInteger(parsedHour) ? parsedHour : null;
 };
@@ -41,6 +42,7 @@ const isValidReservationHour = (hour) =>
 export const isLunchBreakHour = (hour) => LUNCH_BREAK_HOURS.includes(hour);
 
 export const getUnavailableReservationHours = (room) => {
+  // Lunch break is always unavailable regardless of room.
   const unavailable = new Set(LUNCH_BREAK_HOURS);
   const selectedRoom = room?.trim();
 
@@ -63,6 +65,7 @@ export const getUnavailableReservationHours = (room) => {
 };
 
 const hasApprovedSlotConflict = (reservationsList, room, reservationHour, skipId = null) =>
+  // Detect approved reservations that overlap the exact same room and hour.
   reservationsList.some(
     (entry) =>
       entry.status === RESERVATION_STATUS.APPROVED &&
@@ -86,6 +89,7 @@ export const getReservationHourOptions = () =>
 const loadReservations = () => {
   const stored = getData(RESERVATIONS_KEY, null);
   if (!stored || stored.length === 0) {
+    // First-run seed for local mock data.
     saveData(RESERVATIONS_KEY, reservations);
     return [...reservations];
   }
@@ -112,6 +116,7 @@ export const getReservationHistory = () =>
 
 export const addReservation = (reservation) => {
   const reservationHour = toHourNumber(reservation.reservationHour);
+  // Validate base input fields before conflict checks.
   if (!reservation.room?.trim()) {
     return { ok: false, error: "Please choose a room" };
   }
@@ -123,10 +128,12 @@ export const addReservation = (reservation) => {
   }
 
   const currentReservations = loadReservations();
+  // Prevent creating pending request if approved slot already exists.
   if (hasApprovedSlotConflict(currentReservations, reservation.room.trim(), reservationHour)) {
     return { ok: false, error: "This room is already approved for that 1-hour slot." };
   }
 
+  // Create pending reservation and write lifecycle history entry.
   const next = {
     id: Date.now(),
     createdAt: getIsoTimestamp(),
@@ -169,6 +176,7 @@ export const approveReservation = (id) => {
   if (reservationHour === null || !isValidReservationHour(reservationHour)) {
     return { ok: false, error: "Reservation does not have a valid 1-hour time slot." };
   }
+  // Re-validate slot to avoid approving conflicting reservations.
   if (hasApprovedSlotConflict(current, selected.room, reservationHour, selected.id)) {
     return {
       ok: false,
@@ -176,6 +184,7 @@ export const approveReservation = (id) => {
     };
   }
 
+  // Transition reservation to approved and clear stale cancellation flag.
   current[index] = {
     ...selected,
     status: RESERVATION_STATUS.APPROVED,
@@ -205,6 +214,7 @@ export const closeReservation = (id) => {
   if (index === -1) return { ok: false, error: "Reservation not found" };
 
   const selected = current[index];
+  // Only approved reservations can transition to closed.
   if (selected.status !== RESERVATION_STATUS.APPROVED) {
     return { ok: false, error: "Only approved reservations can be closed." };
   }
@@ -240,6 +250,7 @@ export const requestReservationCancellation = (id, requesterEmail) => {
   if (index === -1) return { ok: false, error: "Reservation not found" };
 
   const selected = current[index];
+  // Enforce ownership check so users can request cancellation only for their own records.
   if (selected.requestedBy !== requesterEmail) {
     return { ok: false, error: "You can only request cancellation for your own reservation." };
   }
@@ -250,6 +261,7 @@ export const requestReservationCancellation = (id, requesterEmail) => {
     return { ok: false, error: "Cancellation request already submitted." };
   }
 
+  // Mark reservation as cancellation-requested; staff resolves closure in approvals page.
   current[index] = {
     ...selected,
     cancellationRequested: true,

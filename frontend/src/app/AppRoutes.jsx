@@ -20,10 +20,13 @@ const AppRoutes = () => {
 	return (
 		<BrowserRouter>
 			<Routes>
+				{/* Default entry redirects to login. */}
 				<Route path="/" element={<Navigate to="/login" replace />} />
+				{/* Public authentication routes. */}
 				<Route path="/login" element={<Login />} />
 				<Route path="/signup" element={<Signup />} />
 
+				{/* Borrower-only routes guarded by role check. */}
 				<Route
 					path="/borrower/browse"
 					element={
@@ -68,6 +71,7 @@ const AppRoutes = () => {
 					}
 				/>
 
+				{/* Staff-only routes guarded by role check. */}
 				<Route
 					path="/staff/dashboard"
 					element={
@@ -112,6 +116,7 @@ const AppRoutes = () => {
 					}
 				/>
 
+				{/* Catch-all fallback for unknown URLs. */}
 				<Route path="*" element={<NotFound />} />
 			</Routes>
 		</BrowserRouter>

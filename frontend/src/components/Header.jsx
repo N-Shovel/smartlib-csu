@@ -8,6 +8,7 @@ const Header = () => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
+    // Clear auth state then return the user to login screen.
     logoutUser();
     navigate("/login");
   };
@@ -20,6 +21,7 @@ const Header = () => {
         </Link>
       </div>
       <nav className="header__nav">
+        {/* Render account info/actions when authenticated; otherwise show entry actions. */}
         {user ? (
           <div className="header__meta">
             <span className="pill">{user.role}</span>

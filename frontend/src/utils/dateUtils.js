@@ -3,6 +3,7 @@
 export const getIsoTimestamp = () => new Date().toISOString();
 
 export const formatDateTime = (isoString) => {
+	// Guard against missing or invalid date inputs.
 	if (!isoString) return "-";
 	const date = new Date(isoString);
 	if (Number.isNaN(date.getTime())) return "-";

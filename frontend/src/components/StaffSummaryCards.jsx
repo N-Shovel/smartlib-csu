@@ -9,6 +9,7 @@ const defaultCards = [
 const StaffSummaryCards = ({ cards = defaultCards }) => {
 	return (
 		<div className="stats-grid">
+			{/* Allow callers to provide custom metrics; otherwise use fallback defaults. */}
 			{cards.map((card) => (
 				<div className="card" key={card.label}>
 					<p className="micro">{card.label}</p>

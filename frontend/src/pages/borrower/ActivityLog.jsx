@@ -15,6 +15,7 @@ import { RESERVATION_STATUS } from "../../constants/status";
 
 const ActivityLog = () => {
   const { user } = useAuth();
+  // Use normalized current-user email to scope visible activity records.
   const userEmail = user?.email || "";
 
   const getUserReservationUpdates = () =>
@@ -40,15 +41,18 @@ const ActivityLog = () => {
   const [myReservations, setMyReservations] = useState(getUserActiveReservations);
   const [borrowedHistory] = useState(getUserBorrowedHistory);
 
+  // Convert action enum labels like RESERVATION_CREATED into readable text.
   const formatAction = (action) => action?.replace(/_/g, " ") || "-";
 
   const handleCancellationRequest = (id) => {
+    // Ask service to mark this reservation as cancellation-requested.
     const result = requestReservationCancellation(id, userEmail);
     if (!result.ok) {
       showError(result.error || "Unable to request cancellation.");
       return;
     }
     showSuccess("Cancellation request submitted.");
+    // Refresh local view from source data after successful mutation.
     setMyReservations(getUserActiveReservations());
     setReservationUpdates(getUserReservationUpdates());
   };

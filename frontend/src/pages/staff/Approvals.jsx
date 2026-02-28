@@ -19,11 +19,13 @@ const Approvals = () => {
   const [history, setHistory] = useState(getReservationHistory());
   const formatAction = (action) => action.replace(/_/g, " ");
 
+  // Pull fresh reservation and history snapshots after each state-changing action.
   const refresh = () => {
     setReservations(getReservations());
     setHistory(getReservationHistory());
   };
 
+  // Split data for dedicated pending and active sections.
   const pending = reservations.filter(
     (reservation) => reservation.status === RESERVATION_STATUS.PENDING
   );
@@ -32,6 +34,7 @@ const Approvals = () => {
   );
 
   const handleApprove = (id) => {
+    // Approval also performs conflict checks in service layer.
     const result = approveReservation(id);
     if (result.ok) {
       showSuccess("Reservation approved");
@@ -42,6 +45,7 @@ const Approvals = () => {
   };
 
   const handleClose = (id) => {
+    // Closing ends an approved reservation and records history.
     const result = closeReservation(id);
     if (result.ok) {
       showSuccess("Reservation closed");
@@ -53,6 +57,7 @@ const Approvals = () => {
 
   const handleHistoryExport = () => {
     if (history.length === 0) return;
+    // Export latest six updates to keep report lightweight and focused.
     exportToCSV(
       getReservationHistoryExport(history.slice(0, 6)),
       "reservation-history.csv"

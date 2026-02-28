@@ -8,6 +8,7 @@ const ThesisPermissionModal = ({
   onCancel,
   onSubmit
 }) => {
+  // Render nothing when the thesis application flow is inactive.
   if (!isOpen) return null;
 
   return (
@@ -21,6 +22,7 @@ const ThesisPermissionModal = ({
           inputMode="numeric"
           placeholder="Enter permission slip code"
           value={code}
+          // Parent owns validation/state; this component only forwards input changes.
           onChange={(event) => onCodeChange(event.target.value)}
         />
         {error ? <div className="alert">{error}</div> : null}

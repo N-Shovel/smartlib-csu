@@ -26,8 +26,10 @@ const BookDetails = () => {
     );
   }
 
+  // Pull the latest copy after borrow/return mutations.
   const refresh = () => setBook(getBookById(id));
 
+  // Thesis items require the permission-code modal flow.
   const isThesis = String(book.category || "").toLowerCase() === "thesis";
 
   const submitBorrow = (code = "") => {
@@ -45,6 +47,7 @@ const BookDetails = () => {
 
   const handleBorrow = () => {
     if (!user) return;
+    // Thesis borrowing is gated by manual permission code submission.
     if (isThesis) {
       setIsPermissionModalOpen(true);
       setPermissionCode("");
@@ -52,6 +55,7 @@ const BookDetails = () => {
       return;
     }
 
+    // Non-thesis items are borrowed directly.
     submitBorrow();
   };
 
@@ -69,6 +73,7 @@ const BookDetails = () => {
 
   const handleReturn = () => {
     if (!user) return;
+    // Return operation validates ownership in service layer.
     const result = returnBook(book.id, user.email);
     if (!result.ok) {
       showError(result.error);

@@ -15,6 +15,7 @@ const Login = () => {
   const { loginUser } = useAuth();
 
   const handleLogin = () => {
+    // Reset previous validation/auth messages before a new attempt.
     setError("");
     const result = loginUser(email, password);
     if (!result.ok) {
@@ -23,12 +24,14 @@ const Login = () => {
       return;
     }
 
+    // Success message varies by role to make the redirect context explicit.
     showSuccess(
       result.user.role === ROLES.STAFF
         ? "Logged in as staff"
         : "Logged in as borrower"
     );
 
+    // Navigate users to their role-specific landing page.
     navigate(
       result.user.role === ROLES.STAFF ? "/staff/dashboard" : "/borrower/browse"
     );

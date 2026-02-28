@@ -10,6 +10,7 @@ const ToasterHost = () => {
   useEffect(() => {
     const handleToast = (event) => {
       const detail = event.detail || {};
+      // Ignore invalid events that don't carry a displayable message.
       if (!detail.message) return;
 
       const nextToast = {
@@ -18,8 +19,10 @@ const ToasterHost = () => {
         message: detail.message
       };
 
+      // Prepend latest toast and keep only the newest four entries.
       setToasts((current) => [nextToast, ...current].slice(0, 4));
 
+      // Auto-dismiss each toast after a short delay.
       setTimeout(() => {
         setToasts((current) => current.filter((toast) => toast.id !== nextToast.id));
       }, 2800);

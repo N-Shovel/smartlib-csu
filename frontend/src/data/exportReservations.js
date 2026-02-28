@@ -4,6 +4,7 @@ import { formatDateTime } from "../utils/dateUtils";
 import { formatReservationHour } from "../services/reservationService";
 
 export const getReservationHistoryExport = (history) =>
+	// Convert reservation timeline entries into report-friendly fields.
 	history.map((entry) => ({
 		room: entry.room,
 		timeSlot: formatReservationHour(entry.reservationHour),

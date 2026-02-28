@@ -9,9 +9,11 @@ const BookCard = ({
 	onOpenDetails,
 	showBorrower = false
 }) => {
+	// Thesis entries use "Apply" wording and a permission flow instead of plain borrow.
 	const isThesis = String(book.category || "").toLowerCase() === "thesis";
 	const MAX_DESCRIPTION_CHARS = 95;
 	const descriptionText = String(book.description || "").trim();
+	// Keep cards compact by truncating long descriptions.
 	const previewDescription =
 		descriptionText.length > MAX_DESCRIPTION_CHARS
 			? `${descriptionText.slice(0, MAX_DESCRIPTION_CHARS).trimEnd()}...`
@@ -32,9 +34,11 @@ const BookCard = ({
 				<p className="micro">Borrowed by {book.borrowedBy}</p>
 			) : null}
 			<div className="book-card__actions">
+				{/* Details are always available regardless of borrow state. */}
 				<button className="btn btn--ghost" onClick={() => onOpenDetails(book)}>
 					{isThesis ? "Detail" : "Details"}
 				</button>
+				{/* Primary action toggles between borrow/apply and return based on availability. */}
 				{book.available ? (
 					<button
 						className="btn btn--primary"

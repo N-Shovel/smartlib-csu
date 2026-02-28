@@ -18,12 +18,14 @@ const RoomReservation = () => {
   const [reservationHour, setReservationHour] = useState("");
   const [notes, setNotes] = useState("");
   const { user } = useAuth();
+  // Recompute unavailable slots whenever selected room changes.
   const unavailableHours = useMemo(
     () => getUnavailableReservationHours(room),
     [room]
   );
 
   const handleReserve = () => {
+    // Guard clauses keep validation flow straightforward and readable.
     if (!room.trim()) {
       showError("Please choose a room");
       return;
@@ -41,6 +43,7 @@ const RoomReservation = () => {
       room: room.trim(),
       reservationHour: Number(reservationHour),
       notes: notes.trim(),
+      // Attach requester identity for ownership/history tracking.
       requestedBy: user?.email || "unknown"
     });
 
@@ -89,6 +92,7 @@ const RoomReservation = () => {
             >
               <option value="">Select time (8:00 AM - 6:00 PM)</option>
               {reservationHourOptions.map((slot) => {
+                // Slot can be unavailable due to lunch break or approved reservation.
                 const isUnavailable = unavailableHours.has(slot.value);
                 const stateLabel = isUnavailable
                   ? isLunchBreakHour(slot.value)

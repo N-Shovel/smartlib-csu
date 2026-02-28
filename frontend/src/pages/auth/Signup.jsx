@@ -24,9 +24,10 @@ const Signup = () => {
   const { signupUser } = useAuth();
 
   const handleSignup = () => {
+    // Clear stale errors before validating fresh input.
     setError("");
     
-    // Check required fields
+    // Guard: all required borrower fields must be present.
     if (!firstName || !lastName || !coursAndYear || !id || !contactInfo || !email || !currentAddress || !password || !confirmPassword) {
       const errorMsg = "Please fill up all required fields";
       setError(errorMsg);
@@ -34,7 +35,7 @@ const Signup = () => {
       return;
     }
 
-    // Check password match
+    // Guard: prevent account creation when password confirmation does not match.
     if (password !== confirmPassword) {
       const errorMsg = "Passwords do not match";
       setError(errorMsg);
@@ -42,6 +43,7 @@ const Signup = () => {
       return;
     }
 
+    // Package form fields into a borrower profile payload for signup service.
     const profile = {
       firstName,
       lastName,
@@ -51,12 +53,14 @@ const Signup = () => {
       currentAddress
     };
 
+    // Persist new account via auth context/service.
     const result = signupUser(email, password, ROLES.BORROWER, profile);
     if (!result.ok) {
       setError(result.error);
       showError(result.error);
       return;
     }
+    // On success, direct the user to login so they can authenticate.
     showSuccess("Account created!");
     navigate("/login");
   };

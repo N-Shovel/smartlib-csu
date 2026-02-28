@@ -5,6 +5,7 @@ import { formatDateTime } from "../../utils/dateUtils";
 import StaffSummaryCards from "../../components/StaffSummaryCards";
 
 const Dashboard = () => {
+  // Show a short, recent feed to keep dashboard quick to scan.
   const logs = getActivityLogs().slice(0, 4);
   const formatAction = (action) => action.replace(/_/g, " ");
 

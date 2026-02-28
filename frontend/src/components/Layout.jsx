@@ -5,10 +5,12 @@ import Sidebar from "./Sidebar";
 
 function Layout({ children }) {
   return (
+    // Shared shell keeps sidebar/header persistent while page content changes.
     <div className="app-shell">
       <Sidebar />
       <div className="app-shell__main">
         <Header />
+        {/* Routed page content is injected here. */}
         <main className="page">{children}</main>
       </div>
     </div>

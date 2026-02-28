@@ -10,17 +10,20 @@ import { getBorrowHistoryExport } from "../../data/exportBorrowersHistory";
 import { getBorrowerSummaryExport } from "../../data/exportBorrowerSummary";
 
 const BorrowerTracking = () => {
+  // Derived service snapshots used to render active borrowers and audit trail.
   const borrowers = getBorrowerSummary();
   const history = getBorrowHistory();
   const formatAction = (action) => action.replace(/_/g, " ");
 
   const handleExport = () => {
     if (borrowers.length === 0) return;
+    // Export active borrower summary as CSV.
     exportToCSV(getBorrowerSummaryExport(borrowers), "borrower-summary.csv");
   };
 
   const handleHistoryExport = () => {
     if (history.length === 0) return;
+    // Export a concise slice of latest borrow/return events.
     exportToCSV(getBorrowHistoryExport(history.slice(0, 6)), "borrow-history.csv");
   };
 

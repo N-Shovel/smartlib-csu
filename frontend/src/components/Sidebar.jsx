@@ -13,8 +13,7 @@ const Sidebar = () => {
 	const [isMobileMoving, setIsMobileMoving] = useState(false);
 	const movementTimeoutRef = useRef(null);
 
-	if (!user) return null;
-
+	// Sidebar links are derived from the authenticated user's role.
 	const links =
 		user.role === ROLES.STAFF
 			? [
@@ -30,11 +29,15 @@ const Sidebar = () => {
 				];
 
 	useEffect(() => {
+		if (!user) return;
+
 		const markMoving = () => {
+			// Hide idle animation while the user is actively moving/scrolling.
 			setIsMobileMoving(true);
 			if (movementTimeoutRef.current) {
 				clearTimeout(movementTimeoutRef.current);
 			}
+			// Return to idle state shortly after movement stops.
 			movementTimeoutRef.current = setTimeout(() => {
 				setIsMobileMoving(false);
 			}, 800);
@@ -54,13 +57,16 @@ const Sidebar = () => {
 				clearTimeout(movementTimeoutRef.current);
 			}
 		};
-	}, []);
+	}, [user]);
+
+	if (!user) return null;
 
 	return (
 		<>
 			<button
 				type="button"
 				className={`mobile-menu-fab${!isMobileMoving ? " mobile-menu-fab--idle" : ""}`}
+				// Mobile quick-action button toggles sidebar visibility.
 				onClick={() => setIsMobileMenuOpen((prev) => !prev)}
 				aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
 			>
@@ -90,6 +96,7 @@ const Sidebar = () => {
 							key={link.to}
 							to={link.to}
 							title={link.label}
+							// Close mobile drawer once user selects a destination.
 							onClick={() => setIsMobileMenuOpen(false)}
 							className={({ isActive }) =>
 								`sidebar__link${isActive ? " sidebar__link--active" : ""}`

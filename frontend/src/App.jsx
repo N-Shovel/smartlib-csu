@@ -5,6 +5,7 @@ import AppRoutes from "./app/AppRoutes";
 
 function App() {
   return (
+    // Providers expose app-wide state/services before routes render.
     <AppProviders>
       <AppRoutes />
     </AppProviders>

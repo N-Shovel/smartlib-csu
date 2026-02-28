@@ -5,6 +5,7 @@ import { exportToCSV } from "../../services/exportService";
 import { getBorrowerSignupsExport } from "../../data/exportBorrowerSignups";
 
 const truncateText = (value, maxLength) => {
+	// Keep table columns compact while preserving full value in title tooltip.
 	const text = String(value || "-");
 	if (text.length <= maxLength) return text;
 	return `${text.slice(0, maxLength)}...`;
@@ -15,6 +16,7 @@ const StaffAndBorrowerList = () => {
 
 	const handleExport = () => {
 		if (borrowers.length === 0) return;
+		// Export all borrower signup rows in one CSV file.
 		exportToCSV(getBorrowerSignupsExport(borrowers), "borrower-signups.csv");
 	};
 
