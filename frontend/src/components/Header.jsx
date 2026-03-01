@@ -1,12 +1,12 @@
 // Purpose: Top navigation bar with auth-aware user actions.
 // Parts: auth/user lookup, logout handler, nav/action rendering.
 import { Link } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
 import { ROLES } from "../constants/roles";
 import caragaStateUniversityLogo from "../assets/Caraga_State_University.png";
+import { useStore } from "../store/useAuthStore";
 
 const Header = () => {
-  const { user } = useAuth();
+  const { user } = useStore();
 
   // Resolve brand destination from role safely; fallback protects null/unknown sessions.
   const brandTarget =

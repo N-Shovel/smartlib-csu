@@ -11,7 +11,6 @@ import BookDetails from "../pages/borrower/BookDetails";
 import BrowseBooks from "../pages/borrower/BrowseBooks";
 import RoomReservation from "../pages/borrower/RoomReservation";
 import NotFound from "../pages/NotFound";
-import Reservation from "../pages/staff/Reservation";
 import BorrowerTracking from "../pages/staff/BorrowerTracking";
 import Dashboard from "../pages/staff/Dashboard";
 import StaffAndBorrowerList from "../pages/staff/StaffAndBorrowerList";
@@ -19,6 +18,7 @@ import BookManagement from "../pages/staff/BookManagement";
 import { useStore } from "../store/useAuthStore";
 import { useEffect } from "react";
 import PageLoader from "../components/PageLoader";
+import { ROLES } from "../constants/roles";
 
 const AppRoutes = () => {
 
@@ -31,7 +31,7 @@ const AppRoutes = () => {
     if(isCheckingAuth) return <PageLoader/>  
 
 	return (
-		<BrowserRouter>
+<BrowserRouter>
 			<Routes>
 				{/* Default entry redirects to login. */}
 				<Route path="/" element={<Navigate to="/login" replace />} />
@@ -97,17 +97,6 @@ const AppRoutes = () => {
 				/>
 
 				<Route
-					path="/staff/approvals"
-					element={
-						<ProtectedRoute>
-							<Layout>
-								<Approvals />
-							</Layout>
-						</ProtectedRoute>
-					}
-				/>
-
-				<Route
 					path="/staff/tracking"
 					element={
 						<ProtectedRoute>
@@ -129,46 +118,23 @@ const AppRoutes = () => {
 					}
 				/>
 
-					<Route
-						path="/staff/tracking"
-						element={
-							<ProtectedRoute role={ROLES.STAFF}>
-								<Layout>
-									<BorrowerTracking />
-								</Layout>
-							</ProtectedRoute>
-						}
-					/>
+				<Route
+					path="/staff/books"
+					element={
+						<ProtectedRoute>
+							<Layout>
+								<BookManagement />
+							</Layout>
+						</ProtectedRoute>
+					}
+				/>
 
-					<Route
-						path="/staff/borrowers"
-						element={
-							<ProtectedRoute role={ROLES.STAFF}>
-								<Layout>
-									<StaffAndBorrowerList />
-								</Layout>
-							</ProtectedRoute>
-						}
-					/>
-
-					<Route
-						path="/staff/books"
-						element={
-							<ProtectedRoute role={ROLES.STAFF}>
-								<Layout>
-									<BookManagement />
-								</Layout>
-							</ProtectedRoute>
-						}
-					/>
-
-					{/* Catch-all fallback for unknown URLs. */}
-					<Route path="*" element={<NotFound />} />
-				</Routes>
-				<footer className="app-copyright" aria-label="Copyright">
-					© {new Date().getFullYear()} SmartLib CSU. All rights reserved.
-				</footer>
-			</>
+				{/* Catch-all fallback for unknown URLs. */}
+				<Route path="*" element={<NotFound />} />
+			</Routes>
+			<footer className="app-copyright" aria-label="Copyright">
+				© {new Date().getFullYear()} SmartLib CSU. All rights reserved.
+			</footer>
 		</BrowserRouter>
 	);
 };

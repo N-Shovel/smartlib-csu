@@ -23,10 +23,14 @@ const Sidebar = () => {
 	const [isCollapsed, setIsCollapsed] = useState(false);
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 	const [isMobileMoving, setIsMobileMoving] = useState(false);
-	const movementTimeoutRef = useRef(null);
+	const movementTimeoutRef = useRef(null); 
+    
+    const {logout} = useStore();
 
 	const handleLogout = () => {
-		logoutUser();
+        
+        logout();
+
 		setIsMobileMenuOpen(false);
 		navigate("/login");
 	};
