@@ -1,7 +1,6 @@
 // Purpose: Global toast renderer that listens to app notification events.
 // Parts: event subscription effect, toast queue state, toast list render.
-import { useEffect, useState } from "react";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TOAST_EVENT_NAME } from "../utils/notification";
 
 const ToasterHost = () => {

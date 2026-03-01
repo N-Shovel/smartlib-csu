@@ -1,9 +1,11 @@
 // Purpose: Staff dashboard showing summary metrics and recent activity.
 // Parts: metric derivation, formatting helpers, summary cards, activity list render.
+import { useMemo } from "react";
 import { getActivityLogs, getBorrowHistory } from "../../services/bookService";
 import { getReservationHistory } from "../../services/reservationService";
 import { getUserProfileByEmail } from "../../services/authService";
 import { formatDateTime } from "../../utils/dateUtils";
+import { formatActivityAction } from "../../utils/activityUtils";
 
 const Dashboard = () => {
   // LOGIC: Dashboard uses two separate datasets:
@@ -109,6 +111,22 @@ const Dashboard = () => {
     topActivityByUser[email].total += 1;
   });
 
+  const profileByEmail = useMemo(() => {
+    const uniqueEmails = new Set();
+    logs.forEach((entry) => {
+      const email = String(entry.userEmail || "").trim().toLowerCase();
+      if (email) uniqueEmails.add(email);
+    });
+    Object.keys(topActivityByUser).forEach((email) => {
+      if (email) uniqueEmails.add(email);
+    });
+
+    return Array.from(uniqueEmails).reduce((summary, email) => {
+      summary[email] = getUserProfileByEmail(email);
+      return summary;
+    }, {});
+  }, [logs, topActivityByUser]);
+
   const borrowerActivityRows = Object.values(topActivityByUser)
     .filter((entry) => entry.borrowedActions > 0 || entry.reservationActions > 0)
     .sort((a, b) => {
@@ -121,7 +139,7 @@ const Dashboard = () => {
       return b.reservationActions - a.reservationActions;
     })
     .map((entry) => {
-      const profile = getUserProfileByEmail(entry.user);
+      const profile = profileByEmail[entry.user];
       return {
         ...entry,
         profileLabel: [
@@ -132,21 +150,9 @@ const Dashboard = () => {
         ].join(" - ")
       };
     });
-  const formatAction = (action) => {
-    const normalizedAction = String(action || "").trim().toUpperCase();
-
-    if (normalizedAction === "RESERVATION_CREATED") return "ROOM REQUESTED";
-    if (normalizedAction === "RESERVATION_APPROVED") return "ROOM APPROVED";
-    if (normalizedAction === "RESERVATION_CLOSED") return "ROOM CLOSED";
-    if (normalizedAction === "RESERVATION_CANCELLATION_REQUESTED") {
-      return "ROOM CANCELED";
-    }
-
-    return String(action || "-").replace(/_/g, " ");
-  };
   // Resolve Student ID from profile first; fallback to event payload if present.
   const getStudentId = (entry) => {
-    const profile = getUserProfileByEmail(entry.userEmail);
+    const profile = profileByEmail[String(entry.userEmail || "").trim().toLowerCase()];
     return profile?.id || entry.userId || "-";
   };
 
@@ -214,7 +220,7 @@ const Dashboard = () => {
             </div>
             {logs.map((entry) => (
               <div className="table__row" key={entry.id}>
-                <span>{formatAction(entry.action)}</span>
+                <span>{formatActivityAction(entry.action)}</span>
                 <span>{entry.userEmail || "-"}</span>
                 <span>{getStudentId(entry)}</span>
                 <span>{formatDateTime(entry.sourceTimestamp)}</span>

@@ -1,6 +1,6 @@
 // Purpose: Detailed single-book page with borrower actions.
 // Parts: selected book state, borrow/return handlers, thesis flow, detail render.
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   getBookById,
@@ -24,6 +24,26 @@ const BookDetails = () => {
     () => getBorrowRequestsByBorrower(user?.email)
   );
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const queuedActionRef = useRef(null);
+
+  const clearQueuedAction = () => {
+    if (queuedActionRef.current) {
+      clearTimeout(queuedActionRef.current);
+      queuedActionRef.current = null;
+    }
+  };
+
+  const queueAction = (callback, delay = 500) => {
+    clearQueuedAction();
+    queuedActionRef.current = setTimeout(() => {
+      queuedActionRef.current = null;
+      callback();
+    }, delay);
+  };
+
+  useEffect(() => () => {
+    clearQueuedAction();
+  }, []);
 
   if (!book) {
     return (
@@ -51,12 +71,14 @@ const BookDetails = () => {
   const pendingReturnRequest = borrowRequests.find(
     (request) => request.bookId === book.id && request.status === "pending_return"
   );
+  const normalizedBorrowedBy = String(book.borrowedBy || "").trim().toLowerCase();
+  const normalizedUserEmail = String(user?.email || "").trim().toLowerCase();
 
   const submitBorrow = (code = "", handlers = {}) => {
     const { onError, onSuccess } = handlers;
     if (!user) return;
     showInfo("Processing borrow request, please wait...");
-    setTimeout(() => {
+    queueAction(() => {
       const result = borrowBook(book.id, user.email, code);
       if (!result.ok) {
         showError(result.error);
@@ -105,7 +127,7 @@ const BookDetails = () => {
     if (!user) return;
     // Return operation now creates a staff-confirmed pending request.
     showInfo("Submitting return request, please wait...");
-    setTimeout(() => {
+    queueAction(() => {
       const result = requestBookReturn(book.id, user.email);
       if (!result.ok) {
         showError(result.error);
@@ -122,7 +144,7 @@ const BookDetails = () => {
     showInfo("Cancelling borrow request, please wait...");
     // LOGIC: Mirror borrow/return delay pattern so all borrower mutations
     // have uniform processing feedback and transition timing.
-    setTimeout(() => {
+    queueAction(() => {
       const result = cancelBorrowRequest(pendingRequest.id, user.email);
       if (!result.ok) {
         showError(result.error || "Unable to cancel borrow request.");
@@ -162,7 +184,7 @@ const BookDetails = () => {
             <button
               className="btn btn--return"
               onClick={handleReturn}
-              disabled={book.borrowedBy !== user?.email || Boolean(pendingReturnRequest)}
+              disabled={normalizedBorrowedBy !== normalizedUserEmail || Boolean(pendingReturnRequest)}
             >
               {pendingReturnRequest ? "Pending Return" : "Return"}
             </button>

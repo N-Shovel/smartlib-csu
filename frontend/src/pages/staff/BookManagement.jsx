@@ -14,7 +14,7 @@ const INITIAL_FORM = {
 
 const BookManagement = () => {
   // Local UI state is seeded from service and refreshed after each mutation.
-  const [books, setBooks] = useState(getBooks());
+  const [books, setBooks] = useState(() => getBooks());
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -219,9 +219,9 @@ const BookManagement = () => {
       />
 
       {bookToDelete ? (
-        <div className="modal-overlay" role="dialog" aria-modal="true">
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="delete-book-title">
           <div className="card modal-card">
-            <h3>Delete Book</h3>
+            <h3 id="delete-book-title">Delete Book</h3>
             <p className="muted">
               Are you sure you want to delete <strong>{bookToDelete.title}</strong>?
             </p>
@@ -238,9 +238,9 @@ const BookManagement = () => {
       ) : null}
 
       {isAddModalOpen ? (
-        <div className="modal-overlay" role="dialog" aria-modal="true">
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="add-book-title">
           <div className="card modal-card modal-card--book-management">
-            <h3>Add Book</h3>
+            <h3 id="add-book-title">Add Book</h3>
             <label className="label">Title</label>
             <input
               className="input"

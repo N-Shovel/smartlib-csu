@@ -26,15 +26,12 @@ const Login = () => {
       return;
     }
 
-    // Success message is intentionally delayed so login feedback appears after 2 seconds.
-    setTimeout(() => {
-      showSuccess(
-        result.user.role === ROLES.STAFF
-          ? "Logged in as staff"
-          : "Logged in as borrower",
-        2000
-      );
-    }, 2000);
+    showSuccess(
+      result.user.role === ROLES.STAFF
+        ? "Logged in as staff"
+        : "Logged in as borrower",
+      2000
+    );
 
     setIsRedirecting(true);
     // LOGIC: Keep user on current screen briefly so success feedback is visible,
@@ -43,7 +40,7 @@ const Login = () => {
       navigate(
         result.user.role === ROLES.STAFF ? "/staff/dashboard" : "/borrower/browse"
       );
-    }, 1700);
+    }, 2200);
   };
 
   return (

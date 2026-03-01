@@ -15,9 +15,9 @@ import { showError, showSuccess } from "../../utils/notification";
 import { getUserProfileByEmail } from "../../services/authService";
 
 const BorrowerTracking = () => {
-  const [books, setBooks] = useState(getBooks());
-  const [history, setHistory] = useState(getBorrowHistory());
-  const [borrowRequests, setBorrowRequests] = useState(getBorrowRequests());
+  const [books, setBooks] = useState(() => getBooks());
+  const [history, setHistory] = useState(() => getBorrowHistory());
+  const [borrowRequests, setBorrowRequests] = useState(() => getBorrowRequests());
   const getStudentIdByEmail = (email) =>
     getUserProfileByEmail(email)?.id || "-";
   const formatHistoryAction = (action) => String(action || "-").replace(/_/g, " ");
@@ -37,7 +37,8 @@ const BorrowerTracking = () => {
       const borrowEvent = history.find(
         (entry) =>
           entry.bookId === book.id &&
-          entry.borrowerEmail === book.borrowedBy &&
+          String(entry.borrowerEmail || "").toLowerCase().trim() ===
+            String(book.borrowedBy || "").toLowerCase().trim() &&
           entry.action === "BORROW_BOOK"
       );
 

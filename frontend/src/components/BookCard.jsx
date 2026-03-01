@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 // Purpose: Displays a single book with availability and quick actions.
 // Parts: metadata display, status tags, borrow/return/details actions.
 const BookCard = ({
@@ -12,12 +14,33 @@ const BookCard = ({
 	isPending = false,
 	pendingMessage,
 	returnMessage,
+	isProcessing = false,
 	showBorrower = false
 }) => {
 	// Thesis entries use "Apply" wording and a permission flow instead of plain borrow.
 	const isThesis = String(book.category || "").toLowerCase() === "thesis";
-	const isMobileViewport =
-		typeof window !== "undefined" && window.matchMedia("(max-width: 900px)").matches;
+	const [isMobileViewport, setIsMobileViewport] = useState(false);
+
+	useEffect(() => {
+		if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+			return undefined;
+		}
+
+		const mediaQuery = window.matchMedia("(max-width: 900px)");
+		const updateViewport = () => {
+			setIsMobileViewport(mediaQuery.matches);
+		};
+
+		updateViewport();
+		if (typeof mediaQuery.addEventListener === "function") {
+			mediaQuery.addEventListener("change", updateViewport);
+			return () => mediaQuery.removeEventListener("change", updateViewport);
+		}
+
+		mediaQuery.addListener(updateViewport);
+		return () => mediaQuery.removeListener(updateViewport);
+	}, []);
+
 	const MAX_TITLE_CHARS = isMobileViewport ? 46 : 80;
 	const MAX_DESCRIPTION_CHARS = isMobileViewport ? 66 : 95;
 	const titleText = String(book.title || "").trim();
@@ -64,7 +87,7 @@ const BookCard = ({
 					<button
 						className={`btn ${isPending ? "btn--view" : "btn--primary"}`}
 						onClick={() => onBorrow(book)}
-						disabled={!canBorrow && !isPending}
+						disabled={isProcessing || (!canBorrow && !isPending)}
 					>
 						{borrowLabel || (isThesis ? "Apply" : "Borrow")}
 					</button>
@@ -72,7 +95,7 @@ const BookCard = ({
 					<button
 						className="btn btn--return"
 						onClick={() => onReturn(book.id)}
-						disabled={!canReturn}
+						disabled={isProcessing || !canReturn}
 					>
 						{returnLabel}
 					</button>

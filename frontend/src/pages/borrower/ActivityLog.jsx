@@ -1,8 +1,9 @@
 // Purpose: Borrower activity timeline for reservations and borrowing actions.
 // Parts: source data selection, derived filters, action handlers, table/list render.
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getBorrowHistory, getBorrowRequestsByBorrower } from "../../services/bookService";
 import {
+  autoClosePassedReservations,
   formatReservationHour,
   getReservationHistory,
   getReservations,
@@ -13,6 +14,7 @@ import { useAuth } from "../../context/AuthContext";
 import { formatDateTime } from "../../utils/dateUtils";
 import { showError, showInfo, showSuccess } from "../../utils/notification";
 import { RESERVATION_STATUS } from "../../constants/status";
+import { formatActivityAction } from "../../utils/activityUtils";
 
 const ActivityLog = () => {
   const { user } = useAuth();
@@ -24,13 +26,15 @@ const ActivityLog = () => {
       (entry) => entry.requestedBy?.toLowerCase() === userEmail.toLowerCase()
     );
 
-  const getUserActiveReservations = () =>
-    getReservations().filter(
+  const getUserActiveReservations = () => {
+    autoClosePassedReservations();
+    return getReservations().filter(
       (entry) =>
         entry.requestedBy?.toLowerCase() === userEmail.toLowerCase() &&
         entry.status !== RESERVATION_STATUS.CLOSED &&
         !isReservationTimePassed(entry)
     );
+  };
 
   const getUserBorrowedHistory = () =>
     getBorrowHistory().filter(
@@ -45,20 +49,28 @@ const ActivityLog = () => {
   );
   const [myReservations, setMyReservations] = useState(getUserActiveReservations);
   const [borrowUpdates, setBorrowUpdates] = useState(getUserBorrowUpdates);
-  const [borrowedHistory] = useState(getUserBorrowedHistory);
+  const [borrowedHistory, setBorrowedHistory] = useState(getUserBorrowedHistory);
+  const cancellationTimeoutRef = useRef(null);
 
-  // Convert action enum labels like RESERVATION_CREATED into readable text.
-  const formatAction = (action) => action?.replace(/_/g, " ") || "-";
+  useEffect(() => () => {
+    if (cancellationTimeoutRef.current) {
+      clearTimeout(cancellationTimeoutRef.current);
+    }
+  }, []);
 
   const handleCancellationRequest = (id) => {
     // Ask service to mark this reservation as cancellation-requested.
     showInfo("Submitting cancellation request, please wait...");
+    if (cancellationTimeoutRef.current) {
+      clearTimeout(cancellationTimeoutRef.current);
+    }
     // LOGIC: Match cancellation UX timing with other borrower mutations
     // (borrow/return/cancel) so feedback feels consistent across actions.
-    setTimeout(() => {
+    cancellationTimeoutRef.current = setTimeout(() => {
       const result = requestReservationCancellation(id, userEmail);
       if (!result.ok) {
         showError(result.error || "Unable to request cancellation.");
+        cancellationTimeoutRef.current = null;
         return;
       }
       showSuccess("Cancellation request submitted.");
@@ -66,6 +78,8 @@ const ActivityLog = () => {
       setMyReservations(getUserActiveReservations());
       setReservationUpdates(getUserReservationUpdates());
       setBorrowUpdates(getUserBorrowUpdates());
+      setBorrowedHistory(getUserBorrowedHistory());
+      cancellationTimeoutRef.current = null;
     }, 500);
   };
 
@@ -126,7 +140,7 @@ const ActivityLog = () => {
             {borrowedHistory.map((entry) => (
               <div className="table__row" key={entry.id}>
                 <span>{entry.title || "-"}</span>
-                <span>{formatAction(entry.action)}</span>
+                <span>{formatActivityAction(entry.action)}</span>
                 <span>{formatDateTime(entry.timestamp)}</span>
               </div>
             ))}
@@ -165,7 +179,7 @@ const ActivityLog = () => {
                   onClick={() => handleCancellationRequest(entry.id)}
                   disabled={entry.cancellationRequested}
                 >
-                  {entry.cancellationRequested ? "Canceled" : "Cancel"}
+                  {entry.cancellationRequested ? "Cancellation Requested" : "Cancel"}
                 </button>
               </div>
             ))}
@@ -195,7 +209,7 @@ const ActivityLog = () => {
               <div className="table__row" key={entry.id}>
                 <span>{entry.room}</span>
                 <span>{formatReservationHour(entry.reservationHour)}</span>
-                <span>{formatAction(entry.action)}</span>
+                <span>{formatActivityAction(entry.action)}</span>
                 <span>{entry.status || "-"}</span>
                 <span>{formatDateTime(entry.timestamp)}</span>
               </div>

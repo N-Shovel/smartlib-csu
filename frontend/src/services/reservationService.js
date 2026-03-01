@@ -161,7 +161,10 @@ const loadReservationHistory = () => {
 const saveReservationHistory = (nextHistory) =>
   saveData(RESERVATION_HISTORY_KEY, nextHistory);
 
-const autoClosePassedReservations = () => {
+const createHistoryEntryId = () =>
+  globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+export const autoClosePassedReservations = () => {
   // Auto-maintenance step: close expired reservations before returning list consumers.
   const currentReservations = loadReservations();
   const nowTimestamp = getIsoTimestamp();
@@ -188,10 +191,8 @@ const autoClosePassedReservations = () => {
 
   saveReservations(nextReservations);
 
-  const historyIdSeed = Date.now();
-  const autoClosedHistoryEntries = expiredReservations.map((entry, index) => ({
-    // Deterministic per-batch ID generation avoids random collisions.
-    id: historyIdSeed + index,
+  const autoClosedHistoryEntries = expiredReservations.map((entry) => ({
+    id: createHistoryEntryId(),
     reservationId: entry.id,
     room: entry.room,
     reservationHour: entry.reservationHour,
@@ -212,6 +213,8 @@ export const addReservation = (reservation) => {
   const reservationHour = toHourNumber(reservation.reservationHour);
   const normalizedRequesterEmail = normalizeEmail(reservation.requestedBy);
   const now = new Date();
+  const requestedReservationDateTime = new Date(now);
+  requestedReservationDateTime.setHours(reservationHour ?? 0, 0, 0, 0);
   // Validate base input fields before conflict checks.
   if (!reservation.room?.trim()) {
     return { ok: false, error: "Please choose a room" };
@@ -225,7 +228,7 @@ export const addReservation = (reservation) => {
   if (isLunchBreakHour(reservationHour)) {
     return { ok: false, error: "11:00 AM - 1:00 PM is Lunch Break and unavailable." };
   }
-  if (reservationHour <= now.getHours()) {
+  if (requestedReservationDateTime.getTime() <= now.getTime()) {
     return { ok: false, error: "Selected time slot has already passed." };
   }
 
@@ -274,7 +277,8 @@ export const addReservation = (reservation) => {
 };
 
 export const getReservations = () =>
-  autoClosePassedReservations().map((r) => ({
+  // Pure read: callers trigger auto-close explicitly when maintenance is desired.
+  loadReservations().map((r) => ({
     ...r,
     cancellationRequested: Boolean(r.cancellationRequested)
   }));

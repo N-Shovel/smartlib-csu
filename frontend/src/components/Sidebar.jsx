@@ -65,21 +65,25 @@ const Sidebar = () => {
 	if (!user) return null;
 
 	// Sidebar links are derived from the authenticated user's role.
+	const staffLinks = [
+		{ to: "/staff/dashboard", label: "Dashboard", icon: LayoutDashboard },
+		{ to: "/staff/tracking", label: "Borrowers", icon: Users },
+		{ to: "/staff/reservation", label: "Reservation", icon: CalendarClock },
+		{ to: "/staff/books", label: "Book Management", icon: BookOpen },
+		{ to: "/staff/borrowers", label: "Borrowers Signup", icon: UserRoundPlus }
+	];
+	const borrowerLinks = [
+		{ to: "/borrower/browse", label: "Browse", icon: Search },
+		{ to: "/borrower/reserve", label: "Reserve Room", icon: CalendarPlus },
+		{ to: "/borrower/activity", label: "Activity Log", icon: History },
+		{ to: "/borrower/account", label: "Account", icon: UserRound }
+	];
 	const links =
 		user.role === ROLES.STAFF
-			? [
-					{ to: "/staff/dashboard", label: "Dashboard", icon: LayoutDashboard },
-					{ to: "/staff/tracking", label: "Borrowers", icon: Users },
-					{ to: "/staff/reservation", label: "Reservation", icon: CalendarClock },
-					{ to: "/staff/books", label: "Book Management", icon: BookOpen },
-					{ to: "/staff/borrowers", label: "Borrowers Signup", icon: UserRoundPlus }
-				]
-			: [
-					{ to: "/borrower/browse", label: "Browse", icon: Search },
-					{ to: "/borrower/reserve", label: "Reserve Room", icon: CalendarPlus },
-					{ to: "/borrower/activity", label: "Activity Log", icon: History },
-					{ to: "/borrower/account", label: "Account", icon: UserRound }
-				];
+			? staffLinks
+			: user.role === ROLES.BORROWER
+				? borrowerLinks
+				: [];
 
 	return (
 		<>

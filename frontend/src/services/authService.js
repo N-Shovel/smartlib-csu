@@ -54,24 +54,14 @@ const loadUsers = () => {
     const seed = seededProfileByEmail[user.email];
     if (!seed) return user;
 
-    return {
-      ...seed,
-      ...user,
-      firstName: hasValue(user.firstName) ? user.firstName : seed.firstName,
-      lastName: hasValue(user.lastName) ? user.lastName : seed.lastName,
-      nameSuffix: hasValue(user.nameSuffix) ? user.nameSuffix : seed.nameSuffix,
-      collegeCourse: hasValue(user.collegeCourse)
-        ? user.collegeCourse
-        : seed.collegeCourse,
-      yearLevel: hasValue(user.yearLevel) ? user.yearLevel : seed.yearLevel,
-      id: hasValue(user.id) ? user.id : seed.id,
-      contactInfo: hasValue(user.contactInfo)
-        ? user.contactInfo
-        : seed.contactInfo,
-      currentAddress: hasValue(user.currentAddress)
-        ? user.currentAddress
-        : seed.currentAddress
-    };
+    const filled = { ...seed, ...user };
+    Object.keys(seed).forEach((key) => {
+      if (!hasValue(filled[key])) {
+        filled[key] = seed[key];
+      }
+    });
+
+    return filled;
   });
 
   const changed = JSON.stringify(mergedUsers) !== JSON.stringify(stored);

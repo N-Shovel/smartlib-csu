@@ -1,7 +1,8 @@
 // Purpose: Staff reservation approvals and reservation-history management page.
 // Parts: reservation datasets, formatting helpers, approve/close handlers, export/table render.
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  autoClosePassedReservations,
   getReservations,
   approveReservation,
   getReservationHistory,
@@ -16,12 +17,33 @@ import { getReservationHistoryExport } from "../../data/exportReservations";
 import { getUserProfileByEmail } from "../../services/authService";
 
 const Reservation = () => {
-  const [reservations, setReservations] = useState(getReservations());
+  const [reservations, setReservations] = useState(() => {
+    autoClosePassedReservations();
+    return getReservations();
+  });
   const [history, setHistory] = useState(getReservationHistory());
   const [selectedReason, setSelectedReason] = useState(null);
-  // Student ID is resolved from auth profiles to keep table IDs consistent.
+  const studentIdByEmail = useMemo(() => {
+    const lookupEmails = new Set();
+
+    reservations.forEach((entry) => {
+      const email = String(entry.requestedBy || "").trim().toLowerCase();
+      if (email) lookupEmails.add(email);
+    });
+    history.forEach((entry) => {
+      const email = String(entry.requestedBy || "").trim().toLowerCase();
+      if (email) lookupEmails.add(email);
+    });
+
+    return Array.from(lookupEmails).reduce((summary, email) => {
+      summary[email] = getUserProfileByEmail(email)?.id || "-";
+      return summary;
+    }, {});
+  }, [reservations, history]);
+
+  // Student ID is resolved from a memoized profile map to avoid repeated lookups.
   const getStudentIdByEmail = (email) =>
-    getUserProfileByEmail(email)?.id || "-";
+    studentIdByEmail[String(email || "").trim().toLowerCase()] || "-";
   // Collapse legacy/raw history action strings into table-safe labels.
   const formatHistoryAction = (action) => {
     const normalizedAction = String(action || "").trim().toUpperCase();
@@ -47,6 +69,7 @@ const Reservation = () => {
 
   const refresh = () => {
     // Keep reservations and history in sync after approve/close actions.
+    autoClosePassedReservations();
     setReservations(getReservations());
     setHistory(getReservationHistory());
   };
@@ -85,11 +108,11 @@ const Reservation = () => {
   };
 
   const handleHistoryExport = () => {
-    // Export stays intentionally scoped to latest six rows shown in UI.
+    // Export intentionally includes only the latest six rows shown in the UI.
     if (history.length === 0) return;
     exportToCSV(
       getReservationHistoryExport(history.slice(0, 6)),
-      "reservation-history.csv"
+      "reservation-history-latest.csv"
     );
   };
 
@@ -226,7 +249,7 @@ const Reservation = () => {
                   </td>
                   <td data-label="Action">
                     <button
-                      className="btn btn--danger"
+                      className="btn btn--secondary"
                       onClick={() => handleClose(reservation.id)}
                     >
                       Close
@@ -308,7 +331,7 @@ const Reservation = () => {
               <strong>Reason:</strong> {selectedReason.reason}
             </p>
             <div className="modal-actions">
-              <button className="btn btn--danger" onClick={closeReasonModal}>
+              <button className="btn btn--secondary" onClick={closeReasonModal}>
                 Close
               </button>
             </div>

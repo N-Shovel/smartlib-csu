@@ -29,6 +29,8 @@ const BrowseBooks = () => {
     () => getBorrowRequestsByBorrower(user?.email)
   );
   const [requestToCancel, setRequestToCancel] = useState(null);
+  const [processingById, setProcessingById] = useState({});
+  const [borrowHistoryVersion, setBorrowHistoryVersion] = useState(0);
 
   // Match query against title, author, or category in a case-insensitive way.
   const filteredBooks = useMemo(() => {
@@ -63,6 +65,19 @@ const BrowseBooks = () => {
   const refresh = () => {
     setBooks(getBooks());
     setBorrowRequests(getBorrowRequestsByBorrower(user?.email));
+    setBorrowHistoryVersion((current) => current + 1);
+  };
+
+  const isProcessing = (id) => Boolean(processingById[id]);
+
+  const markProcessing = (id, next) => {
+    setProcessingById((current) => {
+      if (next) {
+        return { ...current, [id]: true };
+      }
+      const { [id]: _removed, ...rest } = current;
+      return rest;
+    });
   };
 
   const pendingRequestByBookId = useMemo(() => {
@@ -85,7 +100,7 @@ const BrowseBooks = () => {
     return pendingMap;
   }, [borrowRequests]);
 
-  const recommendedBooksLine = (() => {
+  const recommendedBooksLine = useMemo(() => {
     const history = getBorrowHistory();
     // Recommendation seed is borrow frequency so repeated demand surfaces first.
     const borrowCountByTitle = history.reduce((summary, entry) => {
@@ -114,22 +129,26 @@ const BrowseBooks = () => {
       .slice(0, 3)
       .map((book) => book.title)
       .join(", ");
-  })();
+  }, [books, borrowHistoryVersion]);
 
   const submitBorrow = (id, code = "", handlers = {}) => {
     const { onError, onSuccess } = handlers;
     if (!user) return;
+    if (isProcessing(id)) return;
+    markProcessing(id, true);
     showInfo("Processing borrow request, please wait...");
     setTimeout(() => {
       const result = borrowBook(id, user.email, code);
       if (!result.ok) {
         showError(result.error);
+        markProcessing(id, false);
         if (onError) onError(result);
         return;
       }
 
       showSuccess("Pending. Please pick it up at the library.");
       refresh();
+      markProcessing(id, false);
       if (onSuccess) onSuccess(result);
     }, 500);
   };
@@ -173,22 +192,28 @@ const BrowseBooks = () => {
 
   const handleReturn = (id) => {
     if (!user) return;
+    if (isProcessing(id)) return;
+    markProcessing(id, true);
     // Return flow now starts with a borrower request that staff confirms.
     showInfo("Submitting return request, please wait...");
     setTimeout(() => {
       const result = requestBookReturn(id, user.email);
       if (!result.ok) {
         showError(result.error);
+        markProcessing(id, false);
         return;
       }
 
       showSuccess("Return request submitted. Please wait for staff confirmation.");
       refresh();
+      markProcessing(id, false);
     }, 500);
   };
 
   const handleCancelPendingRequest = () => {
     if (!requestToCancel || !user) return;
+    if (isProcessing(requestToCancel.bookId)) return;
+    markProcessing(requestToCancel.bookId, true);
     showInfo("Cancelling borrow request, please wait...");
     // LOGIC: Delay keeps cancel action behavior aligned with borrow/return timing
     // and gives users a visible processing state before state refresh.
@@ -196,12 +221,14 @@ const BrowseBooks = () => {
       const result = cancelBorrowRequest(requestToCancel.id, user.email);
       if (!result.ok) {
         showError(result.error || "Unable to cancel borrow request.");
+        markProcessing(requestToCancel.bookId, false);
         return;
       }
 
       showSuccess("Borrow request cancelled.");
       setRequestToCancel(null);
       refresh();
+      markProcessing(requestToCancel.bookId, false);
     }, 500);
   };
 
@@ -272,6 +299,7 @@ const BrowseBooks = () => {
             <BookCard
               key={book.id}
               book={book}
+              isProcessing={isProcessing(book.id)}
               canBorrow={book.available}
               isPending={pendingRequestByBookId.has(book.id)}
               borrowLabel={pendingRequestByBookId.has(book.id) ? "Pending" : undefined}
@@ -311,6 +339,7 @@ const BrowseBooks = () => {
             <BookCard
               key={book.id}
               book={book}
+              isProcessing={isProcessing(book.id)}
               canBorrow={book.available}
               isPending={pendingRequestByBookId.has(book.id)}
               borrowLabel={pendingRequestByBookId.has(book.id) ? "Pending" : undefined}
@@ -371,7 +400,11 @@ const BrowseBooks = () => {
               <button className="btn btn--ghost" onClick={() => setRequestToCancel(null)}>
                 Keep Pending
               </button>
-              <button className="btn btn--danger" onClick={handleCancelPendingRequest}>
+              <button
+                className="btn btn--danger"
+                onClick={handleCancelPendingRequest}
+                disabled={isProcessing(requestToCancel.bookId)}
+              >
                 Cancel Request
               </button>
             </div>

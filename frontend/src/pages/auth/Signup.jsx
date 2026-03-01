@@ -39,7 +39,7 @@ const Signup = () => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [nameSuffix, setNameSuffix] = useState("");
-  const [coursAndYear, setCoursAndYear] = useState("");
+  const [courseAndYear, setCourseAndYear] = useState("");
   const [contactInfo, setContactInfo] = useState("");
   const [currentAddress, setCurrentAddress] = useState("");
   const [email, setEmail] = useState("");
@@ -51,6 +51,8 @@ const Signup = () => {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const navigate = useNavigate();
   const { signupUser } = useAuth();
+
+  const isAnyEmpty = (values) => values.some((value) => !String(value || "").trim());
 
   const setSignupError = (message) => {
     // Keep toast and inline alert messages in sync from one helper.
@@ -88,7 +90,7 @@ const Signup = () => {
     const normalizedFirstName = String(firstName || "").trim();
     const normalizedLastName = String(lastName || "").trim();
     const normalizedSuffix = String(nameSuffix || "").trim();
-    const normalizedProgramAndYear = String(coursAndYear || "").trim();
+    const normalizedProgramAndYear = String(courseAndYear || "").trim();
     const normalizedStudentId = String(id || "").trim();
     const normalizedContact = String(contactInfo || "").trim();
     const normalizedEmail = String(email || "").trim();
@@ -96,7 +98,19 @@ const Signup = () => {
 
     // Validation runs before service call so users get immediate, field-specific feedback.
     // Guard: all required borrower fields must be present.
-    if (!normalizedFirstName || !normalizedLastName || !normalizedProgramAndYear || !normalizedStudentId || !normalizedContact || !normalizedEmail || !normalizedAddress || !password || !confirmPassword) {
+    if (
+      isAnyEmpty([
+        normalizedFirstName,
+        normalizedLastName,
+        normalizedProgramAndYear,
+        normalizedStudentId,
+        normalizedContact,
+        normalizedEmail,
+        normalizedAddress,
+        password,
+        confirmPassword
+      ])
+    ) {
       setSignupError("Please fill up all required fields");
       return;
     }
@@ -215,8 +229,8 @@ const Signup = () => {
           <input
             className="input"
             placeholder="BSCS-2nd Year"
-            value={coursAndYear}
-            onChange={(e) => setCoursAndYear(e.target.value)}
+            value={courseAndYear}
+            onChange={(e) => setCourseAndYear(e.target.value)}
             minLength={10}
             maxLength={12}
             required
@@ -245,7 +259,7 @@ const Signup = () => {
             className="input"
             type="tel"
             inputMode="numeric"
-            placeholder="09XXXXXXXXX"
+            placeholder="639XXXXXXXXX"
             value={contactInfo}
             onChange={handleContactChange}
             minLength={12}

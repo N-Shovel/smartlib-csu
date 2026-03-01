@@ -4,6 +4,7 @@ import { useState } from "react";
 import { getBorrowerSignups } from "../../services/authService";
 import { exportToCSV } from "../../services/exportService";
 import { getBorrowerSignupsExport } from "../../data/exportBorrowerSignups";
+import { formatBorrowerFullName } from "../../utils/name";
 
 const truncateText = (value, maxLength) => {
 	// Keep table columns compact while preserving full value in title tooltip.
@@ -15,18 +16,6 @@ const truncateText = (value, maxLength) => {
 const StaffAndBorrowerList = () => {
 	const borrowers = getBorrowerSignups();
 	const [selectedBorrower, setSelectedBorrower] = useState(null);
-
-	const formatFullName = (borrower) => {
-		const lastName = String(borrower.lastName || "").trim();
-		const firstName = String(borrower.firstName || "").trim();
-		const suffix = String(borrower.nameSuffix || "").trim();
-
-		// Show suffix only when present; keep base name unchanged otherwise.
-		const baseName = [lastName, firstName].filter(Boolean).join(", ");
-		if (!baseName) return "-";
-
-		return suffix ? `${baseName} ${suffix}` : baseName;
-	};
 
 	const handleExport = () => {
 		if (borrowers.length === 0) return;
@@ -84,9 +73,9 @@ const StaffAndBorrowerList = () => {
 						<tbody>
 							{borrowers.map((borrower) => (
 								<tr key={borrower.email}>
-									<td data-label="Name" title={formatFullName(borrower)}>
+									<td data-label="Name" title={formatBorrowerFullName(borrower)}>
 										{truncateText(
-											formatFullName(borrower),
+											formatBorrowerFullName(borrower),
 											28
 										)}
 									</td>
@@ -125,7 +114,7 @@ const StaffAndBorrowerList = () => {
 					<div className="card modal-card modal-card--signup-details">
 						<h3>Borrower Details</h3>
 						<p>
-							<strong>Name:</strong> {formatFullName(selectedBorrower)}
+							<strong>Name:</strong> {formatBorrowerFullName(selectedBorrower)}
 						</p>
 						<p>
 							<strong>Course - Year Level:</strong> {selectedBorrower.collegeCourse || "-"} - {selectedBorrower.yearLevel || "-"}
@@ -140,7 +129,7 @@ const StaffAndBorrowerList = () => {
 							<strong>Address:</strong> {selectedBorrower.currentAddress || "-"}
 						</p>
 						<div className="modal-actions">
-							<button className="btn btn--danger" onClick={closeBorrowerDetails}>
+							<button className="btn btn--ghost" onClick={closeBorrowerDetails}>
 								Close
 							</button>
 						</div>

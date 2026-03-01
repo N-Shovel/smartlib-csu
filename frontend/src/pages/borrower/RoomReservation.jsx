@@ -23,9 +23,9 @@ const RoomReservation = () => {
     () => getUnavailableReservationHours(room),
     [room]
   );
-  const currentHour = new Date().getHours();
 
   const handleReserve = () => {
+    const currentHour = new Date().getHours();
     // Guard clauses keep validation flow straightforward and readable.
     if (!room.trim()) {
       showError("Please choose a room");
@@ -102,7 +102,7 @@ const RoomReservation = () => {
               {reservationHourOptions.map((slot) => {
                 // Slot can be unavailable due to lunch break or approved reservation.
                 const isUnavailable = unavailableHours.has(slot.value);
-                const isPastSlot = slot.value <= currentHour;
+                const isPastSlot = slot.value <= new Date().getHours();
                 const stateLabel = isUnavailable
                   ? isLunchBreakHour(slot.value)
                     ? "Lunch Break"

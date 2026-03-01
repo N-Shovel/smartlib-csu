@@ -98,7 +98,7 @@ textarea {
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
-  font-family: "Merriweather", serif;
+  font-family: Merriweather, serif;
   font-size: 1.6rem;
   color: #ffffff;
 }

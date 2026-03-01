@@ -466,13 +466,23 @@ export const cancelBorrowRequest = (requestId, borrowerEmail) => {
   return { ok: true, request: { ...cancelledRequest } };
 };
 
-export const returnBook = (id, borrowerEmail) => {
+// TODO: Deprecated in favor of requestBookReturn + receiveReturnRequest flow.
+export const returnBook = (id, borrowerEmail, options = {}) => {
+  console.warn(
+    "[DEPRECATED] returnBook is deprecated. Use requestBookReturn + receiveReturnRequest instead."
+  );
+
+  const isStaffOverride = Boolean(options.isStaffOverride);
   const currentBooks = loadBooks();
   const book = currentBooks.find((item) => item.id === parseInt(id, 10));
   if (!book) return { ok: false, error: "Book not found" };
   if (book.available) return { ok: false, error: "Book already available" };
-  // Only the borrower who checked out the book can return it.
-  if (book.borrowedBy !== borrowerEmail)
+
+  const normalizedBorrowerEmail = normalizeEmail(borrowerEmail);
+  const normalizedBookBorrowerEmail = normalizeEmail(book.borrowedBy);
+
+  // Only original borrower can return unless explicitly invoked as staff override.
+  if (!isStaffOverride && normalizedBookBorrowerEmail !== normalizedBorrowerEmail)
     return { ok: false, error: "Not your borrowed book" };
 
   // Reset checkout fields on return.
@@ -485,14 +495,14 @@ export const returnBook = (id, borrowerEmail) => {
       id: Date.now(),
       bookId: book.id,
       title: book.title,
-      borrowerEmail,
+      borrowerEmail: normalizedBorrowerEmail,
       action: "RETURN_BOOK",
       timestamp: getIsoTimestamp()
     },
     ...loadHistory()
   ];
   saveHistory(nextHistory);
-  addLog("RETURN_BOOK", { borrowerEmail, bookId: book.id });
+  addLog("RETURN_BOOK", { borrowerEmail: normalizedBorrowerEmail, bookId: book.id });
 
   return { ok: true, book: copyBook(book) };
 };

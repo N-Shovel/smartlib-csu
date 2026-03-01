@@ -194,9 +194,9 @@ const Account = () => {
       </div>
 
       {activeModal === "email" ? (
-        <div className="modal-overlay" role="dialog" aria-modal="true">
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="update-email-title">
           <div className="card modal-card">
-            <h3>Update Email</h3>
+            <h3 id="update-email-title">Update Email</h3>
             <label className="label">New Email</label>
             <input
               className="input"
@@ -217,9 +217,9 @@ const Account = () => {
       ) : null}
 
       {activeModal === "contact" ? (
-        <div className="modal-overlay" role="dialog" aria-modal="true">
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="update-contact-title">
           <div className="card modal-card">
-            <h3>Update Contact Number</h3>
+            <h3 id="update-contact-title">Update Contact Number</h3>
             <label className="label">New Contact Number</label>
             <input
               className="input"
@@ -240,9 +240,9 @@ const Account = () => {
       ) : null}
 
       {activeModal === "password" ? (
-        <div className="modal-overlay" role="dialog" aria-modal="true">
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="change-password-title">
           <div className="card modal-card">
-            <h3>Change Password</h3>
+            <h3 id="change-password-title">Change Password</h3>
             <label className="label">Old Password</label>
             <input
               className="input"
