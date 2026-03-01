@@ -11,7 +11,7 @@ import {
 } from "../../services/reservationService";
 import { useAuth } from "../../context/AuthContext";
 import { formatDateTime } from "../../utils/dateUtils";
-import { showError, showSuccess } from "../../utils/notification";
+import { showError, showInfo, showSuccess } from "../../utils/notification";
 import { RESERVATION_STATUS } from "../../constants/status";
 
 const ActivityLog = () => {
@@ -52,16 +52,21 @@ const ActivityLog = () => {
 
   const handleCancellationRequest = (id) => {
     // Ask service to mark this reservation as cancellation-requested.
-    const result = requestReservationCancellation(id, userEmail);
-    if (!result.ok) {
-      showError(result.error || "Unable to request cancellation.");
-      return;
-    }
-    showSuccess("Cancellation request submitted.");
-    // Refresh local view from source data after successful mutation.
-    setMyReservations(getUserActiveReservations());
-    setReservationUpdates(getUserReservationUpdates());
-    setBorrowUpdates(getUserBorrowUpdates());
+    showInfo("Submitting cancellation request, please wait...");
+    // LOGIC: Match cancellation UX timing with other borrower mutations
+    // (borrow/return/cancel) so feedback feels consistent across actions.
+    setTimeout(() => {
+      const result = requestReservationCancellation(id, userEmail);
+      if (!result.ok) {
+        showError(result.error || "Unable to request cancellation.");
+        return;
+      }
+      showSuccess("Cancellation request submitted.");
+      // Refresh local view from source data after successful mutation.
+      setMyReservations(getUserActiveReservations());
+      setReservationUpdates(getUserReservationUpdates());
+      setBorrowUpdates(getUserBorrowUpdates());
+    }, 500);
   };
 
   return (

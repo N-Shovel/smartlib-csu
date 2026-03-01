@@ -48,6 +48,7 @@ const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const navigate = useNavigate();
   const { signupUser } = useAuth();
 
@@ -81,6 +82,7 @@ const Signup = () => {
   };
 
   const handleSignup = () => {
+    if (isRedirecting) return;
     // Clear stale errors before validating fresh input.
     setError("");
     const normalizedFirstName = String(firstName || "").trim();
@@ -148,8 +150,12 @@ const Signup = () => {
       return;
     }
     // On success, direct the user to login so they can authenticate.
-    showSuccess("Account created!");
-    navigate("/login");
+    showSuccess("Account created!", 2000);
+    setIsRedirecting(true);
+    // LOGIC: Delay redirect so users can read the success confirmation first.
+    setTimeout(() => {
+      navigate("/login");
+    }, 1700);
   };
 
   return (
@@ -332,8 +338,8 @@ const Signup = () => {
 
       <div className="signup-field signup-field--full">
         {error ? <div className="alert" role="alert">{error}</div> : null}
-        <button className="btn btn--primary" onClick={handleSignup}>
-          Signup
+        <button className="btn btn--primary" onClick={handleSignup} disabled={isRedirecting}>
+          {isRedirecting ? "Signing up..." : "Signup"}
         </button>
         <p className="muted auth-card__switch">
           Already have an account? <Link to="/login">Login</Link>

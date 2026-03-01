@@ -189,15 +189,20 @@ const BrowseBooks = () => {
 
   const handleCancelPendingRequest = () => {
     if (!requestToCancel || !user) return;
-    const result = cancelBorrowRequest(requestToCancel.id, user.email);
-    if (!result.ok) {
-      showError(result.error || "Unable to cancel borrow request.");
-      return;
-    }
+    showInfo("Cancelling borrow request, please wait...");
+    // LOGIC: Delay keeps cancel action behavior aligned with borrow/return timing
+    // and gives users a visible processing state before state refresh.
+    setTimeout(() => {
+      const result = cancelBorrowRequest(requestToCancel.id, user.email);
+      if (!result.ok) {
+        showError(result.error || "Unable to cancel borrow request.");
+        return;
+      }
 
-    showSuccess("Borrow request cancelled.");
-    setRequestToCancel(null);
-    refresh();
+      showSuccess("Borrow request cancelled.");
+      setRequestToCancel(null);
+      refresh();
+    }, 500);
   };
 
   const handleCategoryToggle = (category) => {

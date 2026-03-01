@@ -119,15 +119,20 @@ const BookDetails = () => {
 
   const handleCancelPendingRequest = () => {
     if (!user || !pendingRequest) return;
-    const result = cancelBorrowRequest(pendingRequest.id, user.email);
-    if (!result.ok) {
-      showError(result.error || "Unable to cancel borrow request.");
-      return;
-    }
+    showInfo("Cancelling borrow request, please wait...");
+    // LOGIC: Mirror borrow/return delay pattern so all borrower mutations
+    // have uniform processing feedback and transition timing.
+    setTimeout(() => {
+      const result = cancelBorrowRequest(pendingRequest.id, user.email);
+      if (!result.ok) {
+        showError(result.error || "Unable to cancel borrow request.");
+        return;
+      }
 
-    showSuccess("Borrow request cancelled.");
-    setIsCancelModalOpen(false);
-    refresh();
+      showSuccess("Borrow request cancelled.");
+      setIsCancelModalOpen(false);
+      refresh();
+    }, 500);
   };
 
   return (

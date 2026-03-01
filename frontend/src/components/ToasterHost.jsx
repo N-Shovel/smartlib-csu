@@ -16,6 +16,10 @@ const ToasterHost = () => {
       const detail = event.detail || {};
       // Ignore invalid events that don't carry a displayable message.
       if (!detail.message) return;
+      const durationMs = Number(detail.durationMs);
+      // LOGIC: Allow per-toast lifetime overrides while preserving a safe default
+      // so legacy calls without duration still auto-dismiss predictably.
+      const toastDuration = Number.isFinite(durationMs) && durationMs > 0 ? durationMs : 2800;
 
       const nextToast = {
         id: Date.now() + Math.random(),
@@ -32,7 +36,7 @@ const ToasterHost = () => {
 
         // Remove completed timeout from tracking to avoid unbounded growth.
         timeoutIdsRef.current = timeoutIdsRef.current.filter((id) => id !== timeoutId);
-      }, 2800);
+      }, toastDuration);
 
       timeoutIdsRef.current.push(timeoutId);
     };
