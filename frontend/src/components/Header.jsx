@@ -31,8 +31,9 @@ const Header = () => {
         {/* Render account info/actions when authenticated; otherwise show entry actions. */}
         {user ? (
           <div className="header__meta">
-            <span className="pill">{user.role}</span>
+            <span className="pill header__role-pill">{user.role}</span>
             <span className="header__email">{user.email}</span>
+            <span className="header__email-mobile">{`${user.role} - ${user.email}`}</span>
           </div>
         ) : (
           <div className="header__actions">

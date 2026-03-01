@@ -5,10 +5,11 @@ import {
   getBooks,
   getBorrowHistory,
   getBorrowRequests,
-  receiveBorrowRequest
+  receiveBorrowRequest,
+  receiveReturnRequest
 } from "../../services/bookService";
 import { exportToCSV } from "../../services/exportService";
-import { formatDateTime } from "../../utils/dateUtils";
+import { formatDateTime, formatDateTimeFull } from "../../utils/dateUtils";
 import { getBorrowHistoryExport } from "../../data/exportBorrowersHistory";
 import { showError, showSuccess } from "../../utils/notification";
 import { getUserProfileByEmail } from "../../services/authService";
@@ -21,6 +22,13 @@ const BorrowerTracking = () => {
     getUserProfileByEmail(email)?.id || "-";
 
   const pendingRequests = borrowRequests.filter((entry) => entry.status === "pending");
+  const pendingReturnRequestByBookAndUser = borrowRequests
+    .filter((entry) => entry.status === "pending_return")
+    .reduce((summary, entry) => {
+      const key = `${entry.bookId}-${String(entry.borrowerEmail || "").toLowerCase()}`;
+      summary[key] = entry;
+      return summary;
+    }, {});
 
   const currentBorrowers = books
     .filter((book) => !book.available && book.borrowedBy)
@@ -37,7 +45,11 @@ const BorrowerTracking = () => {
         studentId: getStudentIdByEmail(book.borrowedBy),
         book: book.title,
         bookId: book.id,
-        time: borrowEvent?.timestamp || null
+        time: borrowEvent?.timestamp || null,
+        pendingReturnRequest:
+          pendingReturnRequestByBookAndUser[
+            `${book.id}-${String(book.borrowedBy || "").toLowerCase()}`
+          ] || null
       };
     });
 
@@ -55,6 +67,21 @@ const BorrowerTracking = () => {
     }
 
     showSuccess("Book release received and recorded.");
+    refresh();
+  };
+
+  const handleReturn = (requestId) => {
+    if (!requestId) {
+      showError("Return request not found.");
+      return;
+    }
+    const result = receiveReturnRequest(requestId);
+    if (!result.ok) {
+      showError(result.error || "Unable to return book.");
+      return;
+    }
+
+    showSuccess("Book returned.");
     refresh();
   };
 
@@ -121,13 +148,27 @@ const BorrowerTracking = () => {
               <span>Student ID</span>
               <span>Book</span>
               <span>Time</span>
+              <span>Status</span>
+              <span>Action</span>
             </div>
             {currentBorrowers.map((entry) => (
               <div className="table__row" key={`${entry.user}-${entry.bookId}`}>
                 <span>{entry.user}</span>
                 <span>{entry.studentId}</span>
                 <span>{entry.book}</span>
-                <span>{formatDateTime(entry.time)}</span>
+                <span>{formatDateTimeFull(entry.time)}</span>
+                <span>
+                  {entry.pendingReturnRequest
+                    ? "returning"
+                    : "borrowed"}
+                </span>
+                <button
+                  className="btn btn--return"
+                  onClick={() => handleReturn(entry.pendingReturnRequest?.id)}
+                  disabled={!entry.pendingReturnRequest}
+                >
+                  Return
+                </button>
               </div>
             ))}
           </div>

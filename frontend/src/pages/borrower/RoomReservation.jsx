@@ -9,7 +9,7 @@ import {
 } from "../../services/reservationService";
 import { ROOMS } from "../../config/rooms";
 import { useAuth } from "../../context/AuthContext";
-import { showError, showSuccess } from "../../utils/notification";
+import { showError, showInfo, showSuccess } from "../../utils/notification";
 
 const reservationHourOptions = getReservationHourOptions();
 
@@ -23,6 +23,7 @@ const RoomReservation = () => {
     () => getUnavailableReservationHours(room),
     [room]
   );
+  const currentHour = new Date().getHours();
 
   const handleReserve = () => {
     // Guard clauses keep validation flow straightforward and readable.
@@ -34,28 +35,35 @@ const RoomReservation = () => {
       showError("Please choose a time slot");
       return;
     }
+    if (Number(reservationHour) <= currentHour) {
+      showError("Selected time slot has already passed.");
+      return;
+    }
     if (unavailableHours.has(Number(reservationHour))) {
       showError("Selected time slot is unavailable.");
       return;
     }
 
-    const result = addReservation({
-      room: room.trim(),
-      reservationHour: Number(reservationHour),
-      notes: notes.trim(),
-      // Attach requester identity for ownership/history tracking.
-      requestedBy: user?.email || "unknown"
-    });
+    showInfo("Submitting reservation, please wait...");
+    setTimeout(() => {
+      const result = addReservation({
+        room: room.trim(),
+        reservationHour: Number(reservationHour),
+        notes: notes.trim(),
+        // Attach requester identity for ownership/history tracking.
+        requestedBy: user?.email || "unknown"
+      });
 
-    if (!result.ok) {
-      showError(result.error || "Unable to submit reservation");
-      return;
-    }
+      if (!result.ok) {
+        showError(result.error || "Unable to submit reservation");
+        return;
+      }
 
-    setRoom("");
-    setReservationHour("");
-    setNotes("");
-    showSuccess("Reservation request submitted");
+      setRoom("");
+      setReservationHour("");
+      setNotes("");
+      showSuccess("Reservation request submitted");
+    }, 500);
   };
 
   return (
@@ -94,17 +102,20 @@ const RoomReservation = () => {
               {reservationHourOptions.map((slot) => {
                 // Slot can be unavailable due to lunch break or approved reservation.
                 const isUnavailable = unavailableHours.has(slot.value);
+                const isPastSlot = slot.value <= currentHour;
                 const stateLabel = isUnavailable
                   ? isLunchBreakHour(slot.value)
                     ? "Lunch Break"
                     : "Reserved"
+                  : isPastSlot
+                    ? "Passed"
                   : "";
 
                 return (
                   <option
                     key={slot.value}
                     value={slot.value}
-                    disabled={isUnavailable}
+                    disabled={isUnavailable || isPastSlot}
                   >
                     {stateLabel ? `${slot.label} (${stateLabel})` : slot.label}
                   </option>
@@ -123,6 +134,7 @@ const RoomReservation = () => {
         <button className="btn btn--primary" onClick={handleReserve}>
           Reserve
         </button>
+        <p className="micro">Slots marked "Reserved" are only staff-approved reservations.</p>
       </div>
     </section>
   );

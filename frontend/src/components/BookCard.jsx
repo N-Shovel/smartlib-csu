@@ -8,8 +8,10 @@ const BookCard = ({
 	onReturn,
 	onOpenDetails,
 	borrowLabel,
+	returnLabel = "Return",
 	isPending = false,
 	pendingMessage,
+	returnMessage,
 	showBorrower = false
 }) => {
 	// Thesis entries use "Apply" wording and a permission flow instead of plain borrow.
@@ -72,11 +74,12 @@ const BookCard = ({
 						onClick={() => onReturn(book.id)}
 						disabled={!canReturn}
 					>
-						Return
+						{returnLabel}
 					</button>
 				)}
 			</div>
 			{isPending && pendingMessage ? <p className="micro">{pendingMessage}</p> : null}
+			{!book.available && returnMessage ? <p className="micro">{returnMessage}</p> : null}
 		</article>
 	);
 };

@@ -105,6 +105,25 @@ const hasApprovedSlotConflict = (reservationsList, room, reservationHour, skipId
       entry.id !== skipId
   );
 
+const hasActiveReservationForUser = (reservationsList, requesterEmail) => {
+  const normalizedRequesterEmail = normalizeEmail(requesterEmail);
+  if (!normalizedRequesterEmail) return false;
+
+  // LOGIC: "Active" means same user + not closed + slot not yet passed.
+  // This is the core rule behind allowing only one reservation at a time.
+  return reservationsList.some((entry) => {
+    if (normalizeEmail(entry.requestedBy) !== normalizedRequesterEmail) {
+      return false;
+    }
+
+    if (entry.status === RESERVATION_STATUS.CLOSED) {
+      return false;
+    }
+
+    return !isReservationTimePassed(entry);
+  });
+};
+
 export const getReservationHourOptions = () =>
   Array.from(
     { length: RESERVATION_END_HOUR - RESERVATION_START_HOUR },
@@ -191,9 +210,14 @@ export const getReservationHistory = () =>
 
 export const addReservation = (reservation) => {
   const reservationHour = toHourNumber(reservation.reservationHour);
+  const normalizedRequesterEmail = normalizeEmail(reservation.requestedBy);
+  const now = new Date();
   // Validate base input fields before conflict checks.
   if (!reservation.room?.trim()) {
     return { ok: false, error: "Please choose a room" };
+  }
+  if (!normalizedRequesterEmail) {
+    return { ok: false, error: "Unable to identify reservation requester." };
   }
   if (reservationHour === null || !isValidReservationHour(reservationHour)) {
     return { ok: false, error: "Please choose a valid time slot (8:00 AM - 6:00 PM)." };
@@ -201,8 +225,21 @@ export const addReservation = (reservation) => {
   if (isLunchBreakHour(reservationHour)) {
     return { ok: false, error: "11:00 AM - 1:00 PM is Lunch Break and unavailable." };
   }
+  if (reservationHour <= now.getHours()) {
+    return { ok: false, error: "Selected time slot has already passed." };
+  }
 
-  const currentReservations = loadReservations();
+  // LOGIC: Run auto-close before validation so expired entries stop blocking
+  // both slot conflicts and per-user active-reservation checks.
+  const currentReservations = autoClosePassedReservations();
+
+  if (hasActiveReservationForUser(currentReservations, normalizedRequesterEmail)) {
+    return {
+      ok: false,
+      error: "You already have an active reservation. You can create a new one after it is closed, cancelled, or the time has passed."
+    };
+  }
+
   // Prevent creating pending request if approved slot already exists.
   if (hasApprovedSlotConflict(currentReservations, reservation.room.trim(), reservationHour)) {
     return { ok: false, error: "This room is already approved for that 1-hour slot." };
@@ -214,6 +251,7 @@ export const addReservation = (reservation) => {
     createdAt: getIsoTimestamp(),
     status: RESERVATION_STATUS.PENDING,
     ...reservation,
+    requestedBy: normalizedRequesterEmail,
     room: reservation.room.trim(),
     reservationHour
   };

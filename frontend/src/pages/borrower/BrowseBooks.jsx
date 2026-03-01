@@ -8,13 +8,13 @@ import ThesisPermissionModal from "../../components/ThesisPermissionModal";
 import {
   getBooks,
   borrowBook,
-  returnBook,
+  requestBookReturn,
   getBorrowHistory,
   getBorrowRequestsByBorrower,
   cancelBorrowRequest
 } from "../../services/bookService";
 import { useAuth } from "../../context/AuthContext";
-import { showError, showSuccess } from "../../utils/notification";
+import { showError, showInfo, showSuccess } from "../../utils/notification";
 
 const BrowseBooks = () => {
   const { user } = useAuth();
@@ -75,6 +75,16 @@ const BrowseBooks = () => {
     return pendingMap;
   }, [borrowRequests]);
 
+  const pendingReturnRequestByBookId = useMemo(() => {
+    const pendingMap = new Map();
+    borrowRequests.forEach((request) => {
+      if (request.status === "pending_return") {
+        pendingMap.set(request.bookId, request);
+      }
+    });
+    return pendingMap;
+  }, [borrowRequests]);
+
   const recommendedBooksLine = (() => {
     const history = getBorrowHistory();
     // Recommendation seed is borrow frequency so repeated demand surfaces first.
@@ -106,17 +116,22 @@ const BrowseBooks = () => {
       .join(", ");
   })();
 
-  const submitBorrow = (id, code = "") => {
+  const submitBorrow = (id, code = "", handlers = {}) => {
+    const { onError, onSuccess } = handlers;
     if (!user) return;
-    const result = borrowBook(id, user.email, code);
-    if (!result.ok) {
-      showError(result.error);
-      return result;
-    } else {
+    showInfo("Processing borrow request, please wait...");
+    setTimeout(() => {
+      const result = borrowBook(id, user.email, code);
+      if (!result.ok) {
+        showError(result.error);
+        if (onError) onError(result);
+        return;
+      }
+
       showSuccess("Pending. Please pick it up at the library.");
-    }
-    refresh();
-    return result;
+      refresh();
+      if (onSuccess) onSuccess(result);
+    }, 500);
   };
 
   const handleBorrow = (book) => {
@@ -144,27 +159,32 @@ const BrowseBooks = () => {
   const handleThesisApply = () => {
     if (!pendingThesisBookId) return;
 
-    const result = submitBorrow(pendingThesisBookId, permissionCode);
-    if (!result?.ok) {
-      setPermissionError(result?.error || "Unable to apply for this thesis.");
-      return;
-    }
-
-    setPendingThesisBookId(null);
-    setPermissionCode("");
-    setPermissionError("");
+    submitBorrow(pendingThesisBookId, permissionCode, {
+      onError: (result) => {
+        setPermissionError(result?.error || "Unable to apply for this thesis.");
+      },
+      onSuccess: () => {
+        setPendingThesisBookId(null);
+        setPermissionCode("");
+        setPermissionError("");
+      }
+    });
   };
 
   const handleReturn = (id) => {
     if (!user) return;
-    // Service validates whether current user is allowed to return this item.
-    const result = returnBook(id, user.email);
-    if (!result.ok) {
-      showError(result.error);
-    } else {
-      showSuccess("Book returned successfully");
-    }
-    refresh();
+    // Return flow now starts with a borrower request that staff confirms.
+    showInfo("Submitting return request, please wait...");
+    setTimeout(() => {
+      const result = requestBookReturn(id, user.email);
+      if (!result.ok) {
+        showError(result.error);
+        return;
+      }
+
+      showSuccess("Return request submitted. Please wait for staff confirmation.");
+      refresh();
+    }, 500);
   };
 
   const handleCancelPendingRequest = () => {
@@ -255,7 +275,19 @@ const BrowseBooks = () => {
                   ? "Please pick it up at the library."
                   : undefined
               }
-              canReturn={!book.available && book.borrowedBy === user?.email}
+              returnLabel={
+                pendingReturnRequestByBookId.has(book.id) ? "Pending Return" : "Return"
+              }
+              returnMessage={
+                pendingReturnRequestByBookId.has(book.id)
+                  ? "Waiting for staff confirmation."
+                  : undefined
+              }
+              canReturn={
+                !book.available &&
+                book.borrowedBy === user?.email &&
+                !pendingReturnRequestByBookId.has(book.id)
+              }
               onBorrow={handleBorrow}
               onReturn={handleReturn}
               onOpenDetails={setSelectedBook}
@@ -282,7 +314,19 @@ const BrowseBooks = () => {
                   ? "Please pick it up at the library."
                   : undefined
               }
-              canReturn={!book.available && book.borrowedBy === user?.email}
+              returnLabel={
+                pendingReturnRequestByBookId.has(book.id) ? "Pending Return" : "Return"
+              }
+              returnMessage={
+                pendingReturnRequestByBookId.has(book.id)
+                  ? "Waiting for staff confirmation."
+                  : undefined
+              }
+              canReturn={
+                !book.available &&
+                book.borrowedBy === user?.email &&
+                !pendingReturnRequestByBookId.has(book.id)
+              }
               onBorrow={handleBorrow}
               onReturn={handleReturn}
               onOpenDetails={setSelectedBook}

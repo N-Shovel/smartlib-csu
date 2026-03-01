@@ -1,6 +1,7 @@
 // Purpose: Signup page for creating borrower accounts.
 // Parts: form model, validation logic, submit handler, grouped form render.
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { showError, showSuccess } from "../../utils/notification";
@@ -295,8 +296,10 @@ const Signup = () => {
             type="button"
             className="password-toggle"
             onClick={() => setShowPassword(!showPassword)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            title={showPassword ? "Hide password" : "Show password"}
           >
-            {showPassword ? "Hide" : "Show"}
+            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </div>
       </div>
@@ -319,8 +322,10 @@ const Signup = () => {
             type="button"
             className="password-toggle"
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+            title={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
           >
-            {showConfirmPassword ? "Hide" : "Show"}
+            {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </div>
       </div>

@@ -5,13 +5,13 @@ import { useParams, Link } from "react-router-dom";
 import {
   getBookById,
   borrowBook,
-  returnBook,
+  requestBookReturn,
   getBorrowRequestsByBorrower,
   cancelBorrowRequest
 } from "../../services/bookService";
 import ThesisPermissionModal from "../../components/ThesisPermissionModal";
 import { useAuth } from "../../context/AuthContext";
-import { showError, showSuccess } from "../../utils/notification";
+import { showError, showInfo, showSuccess } from "../../utils/notification";
 
 const BookDetails = () => {
   const { id } = useParams();
@@ -48,18 +48,26 @@ const BookDetails = () => {
   const pendingRequest = borrowRequests.find(
     (request) => request.bookId === book.id && request.status === "pending"
   );
+  const pendingReturnRequest = borrowRequests.find(
+    (request) => request.bookId === book.id && request.status === "pending_return"
+  );
 
-  const submitBorrow = (code = "") => {
-    if (!user) return null;
-    const result = borrowBook(book.id, user.email, code);
-    if (!result.ok) {
-      showError(result.error);
-      return result;
-    }
+  const submitBorrow = (code = "", handlers = {}) => {
+    const { onError, onSuccess } = handlers;
+    if (!user) return;
+    showInfo("Processing borrow request, please wait...");
+    setTimeout(() => {
+      const result = borrowBook(book.id, user.email, code);
+      if (!result.ok) {
+        showError(result.error);
+        if (onError) onError(result);
+        return;
+      }
 
-    showSuccess("Pending. Please pick it up at the library.");
-    refresh();
-    return result;
+      showSuccess("Pending. Please pick it up at the library.");
+      refresh();
+      if (onSuccess) onSuccess(result);
+    }, 500);
   };
 
   const handleBorrow = () => {
@@ -81,27 +89,32 @@ const BookDetails = () => {
   };
 
   const handleThesisApply = () => {
-    const result = submitBorrow(permissionCode);
-    if (!result?.ok) {
-      setPermissionError(result?.error || "Unable to apply for this thesis.");
-      return;
-    }
-
-    setIsPermissionModalOpen(false);
-    setPermissionCode("");
-    setPermissionError("");
+    submitBorrow(permissionCode, {
+      onError: (result) => {
+        setPermissionError(result?.error || "Unable to apply for this thesis.");
+      },
+      onSuccess: () => {
+        setIsPermissionModalOpen(false);
+        setPermissionCode("");
+        setPermissionError("");
+      }
+    });
   };
 
   const handleReturn = () => {
     if (!user) return;
-    // Return operation validates ownership in service layer.
-    const result = returnBook(book.id, user.email);
-    if (!result.ok) {
-      showError(result.error);
-    } else {
-      showSuccess("Book returned successfully");
-    }
-    refresh();
+    // Return operation now creates a staff-confirmed pending request.
+    showInfo("Submitting return request, please wait...");
+    setTimeout(() => {
+      const result = requestBookReturn(book.id, user.email);
+      if (!result.ok) {
+        showError(result.error);
+        return;
+      }
+
+      showSuccess("Return request submitted. Please wait for staff confirmation.");
+      refresh();
+    }, 500);
   };
 
   const handleCancelPendingRequest = () => {
@@ -144,9 +157,9 @@ const BookDetails = () => {
             <button
               className="btn btn--return"
               onClick={handleReturn}
-              disabled={book.borrowedBy !== user?.email}
+              disabled={book.borrowedBy !== user?.email || Boolean(pendingReturnRequest)}
             >
-              Return
+              {pendingReturnRequest ? "Pending Return" : "Return"}
             </button>
           )}
           <Link className="btn btn--ghost" to="/borrower/browse">
@@ -154,6 +167,9 @@ const BookDetails = () => {
           </Link>
         </div>
         {pendingRequest ? <p className="micro">Please pick it up at the library.</p> : null}
+        {pendingReturnRequest ? (
+          <p className="micro">Waiting for staff confirmation of your return request.</p>
+        ) : null}
       </div>
 
       <ThesisPermissionModal

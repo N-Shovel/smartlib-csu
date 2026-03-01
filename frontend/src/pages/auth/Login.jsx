@@ -25,11 +25,13 @@ const Login = () => {
     }
 
     // Success message varies by role to make the redirect context explicit.
-    showSuccess(
-      result.user.role === ROLES.STAFF
-        ? "Logged in as staff"
-        : "Logged in as borrower"
-    );
+    setTimeout(() => {
+      showSuccess(
+        result.user.role === ROLES.STAFF
+          ? "Logged in as staff"
+          : "Logged in as borrower"
+      );
+    }, 2000);
 
     // Navigate users to their role-specific landing page.
     navigate(

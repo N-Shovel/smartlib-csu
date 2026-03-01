@@ -1,7 +1,18 @@
 // Purpose: Role-aware sidebar navigation with active/interactive states.
 // Parts: nav config, active item tracking, interaction handlers, nav render.
 import { useEffect, useRef, useState } from "react";
-import { Menu } from "lucide-react";
+import {
+	BookOpen,
+	CalendarClock,
+	CalendarPlus,
+	History,
+	LayoutDashboard,
+	Menu,
+	Search,
+	UserRound,
+	UserRoundPlus,
+	Users
+} from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { ROLES } from "../constants/roles";
 import { useAuth } from "../context/AuthContext";
@@ -57,17 +68,17 @@ const Sidebar = () => {
 	const links =
 		user.role === ROLES.STAFF
 			? [
-					{ to: "/staff/dashboard", label: "Dashboard" },
-					{ to: "/staff/tracking", label: "Borrowers" },
-					{ to: "/staff/reservation", label: "Reservation" },
-					{ to: "/staff/books", label: "Book Management" },
-					{ to: "/staff/borrowers", label: "Borrowers Signup" }
+					{ to: "/staff/dashboard", label: "Dashboard", icon: LayoutDashboard },
+					{ to: "/staff/tracking", label: "Borrowers", icon: Users },
+					{ to: "/staff/reservation", label: "Reservation", icon: CalendarClock },
+					{ to: "/staff/books", label: "Book Management", icon: BookOpen },
+					{ to: "/staff/borrowers", label: "Borrowers Signup", icon: UserRoundPlus }
 				]
 			: [
-					{ to: "/borrower/browse", label: "Browse" },
-					{ to: "/borrower/reserve", label: "Reserve Room" },
-					{ to: "/borrower/activity", label: "Activity Log" },
-					{ to: "/borrower/account", label: "Account" }
+					{ to: "/borrower/browse", label: "Browse", icon: Search },
+					{ to: "/borrower/reserve", label: "Reserve Room", icon: CalendarPlus },
+					{ to: "/borrower/activity", label: "Activity Log", icon: History },
+					{ to: "/borrower/account", label: "Account", icon: UserRound }
 				];
 
 	return (
@@ -110,6 +121,7 @@ const Sidebar = () => {
 								`sidebar__link${isActive ? " sidebar__link--active" : ""}`
 							}
 						>
+							<link.icon size={16} strokeWidth={2.2} className="sidebar__link-icon" />
 							<span className="sidebar__link-label">{link.label}</span>
 						</NavLink>
 					))}

@@ -331,6 +331,109 @@ export const receiveBorrowRequest = (requestId, receiverEmail = "staff") => {
   return { ok: true, request: { ...completedRequest }, book: copyBook(book) };
 };
 
+export const requestBookReturn = (id, borrowerEmail) => {
+  const normalizedBorrowerEmail = normalizeEmail(borrowerEmail);
+  if (!normalizedBorrowerEmail) {
+    return { ok: false, error: "Borrower email is required." };
+  }
+
+  const currentBooks = loadBooks();
+  const book = currentBooks.find((item) => item.id === parseInt(id, 10));
+  if (!book) return { ok: false, error: "Book not found" };
+  if (book.available) return { ok: false, error: "Book is already available" };
+  if (normalizeEmail(book.borrowedBy) !== normalizedBorrowerEmail) {
+    return { ok: false, error: "Not your borrowed book" };
+  }
+
+  const currentRequests = loadBorrowRequests();
+  // LOGIC: Enforce one active return request per (book, borrower) pair.
+  // This prevents duplicate pending rows and double-processing by staff.
+  const hasPendingReturnRequest = currentRequests.some(
+    (request) =>
+      request.bookId === book.id &&
+      normalizeEmail(request.borrowerEmail) === normalizedBorrowerEmail &&
+      request.status === "pending_return"
+  );
+
+  if (hasPendingReturnRequest) {
+    return { ok: false, error: "Return request already submitted." };
+  }
+
+  const nextRequest = {
+    id: Date.now(),
+    bookId: book.id,
+    title: book.title,
+    borrowerEmail: normalizedBorrowerEmail,
+    status: "pending_return",
+    requestedAt: getIsoTimestamp()
+  };
+
+  saveBorrowRequests([nextRequest, ...currentRequests]);
+  addLog("RETURN_REQUESTED", {
+    borrowerEmail: normalizedBorrowerEmail,
+    bookId: book.id
+  });
+
+  return { ok: true, request: { ...nextRequest } };
+};
+
+export const receiveReturnRequest = (requestId, receiverEmail = "staff") => {
+  const currentRequests = loadBorrowRequests();
+  const index = currentRequests.findIndex((request) => request.id === requestId);
+  if (index === -1) return { ok: false, error: "Return request not found" };
+
+  const selectedRequest = currentRequests[index];
+  if (selectedRequest.status !== "pending_return") {
+    return { ok: false, error: "Return request is no longer pending." };
+  }
+
+  const currentBooks = loadBooks();
+  const book = currentBooks.find((item) => item.id === selectedRequest.bookId);
+  if (!book) return { ok: false, error: "Book not found" };
+  if (book.available) return { ok: false, error: "Book is already available." };
+
+  const normalizedBorrowerEmail = normalizeEmail(selectedRequest.borrowerEmail);
+  if (normalizeEmail(book.borrowedBy) !== normalizedBorrowerEmail) {
+    return { ok: false, error: "Book borrower does not match return request." };
+  }
+
+  // LOGIC: Staff confirmation is the single state transition that makes a book
+  // available again. We intentionally update inventory, request status, history,
+  // and activity logs together to keep audit trail and availability consistent.
+  book.available = true;
+  book.borrowedBy = null;
+  saveBooks(currentBooks);
+
+  const completedRequest = {
+    ...selectedRequest,
+    status: "returned",
+    returnedAt: getIsoTimestamp(),
+    receivedBy: String(receiverEmail || "staff").trim().toLowerCase()
+  };
+  currentRequests[index] = completedRequest;
+  saveBorrowRequests(currentRequests);
+
+  const nextHistory = [
+    {
+      id: Date.now(),
+      bookId: book.id,
+      title: book.title,
+      borrowerEmail: normalizedBorrowerEmail,
+      action: "RETURN_BOOK",
+      timestamp: getIsoTimestamp()
+    },
+    ...loadHistory()
+  ];
+  saveHistory(nextHistory);
+
+  addLog("RETURN_BOOK_RECEIVED", {
+    borrowerEmail: normalizedBorrowerEmail,
+    bookId: book.id
+  });
+
+  return { ok: true, request: { ...completedRequest }, book: copyBook(book) };
+};
+
 export const cancelBorrowRequest = (requestId, borrowerEmail) => {
   const currentRequests = loadBorrowRequests();
   const index = currentRequests.findIndex((request) => request.id === requestId);
