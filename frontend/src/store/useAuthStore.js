@@ -38,10 +38,10 @@ export const useStore = create((set, get) => ({
     isLoading: false,
     isCheckingAuth: false,
 
-    studentAuth: async () =>{
+    checkAuth: async () =>{
         try{
             set({isCheckingAuth: true});
-            const res = await axiosInstance.get("/profile/student-profile");
+            const res = await axiosInstance.get("/profile/profile");
             set({user: res.data});
         
             console.log(res.data);
@@ -105,7 +105,7 @@ export const useStore = create((set, get) => ({
         }
     },
 
-    studentLogin: async (email, password) => {
+    Login: async (email, password) => {
         
         set({isLoading: true});
         try{

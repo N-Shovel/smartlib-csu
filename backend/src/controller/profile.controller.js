@@ -1,45 +1,78 @@
 import {supabaseForRequest } from "../lib/supabaseClient.js";
 
-export const studentProfile = async(req, res) =>{
+export const Profile = async (req, res) => {
     try {
-        const accessToken = req.cookies?.access_token;
-        if (!accessToken) return res.status(401).json({ message: "Unauthorized" });
+        const access_token = req.cookies?.access_token;
+        if (!access_token) return res.status(401).json({ message: "Unauthorized" });
 
         const userId = req.user?.id;
-        const user = req.user;
+        const email = req.user?.email ?? null;
 
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-        const supabaseUser = supabaseForRequest(accessToken);
+        const supabaseUser = supabaseForRequest(access_token);
 
-        const { data: profile, error } = await supabaseUser
-            .from("student_profiles")
-            .select("user_id, id_number, first_name, last_name, suffix, program, role ,contact_number, address, created_at")
+        // 1) staff
+        const { data: staffProfile, error: staffErr } = await supabaseUser
+            .from("staff_profiles")
+            .select("user_id, staff_id, first_name, last_name, role, created_at")
             .eq("user_id", userId)
             .maybeSingle();
 
-        if (error) return res.status(400).json({ message: error.message });
-        if (!profile) return res.status(404).json({ message: "Profile not found" });
+        if (staffErr) return res.status(400).json({ message: staffErr.message });
 
-        return res.status(200).json({ profile, user });
+        if (staffProfile) {
+            return res.status(200).json({
+                accountType: "staff",
+                user: {
+                    email
+                },
+                profile: staffProfile,
+            });
+        }
+
+        // 2) student
+        const { data: studentProfile, error: studentErr } = await supabaseUser
+            .from("student_profiles")
+            .select(
+                "user_id, id_number, first_name, last_name, suffix, program, year_level, contact_number, address, created_at"
+            )
+            .eq("user_id", userId)
+            .maybeSingle();
+
+        if (studentErr) return res.status(400).json({ message: studentErr.message });
+
+        if (!studentProfile) {
+            return res.status(404).json({
+                message: "Profile not found (no staff or student profile row)",
+            });
+        }
+
+        return res.status(200).json({
+            accountType: "student",
+            user: {
+                email
+            },
+            profile: studentProfile,
+        });
     } catch (e) {
-        console.error(e);
+        console.error("getMyProfileController error:", e);
         return res.status(500).json({ message: "Internal server error" });
     }
-}
+};
 
 export const changePassword = async (req, res) => {
     try {
-        
+
         const access_token = req.cookies?.access_token;
         if(!access_token) return res.status(401).json({message: "Unauthorized"});
-        
+
         const {currentPassword, newPassword} = req.body;
 
         if(!currentPassword || !newPassword) return res.status(400).json({message: "Current password and new password are required"});
 
         if(typeof newPassword !== "string" || newPassword.length < 8) return res.status(400).json({message: "New password must be atleast 8 characters"});
-            
+
         const supabaseUser = supabaseForRequest(access_token);
 
         const email = req.user?.email;
@@ -70,50 +103,50 @@ export const changePassword = async (req, res) => {
 }
 
 export const changeEmail = async (req, res) => {
-  try {
-    const access_token = req.cookies?.access_token;
-    const refresh_token = req.cookies?.refresh_token;
+    try {
+        const access_token = req.cookies?.access_token;
+        const refresh_token = req.cookies?.refresh_token;
 
-    if (!access_token || !refresh_token) {
-      return res.status(401).json({ message: "Unauthorized" });
+        if (!access_token || !refresh_token) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
+
+        const { newEmail } = req.body;
+        if (!newEmail) return res.status(400).json({ message: "New email is required" });
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(newEmail)) {
+            return res.status(400).json({ message: "Invalid email format" });
+        }
+
+        const supabaseUser = supabaseForRequest(access_token);
+
+        // IMPORTANT: attach session to this client instance
+        const { error: sessionError } = await supabaseUser.auth.setSession({
+            access_token,
+            refresh_token,
+        });
+
+        if (sessionError) {
+            return res.status(401).json({ message: sessionError.message });
+        }
+
+        const { data, error } = await supabaseUser.auth.updateUser({ email: newEmail });
+        if (error) return res.status(400).json({ message: error.message });
+
+        return res.status(200).json({
+            message: "Email update requested. Please verify the new email address.",
+            user: data.user,
+        });
+    } catch (e) {
+        console.error("changeEmailController error:", e);
+        return res.status(500).json({ message: "Internal server error" });
     }
-
-    const { newEmail } = req.body;
-    if (!newEmail) return res.status(400).json({ message: "New email is required" });
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(newEmail)) {
-      return res.status(400).json({ message: "Invalid email format" });
-    }
-
-    const supabaseUser = supabaseForRequest(access_token);
-
-    // IMPORTANT: attach session to this client instance
-    const { error: sessionError } = await supabaseUser.auth.setSession({
-      access_token,
-      refresh_token,
-    });
-
-    if (sessionError) {
-      return res.status(401).json({ message: sessionError.message });
-    }
-
-    const { data, error } = await supabaseUser.auth.updateUser({ email: newEmail });
-    if (error) return res.status(400).json({ message: error.message });
-
-    return res.status(200).json({
-      message: "Email update requested. Please verify the new email address.",
-      user: data.user,
-    });
-  } catch (e) {
-    console.error("changeEmailController error:", e);
-    return res.status(500).json({ message: "Internal server error" });
-  }
 };
 
 export const changeNumber = async (req, res) =>{
     try {
-        
+
         const access_token = req.cookies?.access_token;
 
         if(!access_token) return res.status(401).json({message: "unauthorized"});

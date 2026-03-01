@@ -6,7 +6,6 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import Login from "../pages/auth/Login";
 import Signup from "../pages/auth/Signup";
 import ActivityLog from "../pages/borrower/ActivityLog";
-import Account from "../pages/borrower/Account";
 import BookDetails from "../pages/borrower/BookDetails";
 import BrowseBooks from "../pages/borrower/BrowseBooks";
 import RoomReservation from "../pages/borrower/RoomReservation";
@@ -18,15 +17,14 @@ import BookManagement from "../pages/staff/BookManagement";
 import { useStore } from "../store/useAuthStore";
 import { useEffect } from "react";
 import PageLoader from "../components/PageLoader";
-import { ROLES } from "../constants/roles";
 
 const AppRoutes = () => {
 
-    const {user, studentAuth, isCheckingAuth} = useStore();
+    const {user, checkAuth, isCheckingAuth} = useStore();
     
     useEffect(() => {
-        studentAuth();
-    }, [studentAuth])
+        checkAuth();
+    }, [checkAuth])
     
     if(isCheckingAuth) return <PageLoader/>  
 

@@ -11,7 +11,7 @@ const Login = () => {
   const [error, setError] = useState("");
   const [isRedirecting, setIsRedirecting] = useState(false);
   const navigate = useNavigate();
-  const { studentLogin, isLoading } = useStore();
+  const { Login, isLoading } = useStore();
 
   const handleLogin = async () => {
     // Reset previous validation/auth messages before a new attempt.
@@ -25,7 +25,7 @@ const Login = () => {
     }
 
     // Call the store's login method
-    const success = await studentLogin(email, password);
+    const success = await Login(email, password);
     
     if (!success) {
       setError("Login failed. Please check your credentials.");

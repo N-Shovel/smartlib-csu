@@ -1,4 +1,4 @@
-import { supabase } from "../lib/supabaseClient.js"
+import { supabase, supabaseForRequest } from "../lib/supabaseClient.js"
 import { setCookies } from "../lib/utils.js";
 
 export const signupController = async (req, res) => {
@@ -116,54 +116,86 @@ export const signupController = async (req, res) => {
 };
 
 export const loginController = async (req, res) => {
-  const { email, password } = req.body;
+    const { email, password } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ message: "Email and password are required" });
-  }
-
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      return res.status(401).json({ message: error.message });
+    if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
     }
 
-    const userId = data.user?.id;
-    if (!userId) return res.status(404).json({ message: "User id not found" });
+    try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+        });
 
-    const { data: profileData, error: profileError } = await supabase
-      .from("student_profiles")
-      .select(
-        "user_id, id_number, first_name, last_name, suffix, role ,program, contact_number, address, created_at"
-      )
-      .eq("user_id", userId)
-      .single();
+        if (error) {
+            return res.status(401).json({ message: error.message });
+        }
 
-    if (profileError || !profileData) {
-      console.error("Profile lookup error:", profileError);
-      return res.status(404).json({ 
-        message: "Invalid Credentials",
-      });
+        const userId = data.user?.id;
+        if (!userId) return res.status(404).json({ message: "User id not found" });
+
+        const { refresh_token, access_token, expires_in } = data.session || {};
+        if (!refresh_token || !access_token || !expires_in) {
+            return res.status(401).json({ message: "Session missing" });
+        }
+
+        setCookies(res, access_token, refresh_token, expires_in);
+
+        const supabaseUser = supabaseForRequest(access_token);
+
+        // 1) Try staff profile first
+        const { data: staffProfile, error: staffErr } = await supabaseUser
+            .from("staff_profiles")
+            .select("user_id, staff_id, first_name, last_name, role, created_at")
+            .eq("user_id", userId)
+            .maybeSingle();
+
+        if (staffErr) {
+            console.error("Staff profile lookup error:", staffErr);
+            return res.status(500).json({ message: "Failed to lookup staff profile" });
+        }
+
+        if (staffProfile) {
+            return res.status(200).json({
+                message: "Login successful",
+                accountType: "staff",
+                profile: staffProfile,
+                user: data.user,
+            });
+        }
+
+        // 2) Otherwise, try student profile
+        const { data: studentProfile, error: studentErr } = await supabaseUser
+            .from("student_profiles")
+            .select(
+                "user_id, id_number, first_name, last_name, suffix, program, year_level, contact_number, address, created_at"
+            )
+            .eq("user_id", userId)
+            .maybeSingle();
+
+        if (studentErr) {
+            console.error("Student profile lookup error:", studentErr);
+            return res.status(500).json({ message: "Failed to lookup student profile" });
+        }
+
+        if (!studentProfile) {
+            // Auth user exists, but no profile in either table
+            return res.status(403).json({
+                message: "Account has no profile (staff or student). Contact admin.",
+            });
+        }
+
+        return res.status(200).json({
+            message: "Login successful",
+            accountType: "student",
+            profile: studentProfile,
+            user: data.user,
+        });
+    } catch (err) {
+        console.error("Error in login controller: ", err);
+        return res.status(500).json({ message: "Internal server error" });
     }
-
-    const { refresh_token, access_token, expires_in } = data.session || {};
-
-    // Authenticate user via cookies
-    setCookies(res, access_token, refresh_token, expires_in);
-
-    return res.status(200).json({
-      message: "Login successful",
-      profile: profileData,
-      user: data.user,
-    });
-  } catch (err) {
-    console.error("Error in login controller: ", err);
-    return res.status(500).json({ message: "Internal server error" });
-  }
 };
 
 export const logoutController = async (_, res) => {

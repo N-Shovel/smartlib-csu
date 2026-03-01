@@ -4,8 +4,8 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 
 
-import studentAuthRoutes from "./routes/studentAuth.routes.js";
-import studentProfileRoutes from "./routes/studentProfile.route.js";
+import authRoutes from "./routes/auth.routes.js";
+import profileRoutes from "./routes/profile.route.js";
 
 const app = express()
 
@@ -17,8 +17,8 @@ app.use(cors({
 }))
 
 
-app.use("/api/auth", studentAuthRoutes);
-app.use("/api/profile", studentProfileRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/profile", profileRoutes);
 
 if(!ENV.SERVERLESS){
     app.listen(ENV.PORT, () =>{
