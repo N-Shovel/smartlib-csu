@@ -1116,6 +1116,11 @@ textarea.input.input--warning {
   gap: 0.75rem;
 }
 
+.staff-tracking-page .table--staff-borrow-history .table__row {
+  grid-template-columns: minmax(170px, 1.2fr) minmax(110px, 0.75fr) minmax(170px, 1.2fr) minmax(120px, 0.9fr) minmax(150px, 1fr);
+  gap: 0.75rem;
+}
+
 .staff-approvals-page .table--staff-pending .table__row {
   grid-template-columns: minmax(10ch, 12ch) minmax(20ch, 22ch) minmax(18ch, 1.2fr) minmax(10ch, 12ch) minmax(22ch, 24ch) minmax(8ch, 9ch) minmax(8ch, 9ch);
   gap: 0.75rem;
@@ -1819,11 +1824,11 @@ textarea.input.input--warning {
   }
 
   .staff-tracking-page .table--staff-borrow-history {
-    min-width: 700px;
+    min-width: 820px;
   }
 
   .staff-tracking-page .table--staff-borrow-history .table__row {
-    grid-template-columns: minmax(170px, 1.2fr) minmax(110px, 0.8fr) minmax(170px, 1.2fr) minmax(145px, 1fr);
+    grid-template-columns: minmax(170px, 1.2fr) minmax(110px, 0.8fr) minmax(170px, 1.2fr) minmax(120px, 0.9fr) minmax(145px, 1fr);
     gap: 0.75rem;
   }
 

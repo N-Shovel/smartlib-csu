@@ -20,6 +20,7 @@ const BorrowerTracking = () => {
   const [borrowRequests, setBorrowRequests] = useState(getBorrowRequests());
   const getStudentIdByEmail = (email) =>
     getUserProfileByEmail(email)?.id || "-";
+  const formatHistoryAction = (action) => String(action || "-").replace(/_/g, " ");
 
   const pendingRequests = borrowRequests.filter((entry) => entry.status === "pending");
   const pendingReturnRequestByBookAndUser = borrowRequests
@@ -197,6 +198,7 @@ const BorrowerTracking = () => {
               <span>User</span>
               <span>Student ID</span>
               <span>Book</span>
+              <span>Action</span>
               <span>Time</span>
             </div>
             {history.slice(0, 6).map((entry) => (
@@ -204,6 +206,7 @@ const BorrowerTracking = () => {
                 <span>{entry.borrowerEmail}</span>
                 <span>{getStudentIdByEmail(entry.borrowerEmail)}</span>
                 <span>{entry.title}</span>
+                <span>{formatHistoryAction(entry.action)}</span>
                 <span>{formatDateTime(entry.timestamp)}</span>
               </div>
             ))}

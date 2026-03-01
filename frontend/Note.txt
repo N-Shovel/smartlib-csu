@@ -97,6 +97,8 @@ borrower@library.com / 1234
     Contact: 09991234567
     Address: Purok 4, Libertad, Butuan City
 
+Permission Slip: 24101234
+
 DEPENDENCIES / TOOLS NOTES
 ==========================
 toaster library
