@@ -4,10 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { Menu } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { ROLES } from "../constants/roles";
-import { useAuth } from "../context/AuthContext";
+import { useStore } from "../store/useAuthStore";
 
 const Sidebar = () => {
-	const { user } = useAuth();
+    const {user} = useStore(); 
 	const [isCollapsed, setIsCollapsed] = useState(false);
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 	const [isMobileMoving, setIsMobileMoving] = useState(false);
