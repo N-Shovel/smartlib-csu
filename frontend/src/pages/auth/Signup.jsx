@@ -227,7 +227,7 @@ const Signup = () => {
       <div className="signup-field signup-field--full">
         {error ? <div className="alert">{error}</div> : null}
         <button 
-          className={`btn ${isLoading? "bg-gray-500" :  "btn--primary"}`} 
+          className={`btn ${isLoading? "bg-gray-500 cursor-not-allowed" :  "btn--primary"}`} 
           onClick={handleSignup}
           disabled={isLoading}
         >

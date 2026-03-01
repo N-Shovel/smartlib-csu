@@ -6,7 +6,7 @@ const router = express.Router();
 
 
 router.get("/student-profile", protectRoute, studentProfile);
-router.post("/change-password", protectRoute, changePassword);
-router.post("/change-email", protectRoute, changeEmail);
+router.patch("/change-password", protectRoute, changePassword);
+router.patch("/change-email", protectRoute, changeEmail);
 
 export default router;

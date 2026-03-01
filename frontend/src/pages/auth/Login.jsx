@@ -64,7 +64,7 @@ const Login = () => {
         />
         {error ? <div className="alert">{error}</div> : null}
         <button 
-          className="btn btn--primary" 
+          className={`btn ${isLoading? "bg-gray-500 cursor-not-allowed": "btn--primary"}`} 
           onClick={handleLogin}
           disabled={isLoading}
         >

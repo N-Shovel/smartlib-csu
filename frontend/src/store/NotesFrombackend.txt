@@ -1,5 +1,7 @@
 Hello, this is the return type from the backend, please setup frontend based only from this json file
 
+Notes that the key is not a string, the only string is the value, I copy it from postman
+
 user = {
     "profile": {
         "user_id": "0654b6c7-2acf-4dee-9b7f-17a71ed3cc57",
