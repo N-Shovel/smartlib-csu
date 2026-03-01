@@ -1,6 +1,6 @@
 // Purpose: Auth context/provider exposing current user and auth actions.
 // Parts: context shape, provider state/actions, memoized value, consumer hook.
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
 	login,
 	signup,
@@ -12,8 +12,27 @@ import {
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-	// Initialize from persisted session so refresh keeps user logged in.
-	const [user, setUser] = useState(getCurrentUser());
+	// Start with null user until persisted session is safely validated.
+	const [user, setUser] = useState(null);
+	// Prevent route/UI role checks from running before hydration completes.
+	const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+	useEffect(() => {
+		// Hydrate persisted session on app mount.
+		// In production builds, this mount/hydration timing can expose null-role access
+		// if guarded components render before local session is restored.
+		try {
+			const persistedUser = getCurrentUser();
+			const hasRequiredSessionShape =
+				Boolean(persistedUser?.email) && Boolean(persistedUser?.role);
+			// Reject malformed persisted user payloads to avoid role-check crashes.
+			setUser(hasRequiredSessionShape ? persistedUser : null);
+		} catch {
+			setUser(null);
+		} finally {
+			setIsAuthLoading(false);
+		}
+	}, []);
 
 	const loginUser = useCallback((email, password) => {
 		const result = login(email, password);
@@ -50,12 +69,13 @@ export const AuthProvider = ({ children }) => {
 	const value = useMemo(
 		() => ({
 			user,
+			isAuthLoading,
 			loginUser,
 			signupUser,
 			logoutUser,
 			updateBorrowerAccountUser
 		}),
-		[user, loginUser, signupUser, logoutUser, updateBorrowerAccountUser]
+		[user, isAuthLoading, loginUser, signupUser, logoutUser, updateBorrowerAccountUser]
 	);
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

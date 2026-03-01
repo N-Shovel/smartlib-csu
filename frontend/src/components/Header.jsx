@@ -8,6 +8,7 @@ import caragaStateUniversityLogo from "../assets/Caraga_State_University.png";
 const Header = () => {
   const { user } = useAuth();
 
+  // Resolve brand destination from role safely; fallback protects null/unknown sessions.
   const brandTarget =
     user?.role === ROLES.STAFF
       ? "/staff/dashboard"
@@ -31,9 +32,10 @@ const Header = () => {
         {/* Render account info/actions when authenticated; otherwise show entry actions. */}
         {user ? (
           <div className="header__meta">
-            <span className="pill header__role-pill">{user.role}</span>
-            <span className="header__email">{user.email}</span>
-            <span className="header__email-mobile">{`${user.role} - ${user.email}`}</span>
+            {/* Defensive fallback values prevent "cannot read role of null" in edge hydration states. */}
+            <span className="pill header__role-pill">{user?.role || "-"}</span>
+            <span className="header__email">{user?.email || "-"}</span>
+            <span className="header__email-mobile">{`${user?.role || "-"} - ${user?.email || "-"}`}</span>
           </div>
         ) : (
           <div className="header__actions">

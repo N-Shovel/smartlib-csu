@@ -78,10 +78,11 @@ const Sidebar = () => {
 		{ to: "/borrower/activity", label: "Activity Log", icon: History },
 		{ to: "/borrower/account", label: "Account", icon: UserRound }
 	];
+	// Explicitly resolve known roles only; unknown/null role gets empty nav instead of wrong menu.
 	const links =
-		user.role === ROLES.STAFF
+		user?.role === ROLES.STAFF
 			? staffLinks
-			: user.role === ROLES.BORROWER
+			: user?.role === ROLES.BORROWER
 				? borrowerLinks
 				: [];
 
@@ -111,7 +112,8 @@ const Sidebar = () => {
 					>
 						<Menu size={18} strokeWidth={2.35} />
 					</button>
-					<div className="sidebar__title">{user.role} menu</div>
+					{/* Safe title fallback avoids crashing when session is temporarily null during hydration. */}
+					<div className="sidebar__title">{`${user?.role || "user"} menu`}</div>
 				</div>
 				<div className="sidebar__section">
 					{links.map((link) => (
