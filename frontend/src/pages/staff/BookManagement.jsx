@@ -1,122 +1,113 @@
-import { useMemo, useState } from "react";
-import { Search, X } from "lucide-react";
-import { addBook, deleteBook, getBooks } from "../../services/bookService";
+import { useMemo, useState, useEffect } from "react";
+import { LoaderIcon, Search, X } from "lucide-react";
 import { showError, showSuccess } from "../../utils/notification";
 import BookDetailsModal from "../../components/BookDetailsModal";
+import useItems from "../../store/useItemsStore";
 
 const INITIAL_FORM = {
+  itemType: "book", // "book" | "thesis"
   title: "",
   author: "",
-  category: "Book",
   description: "",
-  keywords: ""
+  keywords: "", // comma-separated string
+  itemNumber: "",
 };
 
 const BookManagement = () => {
-  // Local UI state is seeded from service and refreshed after each mutation.
-  const [books, setBooks] = useState(() => getBooks());
+  const { items, fetchBooks, createItem, isLoading } = useItems();
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null); // "book" | "thesis" | null
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [form, setForm] = useState(INITIAL_FORM);
   const [selectedBook, setSelectedBook] = useState(null);
   const [bookToDelete, setBookToDelete] = useState(null);
-  // Keep only the last reversible action to support one-step undo.
   const [lastAction, setLastAction] = useState(null);
 
+  useEffect(() => {
+    fetchBooks();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    console.log(items);
   const filteredBooks = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    // Category filter runs first, then text search refines the result set.
+
     const byCategory =
       selectedCategory === null
-        ? books
-        : books.filter(
-            (book) => String(book.category || "").toLowerCase() === selectedCategory
+        ? items
+        : items.filter(
+            (book) => String(book.item_type || "").toLowerCase() === selectedCategory
           );
 
     if (!query) return byCategory;
 
     return byCategory.filter((book) =>
-      [book.title, book.author, book.category, ...(book.keywords || [])]
+      [book.title, book.author, book.item_type, ...(book.keywords || [])]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(query))
     );
-  }, [books, searchQuery, selectedCategory]);
-
-  const refresh = () => setBooks(getBooks());
+  }, [items, searchQuery, selectedCategory]);
 
   const handleCategoryToggle = (category) => {
     setSelectedCategory((current) => (current === category ? null : category));
   };
 
-  const handleDelete = (book) => {
-    setBookToDelete(book);
+  const handleDelete = (book) => setBookToDelete(book);
+
+  // NOTE: deleteItem is not implemented in zustand store yet.
+  const handleConfirmDelete = async () => {
+    showError("deleteItem is not implemented in Zustand yet.");
   };
 
-  const handleConfirmDelete = () => {
-    if (!bookToDelete) return;
-
-    const result = deleteBook(bookToDelete.id);
-    if (!result.ok) {
-      showError(result.error || "Unable to delete book.");
-      return;
-    }
-
-    // Save deletion context so Undo can reconstruct the removed entry.
-    showSuccess("Book deleted.");
-    setLastAction({ type: "delete", book: bookToDelete });
-    setBookToDelete(null);
-    refresh();
-  };
-
-  const handleUndo = () => {
+  const handleUndo = async () => {
     if (!lastAction) return;
 
-    // Undo add by deleting the recently created book.
     if (lastAction.type === "add") {
-      const result = deleteBook(lastAction.book.id);
-      if (!result.ok) {
-        showError(result.error || "Unable to undo add action.");
-        return;
-      }
-      showSuccess("Add action undone.");
-      setLastAction(null);
-      refresh();
+      showError("Undo add requires deleteItem() in Zustand.");
       return;
     }
 
-    // Undo delete by re-adding the removed book details.
     if (lastAction.type === "delete") {
-      const result = addBook({
-        title: lastAction.book.title,
-        author: lastAction.book.author,
-        category: lastAction.book.category,
-        description: lastAction.book.description,
-        keywords: lastAction.book.keywords || []
-      });
-      if (!result.ok) {
-        showError(result.error || "Unable to undo delete action.");
-        return;
+      try {
+        await createItem(lastAction.payload);
+        showSuccess("Delete action undone.");
+        setLastAction(null);
+        await fetchBooks();
+      } catch (e) {
+        showError("Unable to undo delete action.");
       }
-      showSuccess("Delete action undone.");
-      setLastAction(null);
-      refresh();
     }
   };
 
-  const handleAddSubmit = () => {
-    const result = addBook(form);
-    if (!result.ok) {
-      showError(result.error || "Unable to add book.");
-      return;
-    }
+  const handleAddSubmit = async () => {
+    if (!form.title.trim()) return showError("Title is required.");
+    if (!form.author.trim()) return showError("Author is required.");
 
-  // Save add context so user can rollback the creation in one click.
-    showSuccess("Book added.");
-    setLastAction({ type: "add", book: result.book });
-    setIsAddModalOpen(false);
-    setForm(INITIAL_FORM);
-    refresh();
+    const keywordsArray = String(form.keywords || "")
+      .split(",")
+      .map((k) => k.trim())
+      .filter(Boolean);
+
+    const payload = {
+      itemType: form.itemType,
+      title: form.title.trim(),
+      author: form.author.trim(),
+      description: form.description?.trim() || "",
+      keywords: keywordsArray,
+      itemNumber: form.itemNumber?.trim() || "",
+    };
+
+    try {
+      await createItem(payload);
+
+      showSuccess("Item created.");
+      setLastAction({ type: "add", payload });
+
+      setIsAddModalOpen(false);
+      setForm(INITIAL_FORM);
+      await fetchBooks();
+    } catch (err) {
+      showError(err?.message || "Failed to create item.");
+    }
   };
 
   return (
@@ -124,7 +115,7 @@ const BookManagement = () => {
       <div className="page-header">
         <div>
           <h2>Book Management</h2>
-          <p className="muted">Manage catalog books, add new books, and remove entries.</p>
+          <p className="muted">Manage catalog books/theses, add new items, and remove entries.</p>
         </div>
       </div>
 
@@ -134,14 +125,13 @@ const BookManagement = () => {
           <input
             className="input search-input"
             type="search"
-            aria-label="Search books by title, author, or category"
-            placeholder="Search by title, author, or category"
+            placeholder="Search by title/author/type/keywords"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
           />
         </div>
 
-        <div className="book-category-filter" role="group" aria-label="Book category filter">
+        <div className="book-category-filter" role="group" aria-label="Item type filter">
           <button
             type="button"
             aria-pressed={selectedCategory === "book"}
@@ -152,6 +142,7 @@ const BookManagement = () => {
           >
             {selectedCategory === "book" ? "✓ Books" : "Books"}
           </button>
+
           <button
             type="button"
             aria-pressed={selectedCategory === "thesis"}
@@ -162,26 +153,23 @@ const BookManagement = () => {
           >
             {selectedCategory === "thesis" ? "✓ Thesis" : "Thesis"}
           </button>
-          <button
-            type="button"
-            className="btn btn--primary"
-            onClick={() => setIsAddModalOpen(true)}
-          >
+
+          <button type="button" className="btn btn--primary" onClick={() => setIsAddModalOpen(true)}>
             Add
           </button>
-          <button
-            type="button"
-            className="btn btn--ghost"
-            onClick={handleUndo}
-            disabled={!lastAction}
-          >
+
+          <button type="button" className="btn btn--ghost" onClick={handleUndo} disabled={!lastAction}>
             Undo
+          </button>
+
+          <button type="button" className="btn btn--ghost" onClick={fetchBooks} disabled={isLoading}>
+            Refresh
           </button>
         </div>
       </div>
 
       {filteredBooks.length === 0 ? (
-        <div className="empty-state">No books found.</div>
+        <div className="empty-state">No items found.</div>
       ) : (
         <div className="book-grid">
           {filteredBooks.map((book) => (
@@ -196,12 +184,16 @@ const BookManagement = () => {
                   <X size={14} strokeWidth={2.6} aria-hidden="true" />
                 </button>
               </div>
-              {book.category ? <p className="book-card__category">{book.category}</p> : null}
-              <p className="muted book-card__author">{book.author}</p>
+
+              {book.item_type ? <p className="book-card__category">{book.item_type}</p> : null}
+              {book.author ? <p className="muted book-card__author">{book.author}</p> : null}
+
               {Array.isArray(book.keywords) && book.keywords.length > 0 ? (
                 <p className="micro">Keywords: {book.keywords.join(", ")}</p>
               ) : null}
+
               <p className="book-card__desc">{book.description}</p>
+
               <div className="book-card__actions">
                 <button className="btn btn--info" onClick={() => setSelectedBook(book)}>
                   Details
@@ -221,7 +213,7 @@ const BookManagement = () => {
       {bookToDelete ? (
         <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="delete-book-title">
           <div className="card modal-card">
-            <h3 id="delete-book-title">Delete Book</h3>
+            <h3 id="delete-book-title">Delete Item</h3>
             <p className="muted">
               Are you sure you want to delete <strong>{bookToDelete.title}</strong>?
             </p>
@@ -240,53 +232,51 @@ const BookManagement = () => {
       {isAddModalOpen ? (
         <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="add-book-title">
           <div className="card modal-card modal-card--book-management">
-            <h3 id="add-book-title">Add Book</h3>
+            <h3 id="add-book-title">Add Item</h3>
+
+            <label className="label">Type</label>
+            <select
+              className="select"
+              value={form.itemType}
+              onChange={(event) => setForm((c) => ({ ...c, itemType: event.target.value }))}
+            >
+              <option value="book">Book</option>
+              <option value="thesis">Thesis</option>
+            </select>
+
             <label className="label">Title</label>
             <input
               className="input"
               value={form.title}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, title: event.target.value }))
-              }
+              onChange={(event) => setForm((c) => ({ ...c, title: event.target.value }))}
             />
 
             <label className="label">Author</label>
             <input
               className="input"
               value={form.author}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, author: event.target.value }))
-              }
+              onChange={(event) => setForm((c) => ({ ...c, author: event.target.value }))}
             />
 
-            <label className="label">Category</label>
-            <select
-              className="select"
-              value={form.category}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, category: event.target.value }))
-              }
-            >
-              <option value="Book">Book</option>
-              <option value="Thesis">Thesis</option>
-            </select>
+            <label className="label">Item Number (optional)</label>
+            <input
+              className="input"
+              value={form.itemNumber}
+              onChange={(event) => setForm((c) => ({ ...c, itemNumber: event.target.value }))}
+            />
 
             <label className="label">Description</label>
             <textarea
               className="input input--area"
               value={form.description}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, description: event.target.value }))
-              }
+              onChange={(event) => setForm((c) => ({ ...c, description: event.target.value }))}
             />
 
             <label className="label">Keywords (comma-separated)</label>
             <input
               className="input"
               value={form.keywords}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, keywords: event.target.value }))
-              }
+              onChange={(event) => setForm((c) => ({ ...c, keywords: event.target.value }))}
             />
 
             <div className="modal-actions">
@@ -299,8 +289,12 @@ const BookManagement = () => {
               >
                 Cancel
               </button>
-              <button className="btn btn--primary" onClick={handleAddSubmit}>
-                Add Book
+              <button className="btn btn--primary" onClick={handleAddSubmit} disabled={isLoading}>
+                {isLoading ? (
+                  <LoaderIcon className="flex items-center justify-center animate-spin" />
+                ) : (
+                  "Add"
+                )}
               </button>
             </div>
           </div>
