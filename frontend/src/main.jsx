@@ -4,7 +4,12 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./index.css";
-import { AuthProvider } from "./context/AuthContext";
+import appFavicon from "./assets/Caraga_State_University.png";
+
+const faviconLink = document.querySelector("link[rel='icon']");
+if (faviconLink) {
+  faviconLink.setAttribute("href", appFavicon);
+}
 
 // Mount the React app into the root node declared in index.html.
 ReactDOM.createRoot(document.getElementById("root")).render(

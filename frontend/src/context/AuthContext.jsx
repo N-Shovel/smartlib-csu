@@ -1,45 +1,81 @@
 // Purpose: Auth context/provider exposing current user and auth actions.
 // Parts: context shape, provider state/actions, memoized value, consumer hook.
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
 	login,
 	signup,
 	logout,
-	getCurrentUser
+	getCurrentUser,
+	updateBorrowerAccount
 } from "../services/authService";
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-	// Initialize from persisted session so refresh keeps user logged in.
-	const [user, setUser] = useState(getCurrentUser());
+	// Start with null user until persisted session is safely validated.
+	const [user, setUser] = useState(null);
+	// Prevent route/UI role checks from running before hydration completes.
+	const [isAuthLoading, setIsAuthLoading] = useState(true);
 
-	const loginUser = (email, password) => {
+	useEffect(() => {
+		// Hydrate persisted session on app mount.
+		// In production builds, this mount/hydration timing can expose null-role access
+		// if guarded components render before local session is restored.
+		try {
+			const persistedUser = getCurrentUser();
+			const hasRequiredSessionShape =
+				Boolean(persistedUser?.email) && Boolean(persistedUser?.role);
+			// Reject malformed persisted user payloads to avoid role-check crashes.
+			setUser(hasRequiredSessionShape ? persistedUser : null);
+		} catch {
+			setUser(null);
+		} finally {
+			setIsAuthLoading(false);
+		}
+	}, []);
+
+	const loginUser = useCallback((email, password) => {
 		const result = login(email, password);
 		// Update in-memory auth state only on successful login.
 		if (result.ok) setUser(result.user);
 		return result;
-	};
+	}, []);
 
-	const signupUser = (email, password, role, profile) => {
+	const signupUser = useCallback((email, password, role, profile) => {
 		return signup(email, password, role, profile);
-	};
+	}, []);
 
-	const logoutUser = () => {
+	const logoutUser = useCallback(() => {
 		// Clear persistent auth and reset context user.
 		logout();
 		setUser(null);
-	};
+	}, []);
+
+	const updateBorrowerAccountUser = useCallback((updates) => {
+		if (!user?.email) {
+			return { ok: false, error: "No active user." };
+		}
+
+		// Service returns refreshed session user after email/password/contact update.
+		const result = updateBorrowerAccount(user.email, updates);
+		if (result.ok) {
+			// Keep context session aligned with persisted current user (important after email change).
+			setUser(result.user);
+		}
+		return result;
+	}, [user]);
 
 	// Memoize context value so consumers only rerender when user changes.
 	const value = useMemo(
 		() => ({
 			user,
+			isAuthLoading,
 			loginUser,
 			signupUser,
-			logoutUser
+			logoutUser,
+			updateBorrowerAccountUser
 		}),
-		[user]
+		[user, isAuthLoading, loginUser, signupUser, logoutUser, updateBorrowerAccountUser]
 	);
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

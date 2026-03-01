@@ -9,7 +9,11 @@ const ProtectedRoute = ({ children }) => {
   // Block anonymous users from protected pages.
   if (!user) return <Navigate to="/login" replace />;
 
-  // Auth check passed.
+  // Block authenticated users that don't match the required role.
+  // Optional chaining prevents runtime crash if user shape is unexpectedly incomplete.
+  if (role && user?.role !== role) return <Navigate to="/" replace />;
+
+  // Auth + role checks passed.
   return children;
 };
 

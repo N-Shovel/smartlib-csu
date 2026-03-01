@@ -1,8 +1,10 @@
 // Purpose: Staff page for viewing borrower signups and exporting lists.
 // Parts: data loading, helper formatting, export handler, table render.
+import { useState } from "react";
 import { getBorrowerSignups } from "../../services/authService";
 import { exportToCSV } from "../../services/exportService";
 import { getBorrowerSignupsExport } from "../../data/exportBorrowerSignups";
+import { formatBorrowerFullName } from "../../utils/name";
 
 const truncateText = (value, maxLength) => {
 	// Keep table columns compact while preserving full value in title tooltip.
@@ -13,11 +15,20 @@ const truncateText = (value, maxLength) => {
 
 const StaffAndBorrowerList = () => {
 	const borrowers = getBorrowerSignups();
+	const [selectedBorrower, setSelectedBorrower] = useState(null);
 
 	const handleExport = () => {
 		if (borrowers.length === 0) return;
 		// Export all borrower signup rows in one CSV file.
 		exportToCSV(getBorrowerSignupsExport(borrowers), "borrower-signups.csv");
+	};
+
+	const openBorrowerDetails = (borrower) => {
+		setSelectedBorrower(borrower);
+	};
+
+	const closeBorrowerDetails = () => {
+		setSelectedBorrower(null);
 	};
 
 	return (
@@ -39,45 +50,92 @@ const StaffAndBorrowerList = () => {
 			{borrowers.length === 0 ? (
 				<div className="empty-state">No borrower signups yet.</div>
 			) : (
-				<div className="card staff-table-card">
-					<div className="table table--staff-signups">
-						<div className="table__row table__head">
-							<span>First Name</span>
-							<span>Last Name</span>
-							<span>Course</span>
-							<span>Year Level</span>
-							<span>Contact</span>
-							<span>Address</span>
-							<span>Email</span>
-						</div>
-						{borrowers.map((borrower) => (
-							<div className="table__row" key={borrower.email}>
-								<span title={borrower.firstName || "-"}>
-									{truncateText(borrower.firstName, 14)}
-								</span>
-								<span title={borrower.lastName || "-"}>
-									{truncateText(borrower.lastName, 14)}
-								</span>
-								<span title={borrower.collegeCourse || "-"}>
-									{truncateText(borrower.collegeCourse, 18)}
-								</span>
-								<span title={borrower.yearLevel || "-"}>
-									{truncateText(borrower.yearLevel, 10)}
-								</span>
-								<span title={borrower.contactInfo || "-"}>
-									{truncateText(borrower.contactInfo, 14)}
-								</span>
-								<span title={borrower.currentAddress || "-"}>
-									{truncateText(borrower.currentAddress, 24)}
-								</span>
-								<span title={borrower.email || "-"}>
-									{truncateText(borrower.email, 22)}
-								</span>
-							</div>
-						))}
-					</div>
+				<div className="card table-scroll table-scroll--five staff-table-card">
+					<table className="staff-signups-data-table">
+						<colgroup>
+							<col style={{ width: "24ch" }} />
+							<col style={{ width: "12ch" }} />
+							<col style={{ width: "24ch" }} />
+							<col style={{ width: "18ch" }} />
+							<col style={{ width: "30ch" }} />
+							<col style={{ width: "10ch" }} />
+						</colgroup>
+						<thead>
+							<tr>
+								<th>Name</th>
+								<th>Student ID</th>
+								<th>Course - Year Level</th>
+								<th>Email</th>
+								<th>Address</th>
+								<th>Action</th>
+							</tr>
+						</thead>
+						<tbody>
+							{borrowers.map((borrower) => (
+								<tr key={borrower.email}>
+									<td data-label="Name" title={formatBorrowerFullName(borrower)}>
+										{truncateText(
+											formatBorrowerFullName(borrower),
+											28
+										)}
+									</td>
+									<td data-label="Student ID" title={borrower.id || "-"}>
+										{truncateText(borrower.id, 14)}
+									</td>
+									<td data-label="Course - Year Level" title={`${borrower.collegeCourse || "-"} - ${borrower.yearLevel || "-"}`}>
+										{truncateText(
+											`${borrower.collegeCourse || "-"} - ${borrower.yearLevel || "-"}`,
+											26
+										)}
+									</td>
+									<td data-label="Email" title={borrower.email || "-"}>
+										{truncateText(borrower.email, 16)}
+									</td>
+									<td data-label="Address" title={borrower.currentAddress || "-"}>
+										{truncateText(borrower.currentAddress, 24)}
+									</td>
+									<td data-label="Action">
+										<button
+											className="btn btn--ghost staff-signups-view-btn"
+											onClick={() => openBorrowerDetails(borrower)}
+										>
+											View
+										</button>
+									</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
 				</div>
 			)}
+
+			{selectedBorrower ? (
+				<div className="modal-overlay" role="dialog" aria-modal="true">
+					<div className="card modal-card modal-card--signup-details">
+						<h3>Borrower Details</h3>
+						<p>
+							<strong>Name:</strong> {formatBorrowerFullName(selectedBorrower)}
+						</p>
+						<p>
+							<strong>Course - Year Level:</strong> {selectedBorrower.collegeCourse || "-"} - {selectedBorrower.yearLevel || "-"}
+						</p>
+						<p>
+							<strong>Student ID:</strong> {selectedBorrower.id || "-"}
+						</p>
+						<p>
+							<strong>Email:</strong> {selectedBorrower.email || "-"}
+						</p>
+						<p>
+							<strong>Address:</strong> {selectedBorrower.currentAddress || "-"}
+						</p>
+						<div className="modal-actions">
+							<button className="btn btn--ghost" onClick={closeBorrowerDetails}>
+								Close
+							</button>
+						</div>
+					</div>
+				</div>
+			) : null}
 		</section>
 	);
 };
