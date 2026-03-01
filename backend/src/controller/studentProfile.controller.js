@@ -14,7 +14,7 @@ export const studentProfile = async(req, res) =>{
 
         const { data: profile, error } = await supabaseUser
             .from("student_profiles")
-            .select("user_id, id_number, first_name, last_name, suffix, program,  contact_number, address, created_at")
+            .select("user_id, id_number, first_name, last_name, suffix, program, role ,contact_number, address, created_at")
             .eq("user_id", userId)
             .maybeSingle();
 

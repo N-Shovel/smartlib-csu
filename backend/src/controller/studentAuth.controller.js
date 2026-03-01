@@ -16,7 +16,6 @@ export const signupController = async (req, res) => {
         address,
     } = req.body;
 
-    // ---- validations ----
     if (!firstName || !lastName) {
         return res.status(400).json({ message: "First name and last name are required" });
     }
@@ -86,7 +85,7 @@ export const signupController = async (req, res) => {
                 },
             ])
             .select(
-                "user_id, id_number, first_name, last_name, suffix, program, contact_number, address, created_at"
+                "user_id, id_number, first_name, last_name, suffix, role ,program, contact_number, address, created_at"
             )
             .single();
 
@@ -139,7 +138,7 @@ export const loginController = async (req, res) => {
     const { data: profileData, error: profileError } = await supabase
       .from("student_profiles")
       .select(
-        "user_id, id_number, first_name, last_name, suffix, program,  contact_number, address"
+        "user_id, id_number, first_name, last_name, suffix, role ,program, contact_number, address, created_at"
       )
       .eq("user_id", userId)
       .single();
