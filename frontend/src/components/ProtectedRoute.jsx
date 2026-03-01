@@ -1,14 +1,10 @@
-// Purpose: Role-based route gate to protect restricted pages.
-// Parts: auth check, role validation, redirect behavior.
+// Purpose: Route gate to protect restricted pages from unauthenticated users.
+// Parts: auth check, redirect behavior.
 import { Navigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useStore } from "../store/useAuthStore";
 
-const ProtectedRoute = ({ children, role }) => {
-  const { user, isAuthLoading } = useAuth();
-
-  // Wait for persisted auth hydration to finish before route checks.
-  // Returning null here avoids briefly rendering a redirect based on stale null user.
-  if (isAuthLoading) return null;
+const ProtectedRoute = ({ children }) => {
+  const { user } = useStore();
 
   // Block anonymous users from protected pages.
   if (!user) return <Navigate to="/login" replace />;

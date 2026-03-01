@@ -1,6 +1,7 @@
 /* Purpose: Global design system and shared UI styles for the whole app.
   Parts: theme/base rules, layout containers, component states, responsive rules. */
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:wght@700&display=swap");
+@import "tailwindcss";
 
 :root {
   --bg: #edf5f0;
@@ -374,7 +375,6 @@ h2 {
 
 .btn {
   border: none;
-  cursor: pointer;
   padding: 0.65rem 1.2rem;
   border-radius: 999px;
   font-weight: 600;

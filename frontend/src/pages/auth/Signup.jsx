@@ -2,10 +2,10 @@
 // Parts: form model, validation logic, submit handler, grouped form render.
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
-import { showError, showSuccess } from "../../utils/notification";
-import { ROLES } from "../../constants/roles";
+import { useStore } from "../../store/useAuthStore";
+import { showError } from "../../utils/notification";
 import AuthCard from "../../components/AuthCard";
 
 const toYearLevelSuffix = (value) => {
@@ -50,126 +50,49 @@ const Signup = () => {
   const [error, setError] = useState("");
   const [isRedirecting, setIsRedirecting] = useState(false);
   const navigate = useNavigate();
-  const { signupUser } = useAuth();
+  const { studentSignUp, isLoading } = useStore();
 
-  const isAnyEmpty = (values) => values.some((value) => !String(value || "").trim());
+  const handleSignup = async () => {
 
-  const setSignupError = (message) => {
-    // Keep toast and inline alert messages in sync from one helper.
-    setError(message);
-    showError(message);
-  };
+      // Clear stale errors before validating fresh input.
+      setError("");
+      
+      // Guard: all required borrower fields must be present.
+      if (!firstName || !lastName || !coursAndYear || !id || !contactInfo || !email || !currentAddress || !password || !confirmPassword) {
+        const errorMsg = "Please fill up all required fields";
+        setError(errorMsg);
+        showError(errorMsg);
+        return;
+      }
 
-  const handleSuffixChange = (event) => {
-    // Suffix accepts short tokens only (e.g., JR, SR, III).
-    const value = String(event.target.value || "")
-      .replace(/\s+/g, "")
-      .slice(0, 3)
-      .toUpperCase();
-    setNameSuffix(value);
-  };
+      // Guard: prevent account creation when password confirmation does not match.
+      if (password !== confirmPassword) {
+        const errorMsg = "Passwords do not match";
+        setError(errorMsg);
+        showError(errorMsg);
+        return;
+      }
 
-  const handleStudentIdChange = (event) => {
-    // Preserve user-entered format while enforcing configured max length.
-    const value = String(event.target.value || "").slice(0, 10);
-    setId(value);
-  };
-
-  const handleContactChange = (event) => {
-    // Contact number is normalized to digits-only so exact-length checks stay reliable.
-    const digitsOnly = String(event.target.value || "")
-      .replace(/\D/g, "")
-      .slice(0, 12);
-    setContactInfo(digitsOnly);
-  };
-
-  const handleSignup = () => {
-    if (isRedirecting) return;
-    // Clear stale errors before validating fresh input.
-    setError("");
-    const normalizedFirstName = String(firstName || "").trim();
-    const normalizedLastName = String(lastName || "").trim();
-    const normalizedSuffix = String(nameSuffix || "").trim();
-    const normalizedProgramAndYear = String(courseAndYear || "").trim();
-    const normalizedStudentId = String(id || "").trim();
-    const normalizedContact = String(contactInfo || "").trim();
-    const normalizedEmail = String(email || "").trim();
-    const normalizedAddress = String(currentAddress || "").trim();
-
-    // Validation runs before service call so users get immediate, field-specific feedback.
-    // Guard: all required borrower fields must be present.
-    if (
-      isAnyEmpty([
-        normalizedFirstName,
-        normalizedLastName,
-        normalizedProgramAndYear,
-        normalizedStudentId,
-        normalizedContact,
-        normalizedEmail,
-        normalizedAddress,
+      // Call the store's signup method
+      const success = await studentSignUp(
+        email,
         password,
-        confirmPassword
-      ])
-    ) {
-      setSignupError("Please fill up all required fields");
-      return;
-    }
+        id,
+        firstName,
+        lastName,
+        null, // suffix - optional
+        coursAndYear,        
+        contactInfo,
+        currentAddress
+      );
 
-    // Guard: prevent account creation when password confirmation does not match.
-    if (password !== confirmPassword) {
-      setSignupError("Passwords do not match");
-      return;
-    }
+      if (!success) {
+        setError("Signup failed. Please try again.");
+        return;
+      }
 
-    if (normalizedSuffix.length > 3) {
-      setSignupError("Suffix must be up to 3 characters only.");
-      return;
-    }
-
-    if (normalizedProgramAndYear.length < 10 || normalizedProgramAndYear.length > 12) {
-      setSignupError("Program & Year Level must be 10 to 12 characters.");
-      return;
-    }
-
-    if (normalizedStudentId.length > 10) {
-      setSignupError("Student ID must be up to 10 characters only.");
-      return;
-    }
-
-    if (normalizedContact.length !== 12) {
-      setSignupError("Contact Number must be exactly 12 characters.");
-      return;
-    }
-
-    // Package form fields into a borrower profile payload for signup service.
-    const [parsedCourse = "", parsedYearLevel = ""] = normalizedProgramAndYear
-      .split("-")
-      .map((value) => value.trim());
-
-    const profile = {
-      firstName: normalizedFirstName,
-      lastName: normalizedLastName,
-      nameSuffix: normalizedSuffix,
-      collegeCourse: parsedCourse || normalizedProgramAndYear,
-      yearLevel: toYearLevelSuffix(parsedYearLevel),
-      id: normalizedStudentId,
-      contactInfo: normalizedContact,
-      currentAddress: normalizedAddress
-    };
-
-    // Persist new account via auth context/service.
-    const result = signupUser(normalizedEmail, password, ROLES.BORROWER, profile);
-    if (!result.ok) {
-      setSignupError(result.error);
-      return;
-    }
-    // On success, direct the user to login so they can authenticate.
-    showSuccess("Account created!", 2000);
-    setIsRedirecting(true);
-    // LOGIC: Delay redirect so users can read the success confirmation first.
-    setTimeout(() => {
-      navigate("/login");
-    }, 1700);
+      // On success, direct the user to login so they can authenticate.
+      navigate("/login"); 
   };
 
   return (
@@ -179,94 +102,74 @@ const Signup = () => {
       className="auth-card--signup"
       formClassName="signup-form"
     >
-      <div className="signup-field signup-field--full signup-name-row">
-        <div className="signup-field">
-          <label className="label">
-            First Name <span className="required">*</span>
-          </label>
-          <input
-            className="input"
-            placeholder="Juan"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            autoComplete="given-name"
-            required
-          />
-        </div>
-
-        <div className="signup-field">
-          <label className="label">
-            Last Name <span className="required">*</span>
-          </label>
-          <input
-            className="input"
-            placeholder="Dela Cruz"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            autoComplete="family-name"
-            required
-          />
-        </div>
-
-        <div className="signup-field signup-field--suffix">
-          <label className="label">Suffix</label>
-          <input
-            className="input signup-input--suffix"
-            placeholder="Jr."
-            value={nameSuffix}
-            onChange={handleSuffixChange}
-            maxLength={3}
-            autoComplete="honorific-suffix"
-          />
-        </div>
+      <div className="signup-field">
+        <label className="label">
+          First Name <span className="required">*</span>
+        </label>
+        <input
+          className="input"
+          placeholder="Juan"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          disabled={isLoading}
+          required
+        />
       </div>
 
-      <div className="signup-field signup-field--full signup-row-triple">
-        <div className="signup-field">
-          <label className="label">
-            Program & Year Level <span className="required">*</span>
-          </label>
-          <input
-            className="input"
-            placeholder="BSCS-2nd Year"
-            value={courseAndYear}
-            onChange={(e) => setCourseAndYear(e.target.value)}
-            minLength={10}
-            maxLength={12}
-            required
-          />
-        </div>
+      <div className="signup-field">
+        <label className="label">
+          Last Name <span className="required">*</span>
+        </label>
+        <input
+          className="input"
+          placeholder="Dela Cruz"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          disabled={isLoading}
+          required
+        />
+      </div>
 
-        <div className="signup-field">
-          <label className="label">
-            Student ID <span className="required">*</span>
-          </label>
-          <input
-            className="input"
-            placeholder="241-01234"
-            value={id}
-            onChange={handleStudentIdChange}
-            maxLength={10}
-            required
-          />
-        </div>
+      <div className="signup-field">
+        <label className="label">
+          Program & Year Level <span className="required">*</span>
+        </label>
+        <input
+          className="input"
+          placeholder="BSCS-2nd Year"
+          value={coursAndYear}
+          onChange={(e) => setCoursAndYear(e.target.value)}
+          disabled={isLoading}
+          required
+        />
+      </div>
 
-        <div className="signup-field">
-          <label className="label">
-            Contact Number <span className="required">*</span>
-          </label>
-          <input
-            className="input"
-            type="tel"
-            inputMode="numeric"
-            placeholder="639XXXXXXXXX"
-            value={contactInfo}
-            onChange={handleContactChange}
-            minLength={12}
-            maxLength={12}
-            required
-          />
-        </div>
+      <div className="signup-field">
+        <label className="label">
+          Student ID <span className="required">*</span>
+        </label>
+        <input
+          className="input"
+          placeholder="241-01234"
+          value={id}
+          onChange={(e) => setId(e.target.value)}
+          disabled={isLoading}
+          required
+        />
+      </div>
+
+      <div className="signup-field">
+        <label className="label">
+          Contact Number <span className="required">*</span>
+        </label>
+        <input
+          className="input"
+          placeholder="09XXXXXXXXX"
+          value={contactInfo}
+          onChange={(e) => setContactInfo(e.target.value)}
+          disabled={isLoading}
+          required
+        />
       </div>
 
       <div className="signup-field signup-field--full">
@@ -280,7 +183,7 @@ const Signup = () => {
           placeholder="you@carsu.edu.ph"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          maxLength={80}
+          disabled={isLoading}
           required
         />
       </div>
@@ -294,6 +197,7 @@ const Signup = () => {
           placeholder="Enter your current address"
           value={currentAddress}
           onChange={(e) => setCurrentAddress(e.target.value)}
+          disabled={isLoading}
           required
         />
       </div>
@@ -310,6 +214,7 @@ const Signup = () => {
             placeholder="Create a password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            disabled={isLoading}
             required
           />
           <button
@@ -318,6 +223,7 @@ const Signup = () => {
             onClick={() => setShowPassword(!showPassword)}
             aria-label={showPassword ? "Hide password" : "Show password"}
             title={showPassword ? "Hide password" : "Show password"}
+            disabled={isLoading}
           >
             {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
@@ -336,6 +242,7 @@ const Signup = () => {
             placeholder="Confirm your password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
+            disabled={isLoading}
             required
           />
           <button
@@ -344,6 +251,7 @@ const Signup = () => {
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
             aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
             title={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+            disabled={isLoading}
           >
             {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
@@ -351,9 +259,13 @@ const Signup = () => {
       </div>
 
       <div className="signup-field signup-field--full">
-        {error ? <div className="alert" role="alert">{error}</div> : null}
-        <button className="btn btn--primary" onClick={handleSignup} disabled={isRedirecting}>
-          {isRedirecting ? "Signing up..." : "Signup"}
+        {error ? <div className="alert">{error}</div> : null}
+        <button 
+          className={`btn ${isLoading? "bg-gray-500 cursor-not-allowed" :  "btn--primary"}`} 
+          onClick={handleSignup}
+          disabled={isLoading}
+        >
+          {isLoading ? "Creating account..." : "Signup"}
         </button>
         <p className="muted auth-card__switch">
           Already have an account? <Link to="/login">Login</Link>

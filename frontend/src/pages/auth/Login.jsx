@@ -2,10 +2,8 @@
 // Parts: form state, submit handler, validation/errors, render.
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
-import { ROLES } from "../../constants/roles";
+import { useStore } from "../../store/useAuthStore";
 import AuthCard from "../../components/AuthCard";
-import { showError, showSuccess } from "../../utils/notification";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -13,34 +11,29 @@ const Login = () => {
   const [error, setError] = useState("");
   const [isRedirecting, setIsRedirecting] = useState(false);
   const navigate = useNavigate();
-  const { loginUser } = useAuth();
+  const { studentLogin, isLoading } = useStore();
 
-  const handleLogin = () => {
-    if (isRedirecting) return;
+  const handleLogin = async () => {
     // Reset previous validation/auth messages before a new attempt.
     setError("");
-    const result = loginUser(email, password);
-    if (!result.ok) {
-      setError(result.error);
-      showError(result.error);
+
+    // Validate input
+    if (!email || !password) {
+      const errorMsg = "Please enter both email and password";
+      setError(errorMsg);
       return;
     }
 
-    showSuccess(
-      result.user.role === ROLES.STAFF
-        ? "Logged in as staff"
-        : "Logged in as borrower",
-      2000
-    );
+    // Call the store's login method
+    const success = await studentLogin(email, password);
+    
+    if (!success) {
+      setError("Login failed. Please check your credentials.");
+      return;
+    }
 
-    setIsRedirecting(true);
-    // LOGIC: Keep user on current screen briefly so success feedback is visible,
-    // then continue to the role-specific landing page.
-    setTimeout(() => {
-      navigate(
-        result.user.role === ROLES.STAFF ? "/staff/dashboard" : "/borrower/browse"
-      );
-    }, 2200);
+    // Success - navigate to borrower browse page
+    navigate("/borrower/browse");
   };
 
   return (
@@ -57,6 +50,7 @@ const Login = () => {
           placeholder="you@carsu.edu.ph"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          disabled={isLoading}
         />
         <label className="label" htmlFor="login-password">Password</label>
         <input
@@ -67,12 +61,21 @@ const Login = () => {
           placeholder="Enter your password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          disabled={isLoading}
         />
         {error ? <div className="alert">{error}</div> : null}
-        <button className="btn btn--primary" onClick={handleLogin} disabled={isRedirecting}>
-          {isRedirecting ? "Logging in..." : "Login"}
+        <button 
+          className={`btn ${isLoading? "bg-gray-500 cursor-not-allowed": "btn--primary"}`} 
+          onClick={handleLogin}
+          disabled={isLoading}
+        >
+          {isLoading ? "Logging in..." : "Login"}
         </button>
-        <button className="btn btn--ghost" onClick={() => navigate("/signup")} disabled={isRedirecting}>
+        <button 
+          className="btn btn--ghost" 
+          onClick={() => navigate("/signup")}
+          disabled={isLoading}
+        >
           Create an account
         </button>
     </AuthCard>
