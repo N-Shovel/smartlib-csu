@@ -34,7 +34,8 @@ const AppRoutes = () => {
 				{/* Default entry redirects to login. */}
 				<Route path="/" element={<Navigate to="/login" replace />} />
 				{/* Public authentication routes. */}
-				<Route path="/login" element={!user? <Login /> : <Navigate to={"/borrower/browse"}/>} />
+				<Route path="/login" element={!user? <Login /> : 
+                    user?.profile?.role === "borrower"? <Navigate to={"/borrower/browse"}/> : <Navigate to={"/staff/dashboard"}/>} />
 				<Route path="/signup" element={!user? <Signup /> : <Navigate to={"/borrower/browse"}/>}/>
 
 				{/* Borrower-only routes guarded by role check. */}

@@ -6,6 +6,8 @@ import cors from "cors";
 
 import authRoutes from "./routes/auth.routes.js";
 import profileRoutes from "./routes/profile.route.js";
+import booksAndthesesRoutes from "./routes/books-theses.routes.js";
+import roomReservationRoutes from "./routes/room.routes.js";
 
 const app = express()
 
@@ -19,6 +21,8 @@ app.use(cors({
 
 app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
+app.use("/api/books-theses", booksAndthesesRoutes);
+app.use("/api/rooms", roomReservationRoutes);
 
 if(!ENV.SERVERLESS){
     app.listen(ENV.PORT, () =>{

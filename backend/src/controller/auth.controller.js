@@ -159,7 +159,6 @@ export const loginController = async (req, res) => {
         if (staffProfile) {
             return res.status(200).json({
                 message: "Login successful",
-                accountType: "staff",
                 profile: staffProfile,
                 user: data.user,
             });
@@ -169,7 +168,7 @@ export const loginController = async (req, res) => {
         const { data: studentProfile, error: studentErr } = await supabaseUser
             .from("student_profiles")
             .select(
-                "user_id, id_number, first_name, last_name, suffix, program, year_level, contact_number, address, created_at"
+                "user_id, id_number, first_name, last_name, suffix, program, role ,contact_number, address, created_at"
             )
             .eq("user_id", userId)
             .maybeSingle();
@@ -188,7 +187,6 @@ export const loginController = async (req, res) => {
 
         return res.status(200).json({
             message: "Login successful",
-            accountType: "student",
             profile: studentProfile,
             user: data.user,
         });

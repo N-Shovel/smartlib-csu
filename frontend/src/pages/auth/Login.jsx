@@ -32,8 +32,15 @@ const Login = () => {
       return;
     }
 
-    // Success - navigate to borrower browse page
-    navigate("/borrower/browse");
+    // Get the updated user from store to check role
+    const { user } = useStore.getState();
+    
+    // Navigate based on user role
+    if (user?.profile?.role === "staff") {
+      navigate("/staff/dashboard");
+    } else {
+      navigate("/borrower/browse");
+    }
   };
 
   return (
