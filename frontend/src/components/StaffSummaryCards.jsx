@@ -14,6 +14,15 @@ const StaffSummaryCards = ({ cards = defaultCards }) => {
 				<div className="card" key={card.label}>
 					<p className="micro">{card.label}</p>
 					<h3>{card.value}</h3>
+					{Array.isArray(card.stats) && card.stats.length > 0 ? (
+						<div className="summary-card__stats" aria-label={`${card.label} stats`}>
+							{card.stats.map((item, index) => (
+								<span className="summary-card__stat" key={`${card.label}-${item}-${index}`}>
+									{item}
+								</span>
+							))}
+						</div>
+					) : null}
 				</div>
 			))}
 		</div>

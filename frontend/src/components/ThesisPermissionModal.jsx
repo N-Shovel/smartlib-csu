@@ -12,11 +12,23 @@ const ThesisPermissionModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" role="dialog" aria-modal="true">
+    <div
+      className="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="thesis-permission-title"
+      aria-describedby="thesis-permission-desc"
+    >
       <div className="card modal-card">
-        <h3>Thesis Borrow Application</h3>
-        <p className="muted">Enter your permission slip code to apply for this thesis.</p>
+        <h3 id="thesis-permission-title">Thesis Borrow Application</h3>
+        <p id="thesis-permission-desc" className="muted">
+          Enter your permission slip code to apply for this thesis.
+        </p>
+        <label className="label" htmlFor="thesis-permission-code">
+          Permission Slip Code
+        </label>
         <input
+          id="thesis-permission-code"
           className="input"
           type="text"
           inputMode="numeric"
@@ -27,10 +39,10 @@ const ThesisPermissionModal = ({
         />
         {error ? <div className="alert">{error}</div> : null}
         <div className="modal-actions">
-          <button className="btn btn--ghost" onClick={onCancel}>
+          <button type="button" className="btn btn--secondary" onClick={onCancel}>
             Cancel
           </button>
-          <button className="btn btn--primary" onClick={onSubmit}>
+          <button type="button" className="btn btn--primary" onClick={onSubmit}>
             Apply
           </button>
         </div>

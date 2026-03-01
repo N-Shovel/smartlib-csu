@@ -10,8 +10,11 @@ const BookDetailsModal = ({ isOpen, book, onClose }) => {
         <h3>{book.title}</h3>
         {book.category ? <p className="detail-card__category">{book.category}</p> : null}
         <p className="muted">{book.author}</p>
+        {Array.isArray(book.keywords) && book.keywords.length > 0 ? (
+          <p className="micro">Keywords: {book.keywords.join(", ")}</p>
+        ) : null}
         <p className="detail-card__desc">{book.description}</p>
-        <button className="btn btn--primary" onClick={onClose}>
+        <button className="btn btn--danger" onClick={onClose}>
           Close
         </button>
       </div>

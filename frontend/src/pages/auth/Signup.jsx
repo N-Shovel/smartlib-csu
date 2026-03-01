@@ -1,16 +1,45 @@
 // Purpose: Signup page for creating borrower accounts.
 // Parts: form model, validation logic, submit handler, grouped form render.
+import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useStore } from "../../store/useAuthStore";
 import { showError } from "../../utils/notification";
 import AuthCard from "../../components/AuthCard";
 
+const toYearLevelSuffix = (value) => {
+  const text = String(value || "").trim();
+  if (!text) return "N/A";
+
+  if (/\b(st|nd|rd|th)\b/i.test(text) || /\byear\b/i.test(text)) {
+    return text;
+  }
+
+  const matched = text.match(/\d+/);
+  if (!matched) return text;
+
+  const yearNumber = Number(matched[0]);
+  if (!Number.isFinite(yearNumber) || yearNumber <= 0) return text;
+
+  const modulo100 = yearNumber % 100;
+  const modulo10 = yearNumber % 10;
+  let suffix = "th";
+  if (modulo100 < 11 || modulo100 > 13) {
+    if (modulo10 === 1) suffix = "st";
+    else if (modulo10 === 2) suffix = "nd";
+    else if (modulo10 === 3) suffix = "rd";
+  }
+
+  return `${yearNumber}${suffix} Year`;
+};
+
 const Signup = () => {
   const [id, setId] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [coursAndYear, setCoursAndYear] = useState("");
+  const [nameSuffix, setNameSuffix] = useState("");
+  const [courseAndYear, setCourseAndYear] = useState("");
   const [contactInfo, setContactInfo] = useState("");
   const [currentAddress, setCurrentAddress] = useState("");
   const [email, setEmail] = useState("");
@@ -19,6 +48,7 @@ const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const navigate = useNavigate();
   const { studentSignUp, isLoading } = useStore();
 
@@ -142,7 +172,7 @@ const Signup = () => {
         />
       </div>
 
-      <div className="signup-field">
+      <div className="signup-field signup-field--full">
         <label className="label">
           Email <span className="required">*</span>
         </label>
@@ -191,9 +221,11 @@ const Signup = () => {
             type="button"
             className="password-toggle"
             onClick={() => setShowPassword(!showPassword)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            title={showPassword ? "Hide password" : "Show password"}
             disabled={isLoading}
           >
-            {showPassword ? "Hide" : "Show"}
+            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </div>
       </div>
@@ -217,9 +249,11 @@ const Signup = () => {
             type="button"
             className="password-toggle"
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+            title={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
             disabled={isLoading}
           >
-            {showConfirmPassword ? "Hide" : "Show"}
+            {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </div>
       </div>

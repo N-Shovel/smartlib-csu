@@ -26,10 +26,14 @@ export const exportToCSV = (data, filename) => {
   // Trigger browser download via temporary anchor element.
   const encodedUri = URL.createObjectURL(blob);
   const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
-  link.setAttribute("download", filename);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  try {
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+  } finally {
+    document.body.removeChild(link);
+    URL.revokeObjectURL(encodedUri);
+  }
   return true;
 };
