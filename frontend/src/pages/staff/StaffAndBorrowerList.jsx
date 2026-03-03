@@ -1,9 +1,9 @@
 // Purpose: Staff page for viewing borrower signups and exporting lists.
 // Parts: data loading, helper formatting, export handler, table render.
-import { useState } from "react";
-import { getBorrowerSignups } from "../../services/authService";
+import { useEffect, useState } from "react";
 import { exportToCSV } from "../../services/exportService";
 import { formatBorrowerFullName } from "../../utils/name";
+import { useStore } from "../../store/useAuthStore";
 
 const truncateText = (value, maxLength) => {
 	// Keep table columns compact while preserving full value in title tooltip.
@@ -13,17 +13,23 @@ const truncateText = (value, maxLength) => {
 };
 
 const StaffAndBorrowerList = () => {
-	const borrowers = getBorrowerSignups();
-	const [selectedBorrower, setSelectedBorrower] = useState(null);
+	
+	const {getStudentBorrowers, borrowers} = useStore();
+    
+    useEffect(() =>{
+        getStudentBorrowers();
+    }, [getStudentBorrowers])
+
+    const [selectedBorrower, setSelectedBorrower] = useState(null);
 
 	const handleExport = () => {
 		if (borrowers.length === 0) return;
 		// Export all borrower signup rows in one CSV file.
 		const borrowerData = borrowers.map((borrower) => ({
-			"ID": borrower.id || "-",
-			"Name": formatBorrowerFullName(borrower) || "-",
+			"ID": borrower.id_number || "-",
+			"Name": `${borrower.first_name} ${borrower.last_name} ` || "-",
 			"Email": borrower.email || "-",
-			"Phone": borrower.phone || "-",
+			"Phone": borrower.contact_number || "-",
 			"Status": borrower.status || "-",
 		}));
 		exportToCSV(borrowerData, "borrower-signups.csv");
@@ -80,17 +86,14 @@ const StaffAndBorrowerList = () => {
 							{borrowers.map((borrower) => (
 								<tr key={borrower.email}>
 									<td data-label="Name" title={formatBorrowerFullName(borrower)}>
-										{truncateText(
-											formatBorrowerFullName(borrower),
-											28
-										)}
+										{`${borrower.first_name} ${borrower.last_name}` || "-"}
 									</td>
 									<td data-label="Student ID" title={borrower.id || "-"}>
-										{truncateText(borrower.id, 14)}
+										{truncateText(borrower.id_number, 14)}
 									</td>
 									<td data-label="Course - Year Level" title={`${borrower.collegeCourse || "-"} - ${borrower.yearLevel || "-"}`}>
 										{truncateText(
-											`${borrower.collegeCourse || "-"} - ${borrower.yearLevel || "-"}`,
+											`${borrower.program}`,
 											26
 										)}
 									</td>
@@ -98,7 +101,7 @@ const StaffAndBorrowerList = () => {
 										{truncateText(borrower.email, 16)}
 									</td>
 									<td data-label="Address" title={borrower.currentAddress || "-"}>
-										{truncateText(borrower.currentAddress, 24)}
+										{truncateText(borrower.address, 24)}
 									</td>
 									<td data-label="Action">
 										<button
@@ -120,19 +123,19 @@ const StaffAndBorrowerList = () => {
 					<div className="card modal-card modal-card--signup-details">
 						<h3>Borrower Details</h3>
 						<p>
-							<strong>Name:</strong> {formatBorrowerFullName(selectedBorrower)}
+							<strong>Name:</strong> {`${selectedBorrower.first_name} ${selectedBorrower.last_name}` || "-"}
 						</p>
 						<p>
-							<strong>Course - Year Level:</strong> {selectedBorrower.collegeCourse || "-"} - {selectedBorrower.yearLevel || "-"}
+							<strong>Course - Year Level:</strong> {selectedBorrower.program || "-"}
 						</p>
 						<p>
-							<strong>Student ID:</strong> {selectedBorrower.id || "-"}
+							<strong>Student ID:</strong> {selectedBorrower.id_number || "-"}
 						</p>
 						<p>
 							<strong>Email:</strong> {selectedBorrower.email || "-"}
 						</p>
 						<p>
-							<strong>Address:</strong> {selectedBorrower.currentAddress || "-"}
+							<strong>Address:</strong> {selectedBorrower.address || "-"}
 						</p>
 						<div className="modal-actions">
 							<button className="btn btn--ghost" onClick={closeBorrowerDetails}>
