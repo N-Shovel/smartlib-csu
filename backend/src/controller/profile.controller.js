@@ -184,3 +184,36 @@ export const changeNumber = async (req, res) =>{
         res.status(500).json({message: "Internal server error"});
     }
 }
+
+export const getStudentBorrowers = async (req, res) =>{
+    try {
+       
+        const access_token = req.cookies?.access_token;
+
+        if(!access_token) return res.status(401).json({message: "Unauthorized"});
+
+        const supabase = supabaseForRequest(access_token);
+ 
+        const { data, error } = await supabase
+            .from("student_profiles")
+            .select("*, users_public(email)")
+            .limit(10);       
+
+
+        if (error) {
+            console.error("getStudentBorrower controller query error:", error);
+            return res.status(400).json({ message: error.message });
+        }
+
+        const borrowers = (data ?? []).map((row) => ({
+            ...row,
+            email: row.users_public?.email ?? null,
+        }));
+
+        return res.status(200).json({ borrowers });
+
+    } catch (error) {
+        console.log("Error in getStudentBorrower controller error: ", error);
+        return res.status(500).json({message: "Internal server error"});
+    }
+}

@@ -61,7 +61,7 @@ export const createLibraryItemController = async (req, res) =>{
     }
 }
 
-export const deleteItemController = async (req, res) => {
+export const softDeleteItemController = async (req, res) => {
   try {
     const access_token = req.cookies?.access_token;
     if (!access_token) return res.status(401).json({ message: "Unauthorized" });
@@ -82,6 +82,40 @@ export const deleteItemController = async (req, res) => {
     return res.status(500).json({ message: error?.message || "Server error" });
   }
 };
+
+export const deleteItemController = async (req, res) =>{
+    try {
+        
+        const access_token = req.cookies?.access_token;
+
+        if(!access_token) return res.status(401).json({message: "Unauthorized"});
+
+        const {itemId} = req.body;
+        if(!itemId) return res.status(400).json({message: "ItemId is required"});
+
+        const supabase = supabaseForRequest(access_token);
+
+        const {data, error} = await supabase
+            .from("library_items")
+            .delete()
+            .eq("id", itemId)
+            .select();
+
+        if(error){
+            console.log("Supabase delete error: ", error);
+            return res.status(500).json({message: error.message});
+        }
+
+        if(!data || data.length === 0) return res.status(400).json({message: "Item not found"});
+
+        return res.status(200).json({message: "Item deleted from database", deleted: data});
+
+
+    } catch (error) {
+        console.log("Error in deleteItemController: ", error);
+        return res.status(500).json({message: "Internal Server error"});
+    }
+}
 
 export const restoreItemController = async (req, res) => {
   try {
@@ -116,7 +150,6 @@ export const getBooksController = async (req, res) => {
             .from("library_items")
             .select("id, item_type, title, description, item_number, author ,is_available, created_at")
             .is("deleted_at", null)
-            .eq("item_type", "book")
             .order("created_at", { ascending: false })
             .limit(10);
 

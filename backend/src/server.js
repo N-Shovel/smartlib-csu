@@ -8,6 +8,7 @@ import authRoutes from "./routes/auth.routes.js";
 import profileRoutes from "./routes/profile.route.js";
 import booksAndthesesRoutes from "./routes/items.routes.js";
 import roomReservationRoutes from "./routes/room.routes.js";
+import historyRoutes from "./routes/history.routes.js";
 
 const app = express()
 
@@ -23,6 +24,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/items", booksAndthesesRoutes);
 app.use("/api/rooms", roomReservationRoutes);
+app.use("/api/history", historyRoutes);
 
 if(!ENV.SERVERLESS){
     app.listen(ENV.PORT, () =>{
