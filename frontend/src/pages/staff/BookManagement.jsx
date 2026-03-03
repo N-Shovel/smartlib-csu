@@ -170,12 +170,8 @@ selectedCategory === "thesis" ? " book-category-filter__btn--active" : ""
                         Add
                     </button>
 
-                    <button type="button" className="btn btn--ghost" onClick={handleUndo} disabled={!lastAction || isLoading}>
-                        Undo
-                    </button>
-
-                    <button type="button" className="btn btn--ghost" onClick={fetchBooks} disabled={isLoading}>
-                        {isLoading ? <Loader2Icon className="size-4 animate-spin" aria-hidden="true" /> : "Refresh"}
+                    <button type="button" className={`${isLoading?? "cursor-not-allowed"} btn btn--ghost`} onClick={fetchBooks} disabled={isLoading}>
+                        {isLoading ? "Refresing..." : "Refresh"}
                     </button>
                 </div>
             </div>

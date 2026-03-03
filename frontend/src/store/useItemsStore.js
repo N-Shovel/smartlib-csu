@@ -3,11 +3,11 @@ import { axiosInstance } from "./axios";
 import { showSuccess, showError, showInfo } from "../utils/notification";
 
 const useItems = create((set, get) => ({
-    items: [],
+    books: [],
     count: 0,
     isLoading: false,
 
-    clearItems: () => set({ items: [], count: 0 }),
+    clearItems: () => set({ books: [], count: 0 }),
 
     fetchBooks: async () => {
         set({ isLoading: true });
@@ -19,7 +19,7 @@ const useItems = create((set, get) => ({
             const books = res?.data?.books || [];
             const count = res?.data?.count ?? books.length;
 
-            set({ items: books, count });
+            set({ books: books, count });
         } catch (err) {
             console.error("fetchBooks error:", err);
             const msg =
@@ -54,12 +54,12 @@ const useItems = create((set, get) => ({
         }
     },
 
-    deleteItem: async (itemId) => {
+    softDeleteItem: async (itemId) => {
         try {
             
             set({isLoading: true});
 
-            const res = await axiosInstance.patch("/items/delete", {itemId});
+            const res = await axiosInstance.patch("/items/soft-delete", {itemId});
             
             showSuccess(res?.data?.message || "Item deleted");
             
@@ -73,6 +73,20 @@ const useItems = create((set, get) => ({
         }
     },
 
+    deleteItem: async (itemId) =>{
+        try {
+            set({isLoading: true});
+            
+            const res = await axiosInstance.post("/items/delete", {itemId});
+
+            await get().fetchBooks();
+            
+            showSuccess(res.data?.message);
+
+        } catch (error) {
+            
+        }
+    },
 
     restoreItem: async (itemId) => {
         try {

@@ -37,6 +37,7 @@ export const useStore = create((set, get) => ({
     user: null,
     isLoading: false,
     isCheckingAuth: false,
+    borrowers: [],
 
     checkAuth: async () =>{
         try{
@@ -44,7 +45,6 @@ export const useStore = create((set, get) => ({
             const res = await axiosInstance.get("/profile/profile");
             set({user: res.data});
         
-            console.log(res.data);
             return true; 
         
         }catch(error){
@@ -150,6 +150,24 @@ export const useStore = create((set, get) => ({
             set({isLoading: false});
         }
     },
+    
+    getStudentBorrowers: async () =>{
+        try {
+            set({isLoading: true});
+
+            const res = await axiosInstance.get("/profile/borrowers");
+            
+            console.log(res.data);
+            
+            set({ borrowers: Array.isArray(res.data.borrowers) ? res.data.borrowers : [] });
+
+        } catch (error) {
+           showError(error?.response?.data?.message || "An error occured fetching data"); 
+        }
+        finally{
+            set({isLoading: false});
+        }
+    }
 
 }));
 
