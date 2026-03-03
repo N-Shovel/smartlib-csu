@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { exportToCSV } from "../../services/exportService";
 import { formatBorrowerFullName } from "../../utils/name";
 import { useStore } from "../../store/useAuthStore";
+import { Loader2Icon } from "lucide-react";
 
 const truncateText = (value, maxLength) => {
 	// Keep table columns compact while preserving full value in title tooltip.
@@ -13,24 +14,23 @@ const truncateText = (value, maxLength) => {
 };
 
 const StaffAndBorrowerList = () => {
-	
-	const {getStudentBorrowers, borrowers} = useStore();
-    
-    useEffect(() =>{
-        getStudentBorrowers();
-    }, [getStudentBorrowers])
+	const { getStudentBorrowers, borrowers, isLoading } = useStore();
 
-    const [selectedBorrower, setSelectedBorrower] = useState(null);
+	useEffect(() => {
+		getStudentBorrowers();
+	}, [getStudentBorrowers]);
+
+	const [selectedBorrower, setSelectedBorrower] = useState(null);
 
 	const handleExport = () => {
 		if (borrowers.length === 0) return;
 		// Export all borrower signup rows in one CSV file.
 		const borrowerData = borrowers.map((borrower) => ({
-			"ID": borrower.id_number || "-",
-			"Name": `${borrower.first_name} ${borrower.last_name} ` || "-",
-			"Email": borrower.email || "-",
-			"Phone": borrower.contact_number || "-",
-			"Status": borrower.status || "-",
+			ID: borrower.id_number || "-",
+			Name: `${borrower.first_name} ${borrower.last_name} ` || "-",
+			Email: borrower.email || "-",
+			Phone: borrower.contact_number || "-",
+			Status: borrower.status || "-",
 		}));
 		exportToCSV(borrowerData, "borrower-signups.csv");
 	};
@@ -43,6 +43,9 @@ const StaffAndBorrowerList = () => {
 		setSelectedBorrower(null);
 	};
 
+	//  Ensure borrowers is always an array to avoid length/map crashes
+	const safeBorrowers = Array.isArray(borrowers) ? borrowers : [];
+
 	return (
 		<section className="staff-page staff-signups-page">
 			<div className="page-header">
@@ -53,13 +56,22 @@ const StaffAndBorrowerList = () => {
 				<button
 					className="btn btn--ghost"
 					onClick={handleExport}
-					disabled={borrowers.length === 0}
+					disabled={safeBorrowers.length === 0 || isLoading}
 				>
 					Export CSV
 				</button>
 			</div>
 
-			{borrowers.length === 0 ? (
+			{/*  Loading indicator while fetching borrowers */}
+			{isLoading ? (
+				<div
+					className="card"
+					style={{ display: "flex", justifyContent: "center", padding: "2rem" }}
+					aria-busy="true"
+				>
+					<Loader2Icon className="size-6 animate-spin" aria-label="Loading borrowers" />
+				</div>
+			) : safeBorrowers.length === 0 ? (
 				<div className="empty-state">No borrower signups yet.</div>
 			) : (
 				<div className="card table-scroll table-scroll--five staff-table-card">
@@ -83,7 +95,7 @@ const StaffAndBorrowerList = () => {
 							</tr>
 						</thead>
 						<tbody>
-							{borrowers.map((borrower) => (
+							{safeBorrowers.map((borrower) => (
 								<tr key={borrower.email}>
 									<td data-label="Name" title={formatBorrowerFullName(borrower)}>
 										{`${borrower.first_name} ${borrower.last_name}` || "-"}
@@ -91,11 +103,11 @@ const StaffAndBorrowerList = () => {
 									<td data-label="Student ID" title={borrower.id || "-"}>
 										{truncateText(borrower.id_number, 14)}
 									</td>
-									<td data-label="Course - Year Level" title={`${borrower.collegeCourse || "-"} - ${borrower.yearLevel || "-"}`}>
-										{truncateText(
-											`${borrower.program}`,
-											26
-										)}
+									<td
+										data-label="Course - Year Level"
+										title={`${borrower.collegeCourse || "-"} - ${borrower.yearLevel || "-"}`}
+									>
+										{truncateText(`${borrower.program}`, 26)}
 									</td>
 									<td data-label="Email" title={borrower.email || "-"}>
 										{truncateText(borrower.email, 16)}
@@ -123,7 +135,8 @@ const StaffAndBorrowerList = () => {
 					<div className="card modal-card modal-card--signup-details">
 						<h3>Borrower Details</h3>
 						<p>
-							<strong>Name:</strong> {`${selectedBorrower.first_name} ${selectedBorrower.last_name}` || "-"}
+							<strong>Name:</strong>{" "}
+							{`${selectedBorrower.first_name} ${selectedBorrower.last_name}` || "-"}
 						</p>
 						<p>
 							<strong>Course - Year Level:</strong> {selectedBorrower.program || "-"}
