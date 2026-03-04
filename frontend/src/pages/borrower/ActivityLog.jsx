@@ -52,12 +52,19 @@ const ActivityLog = () => {
         getBorrowRequestsByBorrower(userEmail);
 
     const [reservationUpdates, setReservationUpdates] = useState(
-        getUserReservationUpdates
+        getUserReservationUpdates()
     );
-    const [myReservations, setMyReservations] = useState(getUserActiveReservations);
-    const [borrowUpdates, setBorrowUpdates] = useState(getUserBorrowUpdates);
-    const [borrowedHistory, setBorrowedHistory] = useState(getUserBorrowedHistory);
+    const [myReservations, setMyReservations] = useState(getUserActiveReservations());
+    const [borrowUpdates, setBorrowUpdates] = useState([]);
+    const [borrowedHistory, setBorrowedHistory] = useState(getUserBorrowedHistory());
     const cancellationTimeoutRef = useRef(null);
+
+    useEffect(() => {
+        // Update borrowUpdates from the fetched history data
+        if (itemRequests && itemRequests.length > 0) {
+            setBorrowUpdates(itemRequests);
+        }
+    }, [itemRequests]);
 
     useEffect(() => () => {
         if (cancellationTimeoutRef.current) {
@@ -112,16 +119,18 @@ const ActivityLog = () => {
                         <div className="table table--borrow-updates">
                             <div className="table__row table__head">
                                 <span>Book</span>
+                                <span>Borrower</span>
                                 <span>Status</span>
                                 <span>Requested</span>
                                 <span>Updated</span>
                             </div>
                             {borrowUpdates.map((entry) => (
                                 <div className="table__row" key={entry.id}>
-                                    <span>{entry.title || "-"}</span>
+                                    <span>{entry.item_title || "-"}</span>
+                                    <span>{entry.student_profiles ? `${entry.student_profiles.first_name} ${entry.student_profiles.last_name}` : "-"}</span>
                                     <span>{entry.status || "-"}</span>
-                                    <span>{formatDateTime(entry.requestedAt)}</span>
-                                    <span>{formatDateTime(entry.receivedAt || entry.requestedAt)}</span>
+                                    <span>{formatDateTime(entry.requested_at)}</span>
+                                    <span>{formatDateTime(entry.returned_at || entry.requested_at)}</span>
                                 </div>
                             ))}
                         </div>
