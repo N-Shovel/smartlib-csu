@@ -1,16 +1,40 @@
 // Purpose: Staff borrower monitoring with active records and history export.
 // Parts: pending borrow requests, current borrower table, history export table.
-import { useState } from "react";
-
+import { useEffect, useMemo, useState } from "react";
+import {
+  getBorrowHistory,
+  getBorrowRequests,
+  receiveBorrowRequest,
+  receiveReturnRequest
+} from "../../services/bookService";
 import { exportToCSV } from "../../services/exportService";
 import { formatDateTime, formatDateTimeFull } from "../../utils/dateUtils";
 import { showError, showSuccess } from "../../utils/notification";
 import { getUserProfileByEmail } from "../../services/authService";
+import useItems from "../../store/useItemsStore";
 
 const BorrowerTracking = () => {
-  const [books, setBooks] = useState();
+  const storeBooks = useItems((state) => state.books);
+  const fetchBooks = useItems((state) => state.fetchBooks);
   const [history, setHistory] = useState(() => getBorrowHistory());
-  const [borrowRequests, setBorrowRequests] = useState();
+  const [borrowRequests, setBorrowRequests] = useState(() => getBorrowRequests());
+
+  useEffect(() => {
+    fetchBooks();
+  }, [fetchBooks]);
+
+  const books = useMemo(
+    () =>
+      (storeBooks || [])
+        .filter((item) => !item?.is_deleted)
+        .map((item) => ({
+          ...item,
+          available: item?.is_available ?? item?.available ?? true,
+          borrowedBy: item?.borrowedBy ?? null,
+        })),
+    [storeBooks]
+  );
+
   const getStudentIdByEmail = (email) =>
     getUserProfileByEmail(email)?.id || "-";
   const formatHistoryAction = (action) => String(action || "-").replace(/_/g, " ");
@@ -49,9 +73,9 @@ const BorrowerTracking = () => {
     });
 
   const refresh = () => {
-    setBooks();
+    fetchBooks();
     setHistory(getBorrowHistory());
-    setBorrowRequests();
+    setBorrowRequests(getBorrowRequests());
   };
 
   const handleReceive = (requestId) => {

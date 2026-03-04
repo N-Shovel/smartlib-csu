@@ -10,13 +10,13 @@ import { formatActivityAction } from "../../utils/activityUtils";
 const Dashboard = () => {
   const [borrowHistory, setBorrowHistory] = useState([]);
   const [reservationHistory, setReservationHistory] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Fetch activity data from API
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(false);
+        setLoading(true);
         const [borrowData, reservationData] = await Promise.all([
           getBorrowHistory(),
           getReservationHistory()
