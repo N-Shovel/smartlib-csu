@@ -16,7 +16,7 @@ const EmailConfirmationPopup = ({
       <div className="card modal-card">
         <h3 id="email-confirmation-title">Confirm Your Email</h3>
         <p id="email-confirmation-desc" className="muted">
-          Please confirm email that was send on <strong>{email || "your email"}</strong>
+          Please confirm email that was sent on <strong>{email || "your email"}</strong>
         </p>
 
         <p className="micro" style={{ marginTop: "0.75rem" }}>
