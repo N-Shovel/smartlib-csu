@@ -1,238 +1,268 @@
-// Purpose: Staff borrower monitoring with active records and history export.
-// Parts: pending borrow requests, current borrower table, history export table.
-import { useEffect, useMemo, useState } from "react";
-import {
-  getBorrowHistory,
-  getBorrowRequests,
-  receiveBorrowRequest,
-  receiveReturnRequest
-} from "../../services/bookService";
-import { exportToCSV } from "../../services/exportService";
-import { formatDateTime, formatDateTimeFull } from "../../utils/dateUtils";
-import { showError, showSuccess } from "../../utils/notification";
+// Purpose: Staff dashboard showing summary metrics and recent activity.
+// Parts: metric derivation, formatting helpers, summary cards, activity list render.
+import { useMemo, useState, useEffect } from "react";
+import { getBorrowHistory } from "../../services/bookService";
+import { getReservationHistory } from "../../services/reservationService";
 import { getUserProfileByEmail } from "../../services/authService";
-import useItems from "../../store/useItemsStore";
+import { formatDateTime } from "../../utils/dateUtils";
+import { formatActivityAction } from "../../utils/activityUtils";
 
-const BorrowerTracking = () => {
-  const storeBooks = useItems((state) => state.books);
-  const fetchBooks = useItems((state) => state.fetchBooks);
-  const [history, setHistory] = useState(() => getBorrowHistory());
-  const [borrowRequests, setBorrowRequests] = useState(() => getBorrowRequests());
+const Dashboard = () => {
+  const [borrowHistory, setBorrowHistory] = useState([]);
+  const [reservationHistory, setReservationHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
 
+  // Fetch activity data from API
   useEffect(() => {
-    fetchBooks();
-  }, [fetchBooks]);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [borrowData, reservationData] = await Promise.all([
+          getBorrowHistory(),
+          getReservationHistory()
+        ]);
+        setBorrowHistory(borrowData || []);
+        setReservationHistory(reservationData || []);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+        setBorrowHistory([]);
+        setReservationHistory([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const books = useMemo(
-    () =>
-      (storeBooks || [])
-        .filter((item) => !item?.is_deleted)
-        .map((item) => ({
-          ...item,
-          available: item?.is_available ?? item?.available ?? true,
-          borrowedBy: item?.borrowedBy ?? null,
-        })),
-    [storeBooks]
+    fetchData();
+  }, []);
+
+  // LOGIC: Dashboard uses two separate datasets:
+  // 1) recent feed (mixed borrow + reservation events), and
+  // 2) summary panels (confirmed borrow/reservation outcomes only).
+  // Keeping these concerns separate prevents pending/noisy events from inflating summary counts.
+  // Show a short, recent feed to keep dashboard quick to scan.
+  // Normalize borrow logs into a single shape used by the shared feed table.
+  const hiddenBookManagementActions = new Set(["BOOK_ADDED", "BOOK_DELETED"]);
+  const borrowLogs = borrowHistory
+    .filter((entry) => !hiddenBookManagementActions.has(String(entry.action || "").toUpperCase()))
+    .map((entry) => ({
+      ...entry,
+      userEmail: entry.borrowerEmail || "",
+      sourceTimestamp: entry.timestamp
+    }));
+
+  // Only include reservation actions that matter for day-to-day monitoring.
+  const reservationActionsForFeed = new Set([
+    "RESERVATION_CREATED",
+    "RESERVATION_APPROVED",
+    "RESERVATION_CLOSED",
+    "RESERVATION_CANCELLATION_REQUESTED"
+  ]);
+
+  // Project reservation history into same feed schema as borrow logs.
+  const reservationRequestLogs = reservationHistory
+    .filter((entry) =>
+      reservationActionsForFeed.has(String(entry.action || "").toUpperCase())
+    )
+    .map((entry) => ({
+      ...entry,
+      userEmail: entry.requestedBy || "",
+      sourceTimestamp: entry.timestamp
+    }));
+
+  // Merge, sort newest-first, then cap to the latest four events.
+  const logs = [...borrowLogs, ...reservationRequestLogs]
+    .sort(
+      (a, b) =>
+        new Date(b.sourceTimestamp || 0).getTime() -
+        new Date(a.sourceTimestamp || 0).getTime()
+    )
+    .slice(0, 4);
+
+  const successfulBorrowEntries = borrowHistory.filter(
+    (entry) => String(entry.action || "").toUpperCase() === "BORROW_BOOK"
+  );
+  // Count only successful borrow actions so "Most Borrowed" reflects actual checkouts.
+  const borrowBookCountByTitle = successfulBorrowEntries.reduce((summary, entry) => {
+
+    const title = String(entry.title || "").trim();
+    if (!title) return summary;
+
+    summary[title] = (summary[title] || 0) + 1;
+    return summary;
+  }, {});
+
+  const bookActivityRows = Object.entries(borrowBookCountByTitle).sort(
+    (a, b) => b[1] - a[1]
   );
 
-  const getStudentIdByEmail = (email) =>
-    getUserProfileByEmail(email)?.id || "-";
-  const formatHistoryAction = (action) => String(action || "-").replace(/_/g, " ");
+  const successfulReservationActions = new Set(["RESERVATION_APPROVED"]);
+  const successfulReservationEntries = reservationHistory.filter((entry) =>
+    successfulReservationActions.has(String(entry.action || "").toUpperCase())
+  );
 
-  const pendingRequests = borrowRequests.filter((entry) => entry.status === "pending");
-  const pendingReturnRequestByBookAndUser = borrowRequests
-    .filter((entry) => entry.status === "pending_return")
-    .reduce((summary, entry) => {
-      const key = `${entry.bookId}-${String(entry.borrowerEmail || "").toLowerCase()}`;
-      summary[key] = entry;
-      return summary;
-    }, {});
+  // LOGIC: Aggregate borrower activity in one map so borrow + reservation metrics
+  // stay aligned per user and can be sorted by a combined engagement score.
+  const topActivityByUser = {};
+  successfulBorrowEntries.forEach((entry) => {
+    const email = String(entry.borrowerEmail || "").trim().toLowerCase();
+    if (!email) return;
 
-  const currentBorrowers = books
-    .filter((book) => !book.available && book.borrowedBy)
-    .map((book) => {
-      const borrowEvent = history.find(
-        (entry) =>
-          entry.bookId === book.id &&
-          String(entry.borrowerEmail || "").toLowerCase().trim() ===
-            String(book.borrowedBy || "").toLowerCase().trim() &&
-          entry.action === "BORROW_BOOK"
-      );
-
-      return {
-        user: book.borrowedBy,
-        studentId: getStudentIdByEmail(book.borrowedBy),
-        book: book.title,
-        bookId: book.id,
-        time: borrowEvent?.timestamp || null,
-        pendingReturnRequest:
-          pendingReturnRequestByBookAndUser[
-            `${book.id}-${String(book.borrowedBy || "").toLowerCase()}`
-          ] || null
+    if (!topActivityByUser[email]) {
+      topActivityByUser[email] = {
+        user: email,
+        borrowedActions: 0,
+        reservationActions: 0,
+        total: 0
       };
+    }
+
+    topActivityByUser[email].borrowedActions += 1;
+    topActivityByUser[email].total += 1;
+  });
+
+  successfulReservationEntries.forEach((entry) => {
+    const email = String(entry.requestedBy || "").trim().toLowerCase();
+    if (!email) return;
+
+    if (!topActivityByUser[email]) {
+      topActivityByUser[email] = {
+        user: email,
+        borrowedActions: 0,
+        reservationActions: 0,
+        total: 0
+      };
+    }
+
+    topActivityByUser[email].reservationActions += 1;
+    topActivityByUser[email].total += 1;
+  });
+
+  const profileByEmail = useMemo(() => {
+    const uniqueEmails = new Set();
+    logs.forEach((entry) => {
+      const email = String(entry.userEmail || "").trim().toLowerCase();
+      if (email) uniqueEmails.add(email);
+    });
+    Object.keys(topActivityByUser).forEach((email) => {
+      if (email) uniqueEmails.add(email);
     });
 
-  const refresh = () => {
-    fetchBooks();
-    setHistory(getBorrowHistory());
-    setBorrowRequests(getBorrowRequests());
+    return Array.from(uniqueEmails).reduce((summary, email) => {
+      summary[email] = getUserProfileByEmail(email);
+      return summary;
+    }, {});
+  }, [logs, topActivityByUser]);
+
+  const borrowerActivityRows = Object.values(topActivityByUser)
+    .filter((entry) => entry.borrowedActions > 0 || entry.reservationActions > 0)
+    .sort((a, b) => {
+      // LOGIC: Sort priority = total activity, then borrow count, then reservation count.
+      // This gives deterministic ordering when users have close activity totals.
+      if (b.total !== a.total) return b.total - a.total;
+      if (b.borrowedActions !== a.borrowedActions) {
+        return b.borrowedActions - a.borrowedActions;
+      }
+      return b.reservationActions - a.reservationActions;
+    })
+    .map((entry) => {
+      const profile = profileByEmail[entry.user];
+      return {
+        ...entry,
+        profileLabel: [
+          entry.user || "-",
+          profile?.id || "-",
+          profile?.collegeCourse || "-",
+          profile?.yearLevel || "-"
+        ].join(" - ")
+      };
+    });
+  // Resolve Student ID from profile first; fallback to event payload if present.
+  const getStudentId = (entry) => {
+    const profile = profileByEmail[String(entry.userEmail || "").trim().toLowerCase()];
+    return profile?.id || entry.userId || "-";
   };
 
-  const handleReceive = (requestId) => {
-    const result = receiveBorrowRequest(requestId);
-    if (!result.ok) {
-      showError(result.error || "Unable to receive borrow request.");
-      return;
-    }
-
-    showSuccess("Book release received and recorded.");
-    refresh();
-  };
-
-  const handleReturn = (requestId) => {
-    if (!requestId) {
-      showError("Return request not found.");
-      return;
-    }
-    const result = receiveReturnRequest(requestId);
-    if (!result.ok) {
-      showError(result.error || "Unable to return book.");
-      return;
-    }
-
-    showSuccess("Book returned.");
-    refresh();
-  };
-
-  const handleHistoryExport = () => {
-    if (history.length === 0) return;
-    const historyData = history.map((entry) => ({
-      "Book ID": entry.bookId || "-",
-      "Book Title": entry.bookTitle || "-",
-      "Borrower Email": entry.borrowerEmail || "-",
-      "Action": formatHistoryAction(entry.action),
-      "Timestamp": formatDateTimeFull(entry.timestamp),
-    }));
-    exportToCSV(historyData, "borrow-history.csv");
-  };
+  if (loading) {
+    return (
+      <section className="staff-page staff-dashboard-page">
+        <div className="page-header">
+          <div>
+            <h2>Staff Dashboard</h2>
+            <p className="muted">Loading...</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
-    <section className="staff-page staff-tracking-page">
+    <section className="staff-page staff-dashboard-page">
       <div className="page-header">
         <div>
-          <h2>Borrower Tracking</h2>
-          <p className="muted">Track borrower requests and current book releases.</p>
+          <h2>Staff Dashboard</h2>
+          <p className="muted">Monitor reservations and borrower activity.</p>
         </div>
       </div>
 
-      <div className="page-header" style={{ marginTop: "1rem" }}>
-        <div>
-          <h2>Pending Borrow Requests</h2>
-          <p className="muted">Confirm book pickup by clicking receive.</p>
+      <div className="stats-grid">
+        <div className="card dashboard-summary-card">
+          <p className="dashboard-summary-title">Book Activity</p>
+          <ul className="dashboard-summary-list">
+            {bookActivityRows.length === 0 ? (
+              <li>No confirmed borrow activity yet</li>
+            ) : (
+              bookActivityRows.map(([title, count]) => (
+                <li key={title}>
+                  {title} - Borrowed : {count}
+                </li>
+              ))
+            )}
+          </ul>
         </div>
-      </div>
-      {pendingRequests.length === 0 ? (
-        <div className="empty-state">No pending borrow requests.</div>
-      ) : (
-        <div className="card table-scroll table-scroll--five staff-table-card">
-          <div className="table table--staff-borrow-requests">
-            <div className="table__row table__head">
-              <span>User</span>
-              <span>Student ID</span>
-              <span>Book</span>
-              <span>Requested</span>
-              <span>Action</span>
-            </div>
-            {pendingRequests.map((entry) => (
-              <div className="table__row" key={entry.id}>
-                <span>{entry.borrowerEmail}</span>
-                <span>{getStudentIdByEmail(entry.borrowerEmail)}</span>
-                <span>{entry.title}</span>
-                <span>{formatDateTime(entry.requestedAt)}</span>
-                <button className="btn btn--success" onClick={() => handleReceive(entry.id)}>
-                  Receive
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
-      <div className="page-header" style={{ marginTop: "2rem" }}>
-        <div>
-          <h2>Current Borrower</h2>
-          <p className="muted">Books currently picked up by borrowers.</p>
+        <div className="card dashboard-summary-card">
+          <p className="dashboard-summary-title">Borrower Activity</p>
+          <ul className="dashboard-summary-list">
+            {borrowerActivityRows.length === 0 ? (
+              <li>No borrower activity yet</li>
+            ) : (
+              borrowerActivityRows.map((entry) => (
+                <li key={entry.user}>
+                  {entry.profileLabel}
+                  <ul className="dashboard-summary-sublist">
+                    <li>Borrowed: {entry.borrowedActions}</li>
+                    <li>Reservation: {entry.reservationActions}</li>
+                  </ul>
+                </li>
+              ))
+            )}
+          </ul>
         </div>
       </div>
-      {currentBorrowers.length === 0 ? (
-        <div className="empty-state">No current borrowers.</div>
-      ) : (
-        <div className="card table-scroll table-scroll--five staff-table-card">
-          <div className="table table--staff-current-borrowers">
-            <div className="table__row table__head">
-              <span>User</span>
-              <span>Student ID</span>
-              <span>Book</span>
-              <span>Time</span>
-              <span>Status</span>
-              <span>Action</span>
-            </div>
-            {currentBorrowers.map((entry) => (
-              <div className="table__row" key={`${entry.user}-${entry.bookId}`}>
-                <span>{entry.user}</span>
-                <span>{entry.studentId}</span>
-                <span>{entry.book}</span>
-                <span>{formatDateTimeFull(entry.time)}</span>
-                <span>
-                  {entry.pendingReturnRequest
-                    ? "returning"
-                    : "borrowed"}
-                </span>
-                <button
-                  className="btn btn--return"
-                  onClick={() => handleReturn(entry.pendingReturnRequest?.id)}
-                  disabled={!entry.pendingReturnRequest}
-                >
-                  Return
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       <div className="page-header" style={{ marginTop: "2rem" }}>
         <div>
-          <h2>Borrow History</h2>
-          <p className="muted">Latest 6 book activity entries for borrowers.</p>
+          <h2>Recent Activity</h2>
+          <p className="muted">Latest borrow/return updates and room requests.</p>
         </div>
-        <button
-          className="btn btn--ghost"
-          onClick={handleHistoryExport}
-          disabled={history.length === 0}
-        >
-          Export CSV
-        </button>
       </div>
-      {history.length === 0 ? (
-        <div className="empty-state">No history yet.</div>
+      {logs.length === 0 ? (
+        <div className="empty-state">No activity yet.</div>
       ) : (
-        <div className="card table-scroll table-scroll--five staff-table-card">
-          <div className="table table--staff-borrow-history">
+        <div className="card table-scroll table-scroll--five dashboard-activity-table-card">
+          <div className="table table--staff-dashboard-activity">
             <div className="table__row table__head">
+              <span>Action</span>
               <span>User</span>
               <span>Student ID</span>
-              <span>Book</span>
-              <span>Action</span>
               <span>Time</span>
             </div>
-            {history.slice(0, 6).map((entry) => (
+            {logs.map((entry) => (
               <div className="table__row" key={entry.id}>
-                <span>{entry.borrowerEmail}</span>
-                <span>{getStudentIdByEmail(entry.borrowerEmail)}</span>
-                <span>{entry.title}</span>
-                <span>{formatHistoryAction(entry.action)}</span>
-                <span>{formatDateTime(entry.timestamp)}</span>
+                <span>{formatActivityAction(entry.action)}</span>
+                <span>{entry.userEmail || "-"}</span>
+                <span>{getStudentId(entry)}</span>
+                <span>{formatDateTime(entry.sourceTimestamp)}</span>
               </div>
             ))}
           </div>
@@ -242,4 +272,4 @@ const BorrowerTracking = () => {
   );
 };
 
-export default BorrowerTracking;
+export default Dashboard;
