@@ -42,6 +42,7 @@ const Login = () => {
     if(!user?.user?.user_metadata?.email_verified){
         setPendingEmail(email);
         setIsEmailPopupOpen(true);
+        return;
     }
     
     if (user?.profile?.role === "staff") {
