@@ -1,6 +1,5 @@
-// Purpose: Searchable borrower catalog split by regular and thesis books.
-// Parts: local state, derived filtered lists, borrow/return/thesis handlers, modal render.
-import { useEffect, useMemo, useState } from "react";
+
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { Search } from "lucide-react";
 import BookCard from "../../components/BookCard";
 import BookDetailsModal from "../../components/BookDetailsModal";
@@ -10,7 +9,7 @@ import {
   requestBookReturn,
   getBorrowHistory,
   getBorrowRequestsByBorrower,
-  cancelBorrowRequest
+  cancelBorrowRequest,
 } from "../../services/bookService";
 import { showError, showInfo, showSuccess } from "../../utils/notification";
 import { useStore } from "../../store/useAuthStore";
@@ -18,39 +17,94 @@ import useItems from "../../store/useItemsStore";
 
 const BrowseBooks = () => {
   const { user } = useStore();
-  const items = useItems((state) => state.books);
-  const fetchBooks = useItems((state) => state.fetchBooks);
+  const { books, fetchBooks } = useItems();
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null); // null | "general" | "thesis"
+
   const [pendingThesisBookId, setPendingThesisBookId] = useState(null);
   const [permissionCode, setPermissionCode] = useState("");
   const [permissionError, setPermissionError] = useState("");
+
   const [selectedBook, setSelectedBook] = useState(null);
-  const [borrowRequests, setBorrowRequests] = useState(
-    () => getBorrowRequestsByBorrower(user?.email)
-  );
+
+  const [borrowRequests, setBorrowRequests] = useState([]);
   const [requestToCancel, setRequestToCancel] = useState(null);
+  const [borrowHistory, setBorrowHistory] = useState([]);
+
   const [processingById, setProcessingById] = useState({});
   const [borrowHistoryVersion, setBorrowHistoryVersion] = useState(0);
+
+  const isProcessing = (id) => Boolean(processingById[id]);
+
+  const markProcessing = (id, next) => {
+    setProcessingById((current) => {
+      if (next) return { ...current, [id]: true };
+      const { [id]: _removed, ...rest } = current;
+      return rest;
+    });
+  };
+
+  const loadBorrowRequests = useCallback(async () => {
+    if (!user?.email) {
+      setBorrowRequests([]);
+      return;
+    }
+
+    try {
+      const result = await getBorrowRequestsByBorrower(user.email);
+
+      // Some services return array directly, some wrap in { ok, data }.
+      if (Array.isArray(result)) {
+        setBorrowRequests(result);
+        return;
+      }
+      if (result?.ok && Array.isArray(result.data)) {
+        setBorrowRequests(result.data);
+        return;
+      }
+
+      setBorrowRequests([]);
+    } catch (e) {
+      setBorrowRequests([]);
+      showError(e?.message || "Unable to load borrow requests.");
+    }
+  }, [user?.email]);
+
+  const loadBorrowHistory = useCallback(async () => {
+    try {
+      const result = await getBorrowHistory();
+
+      if (Array.isArray(result)) {
+        setBorrowHistory(result);
+        return;
+      }
+      if (result?.data && Array.isArray(result.data)) {
+        setBorrowHistory(result.data);
+        return;
+      }
+
+      setBorrowHistory([]);
+    } catch (e) {
+      console.error("Error loading borrow history:", e);
+      setBorrowHistory([]);
+    }
+  }, []);
+
+  const refresh = useCallback(async () => {
+    await loadBorrowRequests();
+    await loadBorrowHistory();
+    setBorrowHistoryVersion((current) => current + 1);
+  }, [loadBorrowRequests, loadBorrowHistory]);
 
   useEffect(() => {
     fetchBooks();
   }, [fetchBooks]);
 
-  const books = useMemo(
-    () =>
-      (items || [])
-        .filter((item) => !item?.is_deleted)
-        .map((item) => ({
-          ...item,
-          category: String(item?.item_type || "general").toLowerCase(),
-          available: item?.available ?? true,
-          keywords: Array.isArray(item?.keywords) ? item.keywords : [],
-        })),
-    [items]
-  );
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
-  // Match query against title, author, or category in a case-insensitive way.
   const filteredBooks = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return books;
@@ -62,48 +116,18 @@ const BrowseBooks = () => {
     );
   }, [books, searchQuery]);
 
-  // Keep regular books and theses in separate sections for clearer UX.
-  const regularBooks = useMemo(
-    () =>
-      filteredBooks.filter(
-        (book) => String(book.category || "").toLowerCase() !== "thesis"
-      ),
-    [filteredBooks]
-  );
+  const regularBooks = useMemo(() => {
+    return filteredBooks.filter((book) => String(book.item_type || "").toLowerCase() !== "thesis");
+  }, [filteredBooks]);
 
-  const thesisBooks = useMemo(
-    () =>
-      filteredBooks.filter(
-        (book) => String(book.category || "").toLowerCase() === "thesis"
-      ),
-    [filteredBooks]
-  );
-
-  // Reload latest catalog state and current user's borrow requests after mutations.
-  const refresh = () => {
-    fetchBooks();
-    setBorrowRequests(getBorrowRequestsByBorrower(user?.email));
-    setBorrowHistoryVersion((current) => current + 1);
-  };
-
-  const isProcessing = (id) => Boolean(processingById[id]);
-
-  const markProcessing = (id, next) => {
-    setProcessingById((current) => {
-      if (next) {
-        return { ...current, [id]: true };
-      }
-      const { [id]: _removed, ...rest } = current;
-      return rest;
-    });
-  };
+  const thesisBooks = useMemo(() => {
+    return filteredBooks.filter((book) => String(book.item_type || "").toLowerCase() === "thesis");
+  }, [filteredBooks]);
 
   const pendingRequestByBookId = useMemo(() => {
     const pendingMap = new Map();
     borrowRequests.forEach((request) => {
-      if (request.status === "pending") {
-        pendingMap.set(request.bookId, request);
-      }
+      if (request.status === "pending") pendingMap.set(request.bookId, request);
     });
     return pendingMap;
   }, [borrowRequests]);
@@ -111,17 +135,33 @@ const BrowseBooks = () => {
   const pendingReturnRequestByBookId = useMemo(() => {
     const pendingMap = new Map();
     borrowRequests.forEach((request) => {
-      if (request.status === "pending_return") {
-        pendingMap.set(request.bookId, request);
-      }
+      if (request.status === "pending_return") pendingMap.set(request.bookId, request);
     });
     return pendingMap;
   }, [borrowRequests]);
 
+  // NOTE:
+  // Your book objects (from the array you posted) do NOT include `borrowedBy`,
+  // so we compute “what the current user borrowed” from borrow history.
+  const borrowedByUserBookIds = useMemo(() => {
+    if (!user?.email) return new Set();
+
+    const set = new Set();
+
+    borrowHistory.forEach((entry) => {
+      const action = String(entry.action || "").toUpperCase();
+      const borrower = String(entry.borrowerEmail || entry.email || "").toLowerCase();
+
+      if (action === "BORROW_BOOK" && borrower === user.email.toLowerCase() && entry.bookId) {
+        set.add(entry.bookId);
+      }
+    });
+
+    return set;
+  }, [user?.email, borrowHistory]);
+
   const recommendedBooksLine = useMemo(() => {
-    const history = getBorrowHistory();
-    // Recommendation seed is borrow frequency so repeated demand surfaces first.
-    const borrowCountByTitle = history.reduce((summary, entry) => {
+    const borrowCountByTitle = borrowHistory.reduce((summary, entry) => {
       if (String(entry.action || "").toUpperCase() !== "BORROW_BOOK") return summary;
 
       const title = String(entry.title || "").trim();
@@ -136,43 +176,41 @@ const BrowseBooks = () => {
       .slice(0, 3)
       .map(([title]) => title);
 
-    // Prefer popularity-based recommendations when history exists.
-    if (topTitles.length > 0) {
-      return topTitles.join(", ");
-    }
+    if (topTitles.length > 0) return topTitles.join(", ");
 
-    // Fallback keeps UI populated on fresh installs with no borrow history yet.
     return books
-      .filter((book) => book.available)
+      .filter((book) => book.is_available)
       .slice(0, 3)
       .map((book) => book.title)
       .join(", ");
-  }, [books, borrowHistoryVersion]);
+  }, [books, borrowHistory]);
 
-  const submitBorrow = (id, code = "", handlers = {}) => {
+  const submitBorrow = async (id, code = "", handlers = {}) => {
     const { onError, onSuccess } = handlers;
-    if (!user) return;
+
+    if (!user?.email) return;
     if (isProcessing(id)) return;
+
     markProcessing(id, true);
     showInfo("Processing borrow request, please wait...");
-    setTimeout(() => {
-      const result = borrowBook(id, user.email, code);
-      if (!result.ok) {
-        showError(result.error);
-        markProcessing(id, false);
-        if (onError) onError(result);
-        return;
-      }
+
+    try {
+      const result = await borrowBook(id, user.email, code);
 
       showSuccess("Pending. Please pick it up at the library.");
-      refresh();
-      markProcessing(id, false);
+      await refresh();
       if (onSuccess) onSuccess(result);
-    }, 500);
+    } catch (e) {
+      const errorMsg = e?.response?.data?.message || e?.message || "Unable to borrow book.";
+      showError(errorMsg);
+      if (onError) onError({ ok: false, error: errorMsg });
+    } finally {
+      markProcessing(id, false);
+    }
   };
 
   const handleBorrow = (book) => {
-    if (!user) return;
+    if (!user?.email) return;
 
     const pendingRequest = pendingRequestByBookId.get(book.id);
     if (pendingRequest) {
@@ -180,8 +218,7 @@ const BrowseBooks = () => {
       return;
     }
 
-    // Thesis items trigger permission-code modal instead of immediate borrow.
-    const isThesis = String(book.category || "").toLowerCase() === "thesis";
+    const isThesis = String(book.item_type || "").toLowerCase() === "thesis";
     if (isThesis) {
       setPendingThesisBookId(book.id);
       setPermissionCode("");
@@ -189,7 +226,6 @@ const BrowseBooks = () => {
       return;
     }
 
-    // Non-thesis can be borrowed immediately.
     submitBorrow(book.id);
   };
 
@@ -204,55 +240,95 @@ const BrowseBooks = () => {
         setPendingThesisBookId(null);
         setPermissionCode("");
         setPermissionError("");
-      }
+      },
     });
   };
 
-  const handleReturn = (id) => {
-    if (!user) return;
-    if (isProcessing(id)) return;
-    markProcessing(id, true);
-    // Return flow now starts with a borrower request that staff confirms.
+  const handleReturn = async (bookId) => {
+    if (!user?.email) return;
+    if (isProcessing(bookId)) return;
+
+    // ✅ Prevent returning books you didn’t borrow
+    if (!borrowedByUserBookIds.has(bookId)) {
+      showError("You can only return books you borrowed.");
+      return;
+    }
+
+    if (pendingReturnRequestByBookId.has(bookId)) {
+      showInfo("Return request is already pending.");
+      return;
+    }
+
+    markProcessing(bookId, true);
     showInfo("Submitting return request, please wait...");
-    setTimeout(() => {
-      const result = requestBookReturn(id, user.email);
-      if (!result.ok) {
-        showError(result.error);
-        markProcessing(id, false);
-        return;
-      }
+
+    try {
+      await requestBookReturn(bookId, user.email);
 
       showSuccess("Return request submitted. Please wait for staff confirmation.");
-      refresh();
-      markProcessing(id, false);
-    }, 500);
+      await refresh();
+    } catch (e) {
+      const errorMsg = e?.response?.data?.message || e?.message || "Unable to request return.";
+      showError(errorMsg);
+    } finally {
+      markProcessing(bookId, false);
+    }
   };
 
-  const handleCancelPendingRequest = () => {
-    if (!requestToCancel || !user) return;
-    if (isProcessing(requestToCancel.bookId)) return;
-    markProcessing(requestToCancel.bookId, true);
+  const handleCancelPendingRequest = async () => {
+    if (!requestToCancel || !user?.email) return;
+
+    const bookId = requestToCancel.bookId;
+    if (isProcessing(bookId)) return;
+
+    markProcessing(bookId, true);
     showInfo("Cancelling borrow request, please wait...");
-    // LOGIC: Delay keeps cancel action behavior aligned with borrow/return timing
-    // and gives users a visible processing state before state refresh.
-    setTimeout(() => {
-      const result = cancelBorrowRequest(requestToCancel.id, user.email);
-      if (!result.ok) {
-        showError(result.error || "Unable to cancel borrow request.");
-        markProcessing(requestToCancel.bookId, false);
-        return;
-      }
+
+    try {
+      await cancelBorrowRequest(requestToCancel.id, user.email);
 
       showSuccess("Borrow request cancelled.");
       setRequestToCancel(null);
-      refresh();
-      markProcessing(requestToCancel.bookId, false);
-    }, 500);
+      await refresh();
+    } catch (e) {
+      const errorMsg = e?.response?.data?.message || e?.message || "Unable to cancel borrow request.";
+      showError(errorMsg);
+    } finally {
+      markProcessing(bookId, false);
+    }
   };
 
   const handleCategoryToggle = (category) => {
     setSelectedCategory((current) => (current === category ? null : category));
   };
+
+  const renderBookGrid = (list) => (
+    <div className="book-grid">
+      {list.map((book) => {
+        const bookId = book.id;
+        const hasPendingBorrow = pendingRequestByBookId.has(bookId);
+        const hasPendingReturn = pendingReturnRequestByBookId.has(bookId);
+
+        return (
+          <BookCard
+            key={bookId}
+            book={book}
+            isProcessing={isProcessing(bookId)}
+            canBorrow={Boolean(book.is_available)}
+            isPending={hasPendingBorrow}
+            borrowLabel={hasPendingBorrow ? "Pending" : undefined}
+            pendingMessage={hasPendingBorrow ? "Please pick it up at the library." : undefined}
+            returnLabel={hasPendingReturn ? "Pending Return" : "Return"}
+            returnMessage={hasPendingReturn ? "Waiting for staff confirmation." : undefined}
+            canReturn={!book.is_available && borrowedByUserBookIds.has(bookId) && !hasPendingReturn}
+            onBorrow={handleBorrow}
+            onReturn={handleReturn}
+            onOpenDetails={setSelectedBook}
+          />
+        );
+      })}
+    </div>
+  );
 
   return (
     <section className="browse-books-page">
@@ -282,6 +358,7 @@ const BrowseBooks = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
+
         <div className="book-category-filter" role="group" aria-label="Book category filter">
           <button
             type="button"
@@ -293,6 +370,7 @@ const BrowseBooks = () => {
           >
             {selectedCategory === "general" ? "✓ General Books" : "General Books"}
           </button>
+
           <button
             type="button"
             aria-pressed={selectedCategory === "thesis"}
@@ -310,82 +388,13 @@ const BrowseBooks = () => {
         <div className="empty-state">No books found for your search.</div>
       ) : null}
 
-      {selectedCategory === null || selectedCategory === "general" ? (
-        <div className="book-grid">
-          {regularBooks.map((book) => (
-            // A pending request keeps the same primary action clickable for cancellation.
-            <BookCard
-              key={book.id}
-              book={book}
-              isProcessing={isProcessing(book.id)}
-              canBorrow={book.available}
-              isPending={pendingRequestByBookId.has(book.id)}
-              borrowLabel={pendingRequestByBookId.has(book.id) ? "Pending" : undefined}
-              pendingMessage={
-                pendingRequestByBookId.has(book.id)
-                  ? "Please pick it up at the library."
-                  : undefined
-              }
-              returnLabel={
-                pendingReturnRequestByBookId.has(book.id) ? "Pending Return" : "Return"
-              }
-              returnMessage={
-                pendingReturnRequestByBookId.has(book.id)
-                  ? "Waiting for staff confirmation."
-                  : undefined
-              }
-              canReturn={
-                !book.available &&
-                book.borrowedBy === user?.email &&
-                !pendingReturnRequestByBookId.has(book.id)
-              }
-              onBorrow={handleBorrow}
-              onReturn={handleReturn}
-              onOpenDetails={setSelectedBook}
-            />
-          ))}
-        </div>
-      ) : null}
+      {selectedCategory === null || selectedCategory === "general" ? renderBookGrid(regularBooks) : null}
 
       {selectedCategory === null && regularBooks.length > 0 && thesisBooks.length > 0 ? (
         <div className="book-section-separator" aria-hidden="true" />
       ) : null}
 
-      {selectedCategory === null || selectedCategory === "thesis" ? (
-        <div className="book-grid">
-          {thesisBooks.map((book) => (
-            <BookCard
-              key={book.id}
-              book={book}
-              isProcessing={isProcessing(book.id)}
-              canBorrow={book.available}
-              isPending={pendingRequestByBookId.has(book.id)}
-              borrowLabel={pendingRequestByBookId.has(book.id) ? "Pending" : undefined}
-              pendingMessage={
-                pendingRequestByBookId.has(book.id)
-                  ? "Please pick it up at the library."
-                  : undefined
-              }
-              returnLabel={
-                pendingReturnRequestByBookId.has(book.id) ? "Pending Return" : "Return"
-              }
-              returnMessage={
-                pendingReturnRequestByBookId.has(book.id)
-                  ? "Waiting for staff confirmation."
-                  : undefined
-              }
-              canReturn={
-                !book.available &&
-                book.borrowedBy === user?.email &&
-                !pendingReturnRequestByBookId.has(book.id)
-              }
-              onBorrow={handleBorrow}
-              onReturn={handleReturn}
-              onOpenDetails={setSelectedBook}
-            />
-          ))}
-        </div>
-      ) : null}
+      {selectedCategory === null || selectedCategory === "thesis" ? renderBookGrid(thesisBooks) : null}
 
       <BookDetailsModal
         isOpen={Boolean(selectedBook)}

@@ -2,13 +2,7 @@
 // Parts: selected book state, borrow/return handlers, thesis flow, detail render.
 import { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import {
-  getBookById,
-  borrowBook,
-  requestBookReturn,
-  getBorrowRequestsByBorrower,
-  cancelBorrowRequest
-} from "../../services/bookService";
+
 import ThesisPermissionModal from "../../components/ThesisPermissionModal";
 import { showError, showInfo, showSuccess } from "../../utils/notification";
 import { useStore } from "../../store/useAuthStore";
@@ -16,7 +10,7 @@ import { useStore } from "../../store/useAuthStore";
 const BookDetails = () => {
   const { id } = useParams();
   const { user } = useStore();
-  const [book, setBook] = useState(getBookById(id));
+  const [book, setBook] = useState();
   const [isPermissionModalOpen, setIsPermissionModalOpen] = useState(false);
   const [permissionCode, setPermissionCode] = useState("");
   const [permissionError, setPermissionError] = useState("");

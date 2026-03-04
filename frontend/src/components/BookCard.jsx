@@ -18,7 +18,7 @@ const BookCard = ({
 	showBorrower = false
 }) => {
 	// Thesis entries use "Apply" wording and a permission flow instead of plain borrow.
-	const isThesis = String(book.category || "").toLowerCase() === "thesis";
+	const isThesis = String(book.item_type || "").toLowerCase() === "thesis";
 	const [isMobileViewport, setIsMobileViewport] = useState(false);
 
 	useEffect(() => {
@@ -42,27 +42,21 @@ const BookCard = ({
 	}, []);
 
 	const MAX_TITLE_CHARS = isMobileViewport ? 46 : 80;
-	const MAX_DESCRIPTION_CHARS = isMobileViewport ? 66 : 95;
 	const titleText = String(book.title || "").trim();
 	const previewTitle =
 		titleText.length > MAX_TITLE_CHARS
 			? `${titleText.slice(0, MAX_TITLE_CHARS).trimEnd()}...`
 			: titleText;
 	const descriptionText = String(book.description || "").trim();
-	// Keep cards compact by truncating long descriptions.
-	const previewDescription =
-		descriptionText.length > MAX_DESCRIPTION_CHARS
-			? `${descriptionText.slice(0, MAX_DESCRIPTION_CHARS).trimEnd()}...`
-			: descriptionText;
 
 	return (
 		<article className="card book-card">
 			<div className="book-card__header">
 				<h3 title={book.title}>{previewTitle}</h3>
 				<span
-					className={`status status--desktop ${book.available ? "status--ok" : "status--busy"}`}
+					className={`status status--desktop ${book.is_available ? "status--ok" : "status--busy"}`}
 				>
-					{book.available ? "Available" : "Borrowed"}
+					{book.is_available ? "Available" : "Borrowed"}
 				</span>
 			</div>
 			{book.category ? <p className="book-card__category">{book.category}</p> : null}
@@ -70,12 +64,12 @@ const BookCard = ({
 			{Array.isArray(book.keywords) && book.keywords.length > 0 ? (
 				<p className="micro">Keywords: {book.keywords.join(", ")}</p>
 			) : null}
-			{previewDescription ? <p className="book-card__desc">{previewDescription}</p> : null}
-			{showBorrower && !book.available && book.borrowedBy ? (
+			{descriptionText ? <p className="book-card__desc">{descriptionText}</p> : null}
+			{showBorrower && !book.is_available && book.borrowedBy ? (
 				<p className="micro">Borrowed by {book.borrowedBy}</p>
 			) : null}
-			<span className={`status status--mobile ${book.available ? "status--ok" : "status--busy"}`}>
-				{book.available ? "Available" : "Borrowed"}
+			<span className={`status status--mobile ${book.is_available ? "status--ok" : "status--busy"}`}>
+				{book.is_available ? "Available" : "Borrowed"}
 			</span>
 			<div className="book-card__actions">
 				{/* Details are always available regardless of borrow state. */}
@@ -83,7 +77,7 @@ const BookCard = ({
 					{isThesis ? "Detail" : "Details"}
 				</button>
 				{/* Primary action toggles between borrow/apply and return based on availability. */}
-				{book.available ? (
+				{book.is_available ? (
 					<button
 						className={`btn ${isPending ? "btn--view" : "btn--primary"}`}
 						onClick={() => onBorrow(book)}
@@ -102,7 +96,7 @@ const BookCard = ({
 				)}
 			</div>
 			{isPending && pendingMessage ? <p className="micro">{pendingMessage}</p> : null}
-			{!book.available && returnMessage ? <p className="micro">{returnMessage}</p> : null}
+			{!book.is_available && returnMessage ? <p className="micro">{returnMessage}</p> : null}
 		</article>
 	);
 };

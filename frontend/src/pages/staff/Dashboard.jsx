@@ -1,13 +1,40 @@
 // Purpose: Staff dashboard showing summary metrics and recent activity.
 // Parts: metric derivation, formatting helpers, summary cards, activity list render.
-import { useMemo } from "react";
-import { getActivityLogs, getBorrowHistory } from "../../services/bookService";
+import { useMemo, useState, useEffect } from "react";
+import { getBorrowHistory } from "../../services/bookService";
 import { getReservationHistory } from "../../services/reservationService";
 import { getUserProfileByEmail } from "../../services/authService";
 import { formatDateTime } from "../../utils/dateUtils";
 import { formatActivityAction } from "../../utils/activityUtils";
 
 const Dashboard = () => {
+  const [borrowHistory, setBorrowHistory] = useState([]);
+  const [reservationHistory, setReservationHistory] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch activity data from API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(false);
+        const [borrowData, reservationData] = await Promise.all([
+          getBorrowHistory(),
+          getReservationHistory()
+        ]);
+        setBorrowHistory(borrowData || []);
+        setReservationHistory(reservationData || []);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+        setBorrowHistory([]);
+        setReservationHistory([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   // LOGIC: Dashboard uses two separate datasets:
   // 1) recent feed (mixed borrow + reservation events), and
   // 2) summary panels (confirmed borrow/reservation outcomes only).
@@ -15,7 +42,7 @@ const Dashboard = () => {
   // Show a short, recent feed to keep dashboard quick to scan.
   // Normalize borrow logs into a single shape used by the shared feed table.
   const hiddenBookManagementActions = new Set(["BOOK_ADDED", "BOOK_DELETED"]);
-  const borrowLogs = getActivityLogs()
+  const borrowLogs = borrowHistory
     .filter((entry) => !hiddenBookManagementActions.has(String(entry.action || "").toUpperCase()))
     .map((entry) => ({
       ...entry,
@@ -32,7 +59,7 @@ const Dashboard = () => {
   ]);
 
   // Project reservation history into same feed schema as borrow logs.
-  const reservationRequestLogs = getReservationHistory()
+  const reservationRequestLogs = reservationHistory
     .filter((entry) =>
       reservationActionsForFeed.has(String(entry.action || "").toUpperCase())
     )
@@ -51,7 +78,6 @@ const Dashboard = () => {
     )
     .slice(0, 4);
 
-  const borrowHistory = getBorrowHistory();
   const successfulBorrowEntries = borrowHistory.filter(
     (entry) => String(entry.action || "").toUpperCase() === "BORROW_BOOK"
   );
@@ -70,7 +96,7 @@ const Dashboard = () => {
   );
 
   const successfulReservationActions = new Set(["RESERVATION_APPROVED"]);
-  const successfulReservationEntries = getReservationHistory().filter((entry) =>
+  const successfulReservationEntries = reservationHistory.filter((entry) =>
     successfulReservationActions.has(String(entry.action || "").toUpperCase())
   );
 
@@ -155,6 +181,19 @@ const Dashboard = () => {
     const profile = profileByEmail[String(entry.userEmail || "").trim().toLowerCase()];
     return profile?.id || entry.userId || "-";
   };
+
+  if (loading) {
+    return (
+      <section className="staff-page staff-dashboard-page">
+        <div className="page-header">
+          <div>
+            <h2>Staff Dashboard</h2>
+            <p className="muted">Loading...</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="staff-page staff-dashboard-page">

@@ -18,7 +18,7 @@ const useItems = create((set, get) => ({
 
             const books = res?.data?.books || [];
             const count = res?.data?.count ?? books.length;
-
+            console.log(books);
             set({ books: books, count });
         } catch (err) {
             console.error("fetchBooks error:", err);

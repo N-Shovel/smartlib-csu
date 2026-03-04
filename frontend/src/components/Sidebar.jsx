@@ -25,9 +25,9 @@ const Sidebar = () => {
 	const [isMobileMoving, setIsMobileMoving] = useState(false);
 	const movementTimeoutRef = useRef(null); 
     
-	const handleLogout = () => {
+	const handleLogout = async () => {
         
-        logout();
+        await logout();
 
 		setIsMobileMenuOpen(false);
 		navigate("/login");
