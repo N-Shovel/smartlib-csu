@@ -13,7 +13,7 @@ const Login = () => {
   const [isEmailPopupOpen, setIsEmailPopupOpen] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
   const navigate = useNavigate();
-  const { isLoading } = useStore();
+  const {Login, isLoading } = useStore();
 
   const handleLogin = async () => {
     // Reset previous validation/auth messages before a new attempt.
@@ -29,8 +29,27 @@ const Login = () => {
     // UI-only behavior: always show confirmation modal first.
     // TODO(BACKEND): Attempt login, check `email_verified` from auth provider,
     // and only navigate to dashboard/browse when verification is true.
-    setPendingEmail(email);
-    setIsEmailPopupOpen(true);
+
+    const ok = await Login(email, password);
+
+    if (!ok) {
+      setError("Login failed. Please check your credentials.");
+      return;
+    }
+
+    const {user} = useStore.getState();
+
+    if(!user?.user?.user_metadata?.email_verified){
+        setPendingEmail(email);
+        setIsEmailPopupOpen(true);
+    }
+    
+    if (user?.profile?.role === "staff") {
+      navigate("/staff/dashboard");
+    } else {
+      navigate("/borrower/browse");
+    }
+
   };
 
   return (
