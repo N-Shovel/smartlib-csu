@@ -14,7 +14,7 @@ const INITIAL_FORM = {
 };
 
 const BookManagement = () => {
-    const { items, fetchBooks, createItem, deleteItem, isLoading } = useItems();
+    const { books, fetchBooks, createItem, deleteItem, isLoading } = useItems();
 
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState(null); // "book" | "thesis" | null
@@ -32,8 +32,8 @@ const BookManagement = () => {
 
         const byCategory =
             selectedCategory === null
-                ? items
-                : items.filter((book) => String(book.item_type || "").toLowerCase() === selectedCategory);
+                ? books
+                : books.filter((book) => String(book.item_type || "").toLowerCase() === selectedCategory);
 
         if (!query) return byCategory;
 
@@ -42,7 +42,7 @@ const BookManagement = () => {
             .filter(Boolean)
             .some((value) => String(value).toLowerCase().includes(query))
         );
-    }, [items, searchQuery, selectedCategory]);
+    }, [books, searchQuery, selectedCategory]);
 
     const handleCategoryToggle = (category) => {
         setSelectedCategory((current) => (current === category ? null : category));
@@ -58,10 +58,7 @@ const BookManagement = () => {
 
             // close modal after deleting
             setBookToDelete(null);
-            showSuccess("Item deleted.");
-
             // If your store doesn't update `items` on delete, keep this:
-            await fetchBooks();
         } catch (err) {
             showError(err?.message || "Failed to delete item.");
         }
@@ -87,9 +84,7 @@ const BookManagement = () => {
 
         try {
             await createItem(payload);
-
-            showSuccess("Item created.");
-
+            
             setIsAddModalOpen(false);
             setForm(INITIAL_FORM);
             await fetchBooks();
