@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-
+import {useRequest} from "../store/useRequestsStore"
+import { Loader2Icon } from "lucide-react";
 // Purpose: Displays a single book with availability and quick actions.
 // Parts: metadata display, status tags, borrow/return/details actions.
 const BookCard = ({
@@ -17,6 +18,9 @@ const BookCard = ({
 	isProcessing = false,
 	showBorrower = false
 }) => {
+    
+    const {loading} =useRequest();
+
 	// Thesis entries use "Apply" wording and a permission flow instead of plain borrow.
 	const isThesis = String(book.item_type || "").toLowerCase() === "thesis";
 	const [isMobileViewport, setIsMobileViewport] = useState(false);
@@ -83,7 +87,7 @@ const BookCard = ({
 						onClick={() => onBorrow(book)}
 						disabled={isProcessing || (!canBorrow && !isPending)}
 					>
-						{borrowLabel || (isThesis ? "Apply" : "Borrow")}
+						{borrowLabel || (isThesis ? "Apply" : "Borrow") || (loading?? <Loader2Icon className="flex justify-center items-center animate-spin"/>)}
 					</button>
 				) : (
 					<button

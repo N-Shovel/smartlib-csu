@@ -1,9 +1,10 @@
 import express from "express";
 import protectRoute from "../middleware/protectRoute.js";
-import { activityLogs } from "../controller/history.controller.js";
+import {  getRequestHistoryController } from "../controller/history.controller.js";
 
 const router = express.Router();
 
-router.get("/recent-activity", protectRoute, activityLogs);
+{/*========Borrower History==========*/}
+router.get("/borrower-logs", protectRoute, getRequestHistoryController);
 
 export default router;

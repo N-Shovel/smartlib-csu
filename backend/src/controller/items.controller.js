@@ -1,3 +1,4 @@
+import { error } from "node:console";
 import { supabaseForRequest  } from "../lib/supabaseClient.js";
 
 export const createLibraryItemController = async (req, res) =>{
@@ -167,3 +168,58 @@ export const getBooksController = async (req, res) => {
         return res.status(500).json({ message: "Internal server error" });
     }
 };
+
+export const requestItemController = async (req, res) =>{
+    try {
+        
+        const access_token = req?.cookies?.access_token;
+        if(!access_token) return res.status(401).json({message: "Unauthorized"});
+
+        const userId = req.user?.id;
+        if(!userId) return res.status(401).json({message: "Unauthorized"});
+
+        const { 
+                item_title,
+                item_type,
+                item_id,
+                } = req.body;
+        
+        if(!item_type || !["book", "thesis"].includes(item_type)) return res.status(400).json({message: "Item must be book or thesis"});
+        if(!item_title || typeof item_title !== "string") return res.status(400).json({message: "title is required"});
+    
+        const supabase = supabaseForRequest(access_token);
+
+        const { data: studentProfile, error: studentErr } = await supabase
+            .from("student_profiles")
+            .select("user_id, role")
+            .eq("user_id", userId)
+            .maybeSingle();
+
+        if (studentErr) return res.status(400).json({ message: studentErr.message });
+        if (!studentProfile) return res.status(403).json({ message: "Student access required" });
+        
+        const {data: newReq, error: reqErr} = await supabase
+            .from("student_borrow_requests")
+            .insert({
+                student_user_id: userId,
+                item_title: item_title.trim(),
+                item_type: item_type.trim(),
+                library_item_id: item_id
+            })
+            .select("*")
+            .single();
+
+        if(!newReq || reqErr) return res.status(400).json({message: reqErr.message || "Failed to create send request"});
+
+        
+        res.status(201).json({message: "Request was sent, please wait for the confirmation"});
+
+    } catch (error) {
+        console.log("Error in requestItemController: ", error);
+        res.status(500).json({message: "Internal server error"});
+    }     
+}
+
+export const updateItemStatusController = async (req, res) =>{
+
+}
