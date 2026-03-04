@@ -39,20 +39,19 @@ const RoomReservation = () => {
       showError("Selected time slot has already passed.");
       return;
     }
-    if (unavailableHours.has(Number(reservationHour))) {
+    if (unavailableHours.includes(Number(reservationHour))) {
       showError("Selected time slot is unavailable.");
       return;
     }
 
     showInfo("Submitting reservation, please wait...");
     setTimeout(() => {
-      const result = addReservation({
-        room: room.trim(),
-        reservationHour: Number(reservationHour),
-        notes: notes.trim(),
-        // Attach requester identity for ownership/history tracking.
-        requestedBy: user?.email || "unknown"
-      });
+      const result = addReservation(
+        room.trim(),
+        Number(reservationHour),
+        notes.trim(),
+        user?.user?.email || user?.email || "unknown"
+      );
 
       if (!result.ok) {
         showError(result.error || "Unable to submit reservation");
@@ -101,7 +100,7 @@ const RoomReservation = () => {
               <option value="">Select time (8:00 AM - 6:00 PM)</option>
               {reservationHourOptions.map((slot) => {
                 // Slot can be unavailable due to lunch break or approved reservation.
-                const isUnavailable = unavailableHours.has(slot.value);
+                const isUnavailable = unavailableHours.includes(slot.value);
                 const isPastSlot = slot.value <= new Date().getHours();
                 const stateLabel = isUnavailable
                   ? isLunchBreakHour(slot.value)

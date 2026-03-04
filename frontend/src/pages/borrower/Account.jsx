@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { PenSquare } from "lucide-react";
-import { getUserProfileByEmail } from "../../services/authService";
+import { getUserProfileByEmail, updateBorrowerAccountUser } from "../../services/authService";
 import { showError, showSuccess } from "../../utils/notification";
 import { useStore } from "../../store/useAuthStore";
 
@@ -12,7 +12,8 @@ const Account = () => {
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
-  const profile = user?.email ? getUserProfileByEmail(user.email) : null;
+  const accountEmail = user?.user?.email || user?.email || "";
+  const profile = accountEmail ? getUserProfileByEmail(accountEmail) : null;
 
   const openModal = (type) => {
     // Prefill each modal with current persisted values for quicker edits.
@@ -41,9 +42,9 @@ const Account = () => {
     setConfirmNewPassword("");
   };
 
-  const handleUpdateEmail = () => {
+  const handleUpdateEmail = async () => {
     // Uses auth service update path, which also migrates linked borrower references.
-    const result = updateBorrowerAccountUser({
+    const result = await updateBorrowerAccountUser({
       email: emailDraft
     });
 
@@ -56,8 +57,8 @@ const Account = () => {
     closeModal();
   };
 
-  const handleUpdateContact = () => {
-    const result = updateBorrowerAccountUser({
+  const handleUpdateContact = async () => {
+    const result = await updateBorrowerAccountUser({
       contactInfo: contactDraft
     });
 
@@ -70,7 +71,7 @@ const Account = () => {
     closeModal();
   };
 
-  const handleUpdatePassword = () => {
+  const handleUpdatePassword = async () => {
     // Enforce client-side match check before service validates old password.
     if (!newPassword || !confirmNewPassword || !oldPassword) {
       showError("Please complete all password fields.");
@@ -82,7 +83,7 @@ const Account = () => {
       return;
     }
 
-    const result = updateBorrowerAccountUser({
+    const result = await updateBorrowerAccountUser({
       oldPassword,
       password: newPassword
     });

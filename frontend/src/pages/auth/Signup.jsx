@@ -6,6 +6,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useStore } from "../../store/useAuthStore";
 import { showError } from "../../utils/notification";
 import AuthCard from "../../components/AuthCard";
+import EmailConfirmationPopup from "../../confirmation/EmailConfirmationPopup";
 
 const toYearLevelSuffix = (value) => {
   const text = String(value || "").trim();
@@ -47,9 +48,10 @@ const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
-  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [isEmailPopupOpen, setIsEmailPopupOpen] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState("");
   const navigate = useNavigate();
-  const { studentSignUp, isLoading } = useStore();
+  const { isLoading } = useStore();
 
   const handleSignup = async () => {
 
@@ -72,29 +74,15 @@ const Signup = () => {
         return;
       }
 
-      // Call the store's signup method
-      const success = await studentSignUp(
-        email,
-        password,
-        id,
-        firstName,
-        lastName,
-        null, // suffix - optional
-        courseAndYear,        
-        contactInfo,
-        currentAddress
-      );
-
-      if (!success) {
-        setError("Signup failed. Please try again.");
-        return;
-      }
-
-      // On success, direct the user to login so they can authenticate.
-      navigate("/login"); 
+      // UI-only behavior: always show confirmation modal first.
+      // TODO(BACKEND): Create account, trigger verification email, and keep user
+      // blocked from app routes until `email_verified` is true.
+      setPendingEmail(email);
+      setIsEmailPopupOpen(true);
   };
 
   return (
+    <>
     <AuthCard
       title="Create account"
       subtitle="Create your CSU library account and start borrowing."
@@ -271,6 +259,14 @@ const Signup = () => {
         </p>
       </div>
     </AuthCard>
+    <EmailConfirmationPopup
+      isOpen={isEmailPopupOpen}
+      email={pendingEmail}
+      onResend={() => {
+        // TODO(BACKEND): Call resend verification endpoint for `pendingEmail`.
+      }}
+    />
+    </>
   );
 };
 

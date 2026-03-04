@@ -4,14 +4,16 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStore } from "../../store/useAuthStore";
 import AuthCard from "../../components/AuthCard";
+import EmailConfirmationPopup from "../../confirmation/EmailConfirmationPopup";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [isEmailPopupOpen, setIsEmailPopupOpen] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState("");
   const navigate = useNavigate();
-  const { Login, isLoading } = useStore();
+  const { isLoading } = useStore();
 
   const handleLogin = async () => {
     // Reset previous validation/auth messages before a new attempt.
@@ -24,26 +26,15 @@ const Login = () => {
       return;
     }
 
-    // Call the store's login method
-    const success = await Login(email, password);
-    
-    if (!success) {
-      setError("Login failed. Please check your credentials.");
-      return;
-    }
-
-    // Get the updated user from store to check role
-    const { user } = useStore.getState();
-    
-    // Navigate based on user role
-    if (user?.profile?.role === "staff") {
-      navigate("/staff/dashboard");
-    } else {
-      navigate("/borrower/browse");
-    }
+    // UI-only behavior: always show confirmation modal first.
+    // TODO(BACKEND): Attempt login, check `email_verified` from auth provider,
+    // and only navigate to dashboard/browse when verification is true.
+    setPendingEmail(email);
+    setIsEmailPopupOpen(true);
   };
 
   return (
+    <>
     <AuthCard
       title="Welcome back"
       subtitle="Sign in with your CSU account to manage books and reservations."
@@ -86,6 +77,14 @@ const Login = () => {
           Create an account
         </button>
     </AuthCard>
+    <EmailConfirmationPopup
+      isOpen={isEmailPopupOpen}
+      email={pendingEmail}
+      onResend={() => {
+        // TODO(BACKEND): Call resend verification endpoint for `pendingEmail`.
+      }}
+    />
+    </>
   );
 };
 
