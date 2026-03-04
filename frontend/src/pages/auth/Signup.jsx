@@ -6,6 +6,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useStore } from "../../store/useAuthStore";
 import { showError } from "../../utils/notification";
 import AuthCard from "../../components/AuthCard";
+import EmailConfirmationPopup from "../../confirmation/EmailConfirmationPopup";
 
 const toYearLevelSuffix = (value) => {
   const text = String(value || "").trim();
@@ -47,9 +48,10 @@ const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
-  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [isEmailPopupOpen, setIsEmailPopupOpen] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState("");
   const navigate = useNavigate();
-  const { studentSignUp, isLoading } = useStore();
+  const { studentSignUp, isLoading, user } = useStore();
 
   const handleSignup = async () => {
 
@@ -71,8 +73,6 @@ const Signup = () => {
         showError(errorMsg);
         return;
       }
-
-      // Call the store's signup method
       const success = await studentSignUp(
         email,
         password,
@@ -89,12 +89,21 @@ const Signup = () => {
         setError("Signup failed. Please try again.");
         return;
       }
+    
+      if(!user?.user?.user_metadata?.email_verified){
+          setPendingEmail(email);
+          setIsEmailPopupOpen(true);
+      }
 
-      // On success, direct the user to login so they can authenticate.
-      navigate("/login"); 
+      if (user?.profile?.role === "staff") {
+        navigate("/staff/dashboard");
+      } else {
+        navigate("/borrower/browse");
+      }
   };
 
   return (
+    <>
     <AuthCard
       title="Create account"
       subtitle="Create your CSU library account and start borrowing."
@@ -271,6 +280,14 @@ const Signup = () => {
         </p>
       </div>
     </AuthCard>
+    <EmailConfirmationPopup
+      isOpen={isEmailPopupOpen}
+      email={pendingEmail}
+      onResend={() => {
+        // TODO(BACKEND): Call resend verification endpoint for `pendingEmail`.
+      }}
+    />
+    </>
   );
 };
 

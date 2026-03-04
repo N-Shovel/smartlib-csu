@@ -6,6 +6,7 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import Login from "../pages/auth/Login";
 import Signup from "../pages/auth/Signup";
 import ActivityLog from "../pages/borrower/ActivityLog";
+import Account from "../pages/borrower/Account";
 import BookDetails from "../pages/borrower/BookDetails";
 import BrowseBooks from "../pages/borrower/BrowseBooks";
 import RoomReservation from "../pages/borrower/RoomReservation";
@@ -14,6 +15,7 @@ import BorrowerTracking from "../pages/staff/BorrowerTracking";
 import Dashboard from "../pages/staff/Dashboard";
 import StaffAndBorrowerList from "../pages/staff/StaffAndBorrowerList";
 import BookManagement from "../pages/staff/BookManagement";
+import Reservation from "../pages/staff/Reservation";
 import { useStore } from "../store/useAuthStore";
 import { useEffect } from "react";
 import PageLoader from "../components/PageLoader";
@@ -83,6 +85,17 @@ const AppRoutes = () => {
 					}
 				/>
 
+				<Route
+					path="/borrower/account"
+					element={
+						<ProtectedRoute role="borrower">
+							<Layout>
+								<Account />
+							</Layout>
+						</ProtectedRoute>
+					}
+				/>
+
 				{/* Staff-only routes guarded by role check. */}
 				<Route
 					path="/staff/dashboard"
@@ -123,6 +136,17 @@ const AppRoutes = () => {
 						<ProtectedRoute>
 							<Layout>
 								<BookManagement />
+							</Layout>
+						</ProtectedRoute>
+					}
+				/>
+
+				<Route
+					path="/staff/reservation"
+					element={
+						<ProtectedRoute role="staff">
+							<Layout>
+								<Reservation />
 							</Layout>
 						</ProtectedRoute>
 					}

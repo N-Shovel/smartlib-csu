@@ -14,18 +14,7 @@ const INITIAL_FORM = {
 };
 
 const BookManagement = () => {
-    //  Store provides `books`, not `items`
-    const {
-        books,
-        fetchBooks,
-        createItem,
-        deleteItem,
-        restoreItem,
-        isLoading,
-    } = useItems();
-
-    //  Ensure we always work with an array
-    const safeBooks = Array.isArray(books) ? books : [];
+    const { books, fetchBooks, createItem, deleteItem, isLoading } = useItems();
 
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState(null); // "book" | "thesis" | null
@@ -33,35 +22,27 @@ const BookManagement = () => {
     const [form, setForm] = useState(INITIAL_FORM);
     const [selectedBook, setSelectedBook] = useState(null);
     const [bookToDelete, setBookToDelete] = useState(null);
-    const [lastAction, setLastAction] = useState(null);
 
     useEffect(() => {
         fetchBooks();
-        // If your linter complains, you can keep your eslint-disable,
-        // but fetchBooks from Zustand is stable in most cases.
-    }, [fetchBooks]);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const filteredBooks = useMemo(() => {
-        const query = String(searchQuery || "").trim().toLowerCase();
+        const query = searchQuery.trim().toLowerCase();
 
         const byCategory =
             selectedCategory === null
-                ? safeBooks
-                : safeBooks.filter(
-                      (book) =>
-                          String(book?.item_type || "").toLowerCase() ===
-                          String(selectedCategory).toLowerCase()
-                  );
+                ? books
+                : books.filter((book) => String(book.item_type || "").toLowerCase() === selectedCategory);
 
         if (!query) return byCategory;
 
-        return byCategory.filter((book) => {
-            const keywordList = Array.isArray(book?.keywords) ? book.keywords : [];
-            return [book?.title, book?.author, book?.item_type, ...keywordList]
-                .filter(Boolean)
-                .some((value) => String(value).toLowerCase().includes(query));
-        });
-    }, [safeBooks, searchQuery, selectedCategory]);
+        return byCategory.filter((book) =>
+            [book.title, book.author, book.item_type, ...(book.keywords || [])]
+            .filter(Boolean)
+            .some((value) => String(value).toLowerCase().includes(query))
+        );
+    }, [books, searchQuery, selectedCategory]);
 
     const handleCategoryToggle = (category) => {
         setSelectedCategory((current) => (current === category ? null : category));
@@ -73,41 +54,13 @@ const BookManagement = () => {
         if (!bookToDelete?.id || isLoading) return;
 
         try {
-            const deletingId = bookToDelete.id;
+            await deleteItem(bookToDelete.id);
 
-            await deleteItem(deletingId);
-
+            // close modal after deleting
             setBookToDelete(null);
-            setLastAction({ type: "delete", payload: { itemId: deletingId } });
-
-            showSuccess("Item deleted.");
-
-            // Your store already fetches inside deleteItem, but this is harmless.
-            // await fetchBooks();
+            // If your store doesn't update `items` on delete, keep this:
         } catch (err) {
             showError(err?.message || "Failed to delete item.");
-        }
-    };
-
-    const handleUndo = async () => {
-        if (!lastAction) return;
-
-        if (lastAction.type === "add") {
-            showError("Undo add requires deleteItem() support for the created item.");
-            return;
-        }
-
-        if (lastAction.type === "delete") {
-            try {
-                await restoreItem(lastAction.payload.itemId);
-                showSuccess("Delete action undone.");
-                setLastAction(null);
-
-                // store already fetches inside restoreItem
-                // await fetchBooks();
-            } catch (e) {
-                showError("Unable to undo delete action.");
-            }
         }
     };
 
@@ -116,9 +69,9 @@ const BookManagement = () => {
         if (!form.author.trim()) return showError("Author is required.");
 
         const keywordsArray = String(form.keywords || "")
-            .split(",")
-            .map((k) => k.trim())
-            .filter(Boolean);
+        .split(",")
+        .map((k) => k.trim())
+        .filter(Boolean);
 
         const payload = {
             itemType: form.itemType,
@@ -131,15 +84,10 @@ const BookManagement = () => {
 
         try {
             await createItem(payload);
-
-            showSuccess("Item created.");
-            setLastAction({ type: "add", payload });
-
+            
             setIsAddModalOpen(false);
             setForm(INITIAL_FORM);
-
-            // store already fetches inside createItem
-            // await fetchBooks();
+            await fetchBooks();
         } catch (err) {
             showError(err?.message || "Failed to create item.");
         }
@@ -171,8 +119,8 @@ const BookManagement = () => {
                         type="button"
                         aria-pressed={selectedCategory === "book"}
                         className={`btn btn--ghost${
-                            selectedCategory === "book" ? " book-category-filter__btn--active" : ""
-                        }`}
+selectedCategory === "book" ? " book-category-filter__btn--active" : ""
+}`}
                         onClick={() => handleCategoryToggle("book")}
                     >
                         {selectedCategory === "book" ? "✓ Books" : "Books"}
@@ -182,8 +130,8 @@ const BookManagement = () => {
                         type="button"
                         aria-pressed={selectedCategory === "thesis"}
                         className={`btn btn--ghost${
-                            selectedCategory === "thesis" ? " book-category-filter__btn--active" : ""
-                        }`}
+selectedCategory === "thesis" ? " book-category-filter__btn--active" : ""
+}`}
                         onClick={() => handleCategoryToggle("thesis")}
                     >
                         {selectedCategory === "thesis" ? "✓ Thesis" : "Thesis"}
@@ -193,19 +141,6 @@ const BookManagement = () => {
                         Add
                     </button>
 
-                    <button
-                        type="button"
-                        className={`btn btn--ghost ${isLoading ? "cursor-not-allowed" : ""}`}
-                        onClick={fetchBooks}
-                        disabled={isLoading}
-                    >
-                        {isLoading ? "Refreshing..." : "Refresh"}
-                    </button>
-
-                    {/* optional */}
-                    {/* <button type="button" className="btn btn--ghost" onClick={handleUndo} disabled={!lastAction || isLoading}>
-                        Undo
-                    </button> */}
                 </div>
             </div>
 
@@ -214,41 +149,41 @@ const BookManagement = () => {
                     <Loader2Icon className="size-6 animate-spin" aria-label="Loading books" />
                 </div>
             ) : filteredBooks.length === 0 ? (
-                <div className="empty-state">No items found.</div>
-            ) : (
-                <div className="book-grid">
-                    {filteredBooks.map((book) => (
-                        <article className="card book-card" key={book.id}>
-                            <div className="book-card__header">
-                                <h3 title={book.title}>{book.title}</h3>
-                                <button
-                                    className="book-management-delete-btn"
-                                    onClick={() => handleDelete(book)}
-                                    aria-label={`Delete ${book.title}`}
-                                    disabled={isLoading}
-                                >
-                                    <X size={14} strokeWidth={2.6} aria-hidden="true" />
-                                </button>
-                            </div>
+                    <div className="empty-state">No items found.</div>
+                ) : (
+                        <div className="book-grid">
+                            {filteredBooks.map((book) => (
+                                <article className="card book-card" key={book.id}>
+                                    <div className="book-card__header">
+                                        <h3 title={book.title}>{book.title}</h3>
+                                        <button
+                                            className="book-management-delete-btn"
+                                            onClick={() => handleDelete(book)}
+                                            aria-label={`Delete ${book.title}`}
+                                            disabled={isLoading}
+                                        >
+                                            <X size={14} strokeWidth={2.6} aria-hidden="true" />
+                                        </button>
+                                    </div>
 
-                            {book.item_type ? <p className="book-card__category">{book.item_type}</p> : null}
-                            {book.author ? <p className="muted book-card__author">{book.author}</p> : null}
+                                    {book.item_type ? <p className="book-card__category">{book.item_type}</p> : null}
+                                    {book.author ? <p className="muted book-card__author">{book.author}</p> : null}
 
-                            {Array.isArray(book.keywords) && book.keywords.length > 0 ? (
-                                <p className="micro">Keywords: {book.keywords.join(", ")}</p>
-                            ) : null}
+                                    {Array.isArray(book.keywords) && book.keywords.length > 0 ? (
+                                        <p className="micro">Keywords: {book.keywords.join(", ")}</p>
+                                    ) : null}
 
-                            <p className="book-card__desc">{book.description}</p>
+                                    <p className="book-card__desc">{book.description}</p>
 
-                            <div className="book-card__actions">
-                                <button className="btn btn--info" onClick={() => setSelectedBook(book)} disabled={isLoading}>
-                                    Details
-                                </button>
-                            </div>
-                        </article>
-                    ))}
-                </div>
-            )}
+                                    <div className="book-card__actions">
+                                        <button className="btn btn--info" onClick={() => setSelectedBook(book)} disabled={isLoading}>
+                                            Details
+                                        </button>
+                                    </div>
+                                </article>
+                            ))}
+                        </div>
+                    )}
 
             <BookDetailsModal isOpen={Boolean(selectedBook)} book={selectedBook} onClose={() => setSelectedBook(null)} />
 
@@ -267,8 +202,8 @@ const BookManagement = () => {
                                 {isLoading ? (
                                     <LoaderIcon className="size-5 flex justify-center items-center animate-spin" />
                                 ) : (
-                                    "Yes, Delete"
-                                )}
+                                        "Yes, Delete"
+                                    )}
                             </button>
                         </div>
                     </div>
