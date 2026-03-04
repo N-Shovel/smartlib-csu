@@ -88,7 +88,7 @@ const AppRoutes = () => {
 				<Route
 					path="/borrower/account"
 					element={
-						<ProtectedRoute>
+						<ProtectedRoute role="borrower">
 							<Layout>
 								<Account />
 							</Layout>
@@ -144,7 +144,7 @@ const AppRoutes = () => {
 				<Route
 					path="/staff/reservation"
 					element={
-						<ProtectedRoute>
+						<ProtectedRoute role="staff">
 							<Layout>
 								<Reservation />
 							</Layout>
