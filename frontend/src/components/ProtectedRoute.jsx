@@ -11,7 +11,7 @@ const ProtectedRoute = ({ children, role }) => {
 
   // Block authenticated users that don't match the required role.
   // Optional chaining prevents runtime crash if user shape is unexpectedly incomplete.
-  if (role && user?.role !== role) return <Navigate to="/" replace />;
+  if (role && user?.profile?.role !== role) return <Navigate to="/" replace />;
 
   // Auth + role checks passed.
   return children;
