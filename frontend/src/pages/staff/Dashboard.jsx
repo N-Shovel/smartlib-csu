@@ -6,11 +6,13 @@ import { getReservationHistory } from "../../services/reservationService";
 import { getUserProfileByEmail } from "../../services/authService";
 import { formatDateTime } from "../../utils/dateUtils";
 import { formatActivityAction } from "../../utils/activityUtils";
+import { useRequest } from "../../store/useRequestsStore";
 
 const Dashboard = () => {
   const [borrowHistory, setBorrowHistory] = useState([]);
   const [reservationHistory, setReservationHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { fetchHistory, itemRequests } = useRequest();
 
   // Fetch activity data from API
   useEffect(() => {
@@ -19,7 +21,8 @@ const Dashboard = () => {
         setLoading(true);
         const [borrowData, reservationData] = await Promise.all([
           getBorrowHistory(),
-          getReservationHistory()
+          getReservationHistory(),
+          fetchHistory()
         ]);
         setBorrowHistory(borrowData || []);
         setReservationHistory(reservationData || []);
@@ -33,7 +36,7 @@ const Dashboard = () => {
     };
 
     fetchData();
-  }, []);
+  }, [fetchHistory]);
 
   // LOGIC: Dashboard uses two separate datasets:
   // 1) recent feed (mixed borrow + reservation events), and
@@ -112,6 +115,7 @@ const Dashboard = () => {
         user: email,
         borrowedActions: 0,
         reservationActions: 0,
+        requestActions: 0,
         total: 0
       };
     }
@@ -129,6 +133,7 @@ const Dashboard = () => {
         user: email,
         borrowedActions: 0,
         reservationActions: 0,
+        requestActions: 0,
         total: 0
       };
     }
@@ -136,6 +141,30 @@ const Dashboard = () => {
     topActivityByUser[email].reservationActions += 1;
     topActivityByUser[email].total += 1;
   });
+
+  // Add request activity counts
+  if (itemRequests && Array.isArray(itemRequests)) {
+    itemRequests.forEach((entry) => {
+      const userId = entry.student_user_id;
+      if (!userId) return;
+
+      // Find email from user profiles or use student_user_id as fallback
+      const email = String(userId).trim().toLowerCase();
+
+      if (!topActivityByUser[email]) {
+        topActivityByUser[email] = {
+          user: email,
+          borrowedActions: 0,
+          reservationActions: 0,
+          requestActions: 0,
+          total: 0
+        };
+      }
+
+      topActivityByUser[email].requestActions += 1;
+      topActivityByUser[email].total += 1;
+    });
+  }
 
   const profileByEmail = useMemo(() => {
     const uniqueEmails = new Set();
@@ -154,7 +183,7 @@ const Dashboard = () => {
   }, [logs, topActivityByUser]);
 
   const borrowerActivityRows = Object.values(topActivityByUser)
-    .filter((entry) => entry.borrowedActions > 0 || entry.reservationActions > 0)
+    .filter((entry) => entry.borrowedActions > 0 || entry.reservationActions > 0 || entry.requestActions > 0)
     .sort((a, b) => {
       // LOGIC: Sort priority = total activity, then borrow count, then reservation count.
       // This gives deterministic ordering when users have close activity totals.
@@ -222,21 +251,26 @@ const Dashboard = () => {
 
         <div className="card dashboard-summary-card">
           <p className="dashboard-summary-title">Borrower Activity</p>
-          <ul className="dashboard-summary-list">
-            {borrowerActivityRows.length === 0 ? (
-              <li>No borrower activity yet</li>
-            ) : (
-              borrowerActivityRows.map((entry) => (
-                <li key={entry.user}>
-                  {entry.profileLabel}
-                  <ul className="dashboard-summary-sublist">
-                    <li>Borrowed: {entry.borrowedActions}</li>
-                    <li>Reservation: {entry.reservationActions}</li>
-                  </ul>
-                </li>
-              ))
-            )}
-          </ul>
+          {(!itemRequests || itemRequests.length === 0) ? (
+            <div className="empty-state">No borrower activity yet</div>
+          ) : (
+            <div className="table-scroll table-scroll--five">
+              <div className="table table--staff-dashboard-activity">
+                <div className="table__row table__head">
+                  <span>Name</span>
+                  <span>ID Number</span>
+                  <span>Program</span>
+                </div>
+                {itemRequests.map((entry) => (
+                  <div className="table__row" key={entry.id}>
+                    <span>{entry.student_profiles?.last_name || "-"}</span>
+                    <span>{entry.student_profiles?.id_number || "-"}</span>
+                    <span>{entry.student_profiles?.program || "-"}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
