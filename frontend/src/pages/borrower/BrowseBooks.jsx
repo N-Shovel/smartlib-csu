@@ -18,7 +18,7 @@ import useItems from "../../store/useItemsStore";
 
 const BrowseBooks = () => {
   const { user } = useStore();
-  const items = useItems((state) => state.items);
+  const items = useItems((state) => state.books);
   const fetchBooks = useItems((state) => state.fetchBooks);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(null);
