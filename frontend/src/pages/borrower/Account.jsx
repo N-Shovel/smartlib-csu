@@ -119,33 +119,37 @@ const Account = () => {
         <div className="form-row">
           <div className="form-field">
             <span className="label">First Name</span>
-            <p>{profile.firstName || "-"}</p>
+            <p>{user?.profile?.first_name || "-"}</p>
           </div>
           <div className="form-field">
             <span className="label">Last Name</span>
             <p>
-              {profile.lastName || "-"}
+              {user?.profile?.last_name || "-"}
             </p>
           </div>
           <div className="form-field">
             <span className="label">Suffix</span>
             <p>{profile.nameSuffix || "-"}</p>
           </div>
-          <div className="form-field">
-            <span className="label">Course</span>
-            <p>{profile.collegeCourse || "-"}</p>
-          </div>
+                    <div className="form-field">
+                        <span className="label">Course</span>
+                        <p>{user?.profile?.program?.split(
+
+                            "-")[0] || "-"}</p>
+                    </div>
           <div className="form-field">
             <span className="label">Year Level</span>
-            <p>{profile.yearLevel || "-"}</p>
-          </div>
-          <div className="form-field">
+                        <p>{user?.profile?.program?.match(
+
+                            /\d+/)?.[0] || "-"}</p>
+                    </div>
+                    <div className="form-field">
             <span className="label">ID</span>
-            <p>{profile.id || "-"}</p>
+            <p>{user?.profile?.id_number || "-"}</p>
           </div>
           <div className="form-field">
             <span className="label">Address</span>
-            <p>{profile.currentAddress || "-"}</p>
+            <p>{user?.profile?.address || "-"}</p>
           </div>
         </div>
       </div>
@@ -171,7 +175,7 @@ const Account = () => {
           <div style={{ display: "grid", gap: "0.4rem" }}>
             <span className="label">Contact Number</span>
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <p style={{ flex: 1 }}>{profile.contactInfo || "-"}</p>
+              <p style={{ flex: 1 }}>{user?.profile?.contact_number || "-"}</p>
               <button
                 type="button"
                 className="btn btn--ghost"
