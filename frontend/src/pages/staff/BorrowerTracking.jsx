@@ -14,7 +14,7 @@ import { getUserProfileByEmail } from "../../services/authService";
 import useItems from "../../store/useItemsStore";
 
 const BorrowerTracking = () => {
-  const [books, setBooks] = useState(() => getBooks());
+  const storeBooks = useItems((state) => state.books);
   const fetchBooks = useItems((state) => state.fetchBooks);
   const [history, setHistory] = useState(() => getBorrowHistory());
   const [borrowRequests, setBorrowRequests] = useState(() => getBorrowRequests());
@@ -25,14 +25,14 @@ const BorrowerTracking = () => {
 
   const books = useMemo(
     () =>
-      (books || [])
+      (storeBooks || [])
         .filter((item) => !item?.is_deleted)
         .map((item) => ({
           ...item,
-          available: item?.available ?? true,
-          borrowedBy: item?.borrowedBy || null,
+          available: item?.is_available ?? item?.available ?? true,
+          borrowedBy: item?.borrowedBy ?? null,
         })),
-    [items]
+    [storeBooks]
   );
 
   const getStudentIdByEmail = (email) =>
