@@ -51,7 +51,7 @@ const Signup = () => {
   const [isEmailPopupOpen, setIsEmailPopupOpen] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
   const navigate = useNavigate();
-  const { isLoading } = useStore();
+  const { studentSignUp, isLoading, user } = useStore();
 
   const handleSignup = async () => {
 
@@ -73,12 +73,33 @@ const Signup = () => {
         showError(errorMsg);
         return;
       }
+      const success = await studentSignUp(
+        email,
+        password,
+        id,
+        firstName,
+        lastName,
+        null, // suffix - optional
+        courseAndYear,        
+        contactInfo,
+        currentAddress
+      );
 
-      // UI-only behavior: always show confirmation modal first.
-      // TODO(BACKEND): Create account, trigger verification email, and keep user
-      // blocked from app routes until `email_verified` is true.
-      setPendingEmail(email);
-      setIsEmailPopupOpen(true);
+      if (!success) {
+        setError("Signup failed. Please try again.");
+        return;
+      }
+    
+      if(!user?.user?.user_metadata?.email_verified){
+          setPendingEmail(email);
+          setIsEmailPopupOpen(true);
+      }
+
+      if (user?.profile?.role === "staff") {
+        navigate("/staff/dashboard");
+      } else {
+        navigate("/borrower/browse");
+      }
   };
 
   return (
