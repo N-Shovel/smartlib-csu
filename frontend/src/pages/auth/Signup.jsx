@@ -1,44 +1,17 @@
 // Purpose: Signup page for creating borrower accounts.
 // Parts: form model, validation logic, submit handler, grouped form render.
 import { Eye, EyeOff } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useStore } from "../../store/useAuthStore";
 import { showError } from "../../utils/notification";
 import AuthCard from "../../components/AuthCard";
 import EmailConfirmationPopup from "../../confirmation/EmailConfirmationPopup";
 
-const toYearLevelSuffix = (value) => {
-  const text = String(value || "").trim();
-  if (!text) return "N/A";
-
-  if (/\b(st|nd|rd|th)\b/i.test(text) || /\byear\b/i.test(text)) {
-    return text;
-  }
-
-  const matched = text.match(/\d+/);
-  if (!matched) return text;
-
-  const yearNumber = Number(matched[0]);
-  if (!Number.isFinite(yearNumber) || yearNumber <= 0) return text;
-
-  const modulo100 = yearNumber % 100;
-  const modulo10 = yearNumber % 10;
-  let suffix = "th";
-  if (modulo100 < 11 || modulo100 > 13) {
-    if (modulo10 === 1) suffix = "st";
-    else if (modulo10 === 2) suffix = "nd";
-    else if (modulo10 === 3) suffix = "rd";
-  }
-
-  return `${yearNumber}${suffix} Year`;
-};
-
 const Signup = () => {
   const [id, setId] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [nameSuffix, setNameSuffix] = useState("");
   const [courseAndYear, setCourseAndYear] = useState("");
   const [contactInfo, setContactInfo] = useState("");
   const [currentAddress, setCurrentAddress] = useState("");

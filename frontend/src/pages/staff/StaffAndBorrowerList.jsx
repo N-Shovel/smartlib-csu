@@ -27,7 +27,7 @@ const StaffAndBorrowerList = () => {
 		// Export all borrower signup rows in one CSV file.
 		const borrowerData = borrowers.map((borrower) => ({
 			ID: borrower.id_number || "-",
-			Name: `${borrower.first_name} ${borrower.last_name} ` || "-",
+			Name: formatBorrowerFullName(borrower),
 			Email: borrower.email || "-",
 			Phone: borrower.contact_number || "-",
 			Status: borrower.status || "-",
@@ -98,7 +98,7 @@ const StaffAndBorrowerList = () => {
 							{safeBorrowers.map((borrower) => (
 								<tr key={borrower.email}>
 									<td data-label="Name" title={formatBorrowerFullName(borrower)}>
-										{`${borrower.first_name} ${borrower.last_name}` || "-"}
+										{formatBorrowerFullName(borrower)}
 									</td>
 									<td data-label="Student ID" title={borrower.id || "-"}>
 										{truncateText(borrower.id_number, 14)}
@@ -136,7 +136,7 @@ const StaffAndBorrowerList = () => {
 						<h3>Borrower Details</h3>
 						<p>
 							<strong>Name:</strong>{" "}
-							{`${selectedBorrower.first_name} ${selectedBorrower.last_name}` || "-"}
+							{formatBorrowerFullName(selectedBorrower)}
 						</p>
 						<p>
 							<strong>Course - Year Level:</strong> {selectedBorrower.program || "-"}

@@ -1,28 +1,40 @@
 import {create} from "zustand"
 import { axiosInstance } from "./axios"
-import { showSuccess, showError, showInfo } from "../utils/notification"
+import { showSuccess, showError } from "../utils/notification"
 
 
 const setupAxiosInterceptors = (store) => {
+    let refreshPromise = null;
+
   axiosInstance.interceptors.response.use(
     res => res,
     async error => {
-      const originalRequest = error.config;
+            const originalRequest = error.config;
 
       if (
         error.response?.status === 401 &&
+                originalRequest &&
         !originalRequest._retry &&
-        !originalRequest.url.includes("/auth/refresh-token")
+                !String(originalRequest.url || "").includes("/auth/refresh-token")
       ) {
         originalRequest._retry = true;
 
         try {
-          // Use the store's refreshToken method
-          await store.getState().refreshToken();
-          return axiosInstance(originalRequest);
+                    if (!refreshPromise) {
+                        refreshPromise = store.getState().refreshToken().finally(() => {
+                            refreshPromise = null;
+                        });
+                    }
+
+                    const refreshed = await refreshPromise;
+                    if (refreshed) {
+                        return axiosInstance(originalRequest);
+                    }
+
+                    store.getState().clearAuthState();
+                    return Promise.reject(error);
         } catch (refreshError) {
-          // Only logout if refresh truly failed
-          store.getState().logout();
+                    store.getState().clearAuthState();
           return Promise.reject(refreshError);
         }
       }
@@ -39,6 +51,10 @@ export const useStore = create((set, get) => ({
     isCheckingAuth: false,
     borrowers: [],
 
+        clearAuthState: () => {
+            set({ user: null });
+        },
+
     checkAuth: async () =>{
         try{
             set({isCheckingAuth: true});
@@ -47,10 +63,8 @@ export const useStore = create((set, get) => ({
         
             return true; 
         
-        }catch(error){
-            if (error.response?.status !== 401) {
-                set({user: null});
-            }
+        }catch{
+            set({user: null});
             return false;
         }
         finally {
@@ -129,11 +143,14 @@ export const useStore = create((set, get) => ({
     refreshToken: async () => {
         try {
             const res = await axiosInstance.post("/auth/refresh-token");
-            set({ user: res.data.user });
+                        if (res?.data?.user) {
+                            set({ user: res.data.user });
+                        }
             return true;
         } catch (error) {
-            console.error("Token refresh failed:", error);
-            set({ user: null });
+                        if (error?.response?.status !== 401) {
+                            console.error("Token refresh failed:", error);
+                        }
             return false;
         }
     },

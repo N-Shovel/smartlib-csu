@@ -5,9 +5,7 @@ import BookCard from "../../components/BookCard";
 import BookDetailsModal from "../../components/BookDetailsModal";
 import ThesisPermissionModal from "../../components/ThesisPermissionModal";
 import {
-    requestBookReturn,
     getBorrowHistory,
-    getBorrowRequestsByBorrower,
     cancelBorrowRequest,
 } from "../../services/bookService";
 import { showError, showInfo, showSuccess } from "../../utils/notification";
@@ -15,10 +13,27 @@ import { useStore } from "../../store/useAuthStore";
 import useItems from "../../store/useItemsStore";
 import { useRequest } from "../../store/useRequestsStore";
 
+const normalizeKeywordTokens = (keywords) => {
+    if (Array.isArray(keywords)) {
+        return keywords
+            .map((keyword) => String(keyword || "").trim())
+            .filter(Boolean);
+    }
+
+    if (typeof keywords === "string") {
+        return keywords
+            .split(",")
+            .map((keyword) => keyword.trim())
+            .filter(Boolean);
+    }
+
+    return [];
+};
+
 const BrowseBooks = () => {
     const { user } = useStore();
     const { books, fetchBooks } = useItems();
-    const { sendRequest, loading } = useRequest();
+    const { sendRequest, itemRequests, fetchHistory, requestReturn } = useRequest();
 
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState(null); // null | "general" | "thesis"
@@ -34,7 +49,6 @@ const BrowseBooks = () => {
     const [borrowHistory, setBorrowHistory] = useState([]);
 
     const [processingById, setProcessingById] = useState({});
-    const [borrowHistoryVersion, setBorrowHistoryVersion] = useState(0);
 
     const isProcessing = (id) => Boolean(processingById[id]);
 
@@ -46,31 +60,24 @@ const BrowseBooks = () => {
         });
     };
 
+    const currentUserId = user?.profile?.user_id || user?.user?.id || null;
+
     const loadBorrowRequests = useCallback(async () => {
-        if (!user?.email) {
+        if (!currentUserId) {
             setBorrowRequests([]);
             return;
         }
 
         try {
-            const result = await getBorrowRequestsByBorrower(user.email);
-
-            // Some services return array directly, some wrap in { ok, data }.
-            if (Array.isArray(result)) {
-                setBorrowRequests(result);
-                return;
-            }
-            if (result?.ok && Array.isArray(result.data)) {
-                setBorrowRequests(result.data);
-                return;
-            }
-
-            setBorrowRequests([]);
+            await fetchHistory();
+            const currentRequests = useRequest.getState().itemRequests || [];
+            const myRequests = currentRequests.filter((request) => request.student_user_id === currentUserId);
+            setBorrowRequests(myRequests);
         } catch (e) {
             setBorrowRequests([]);
             showError(e?.message || "Unable to load borrow requests.");
         }
-    }, [user?.email]);
+    }, [currentUserId, fetchHistory]);
 
     const loadBorrowHistory = useCallback(async () => {
         try {
@@ -95,7 +102,6 @@ const BrowseBooks = () => {
     const refresh = useCallback(async () => {
         await loadBorrowRequests();
         await loadBorrowHistory();
-        setBorrowHistoryVersion((current) => current + 1);
     }, [loadBorrowRequests, loadBorrowHistory]);
 
     useEffect(() => {
@@ -110,11 +116,20 @@ const BrowseBooks = () => {
         const query = searchQuery.trim().toLowerCase();
         if (!query) return books;
 
-        return books.filter((book) =>
-            [book.title, book.author, book.category, ...(book.keywords || [])]
+        return books.filter((book) => {
+            const searchTerms = [
+                book.title,
+                book.author,
+                book.description,
+                book.category,
+                book.item_type,
+                ...normalizeKeywordTokens(book.keywords),
+            ];
+
+            return searchTerms
             .filter(Boolean)
-            .some((value) => String(value).toLowerCase().includes(query))
-        );
+            .some((value) => String(value).toLowerCase().includes(query));
+        });
     }, [books, searchQuery]);
 
     const regularBooks = useMemo(() => {
@@ -128,7 +143,8 @@ const BrowseBooks = () => {
     const pendingRequestByBookId = useMemo(() => {
         const pendingMap = new Map();
         borrowRequests.forEach((request) => {
-            if (request.status === "pending") pendingMap.set(request.bookId, request);
+            const itemId = request.library_item_id || request.bookId;
+            if (request.status === "pending" && itemId) pendingMap.set(itemId, request);
         });
         return pendingMap;
     }, [borrowRequests]);
@@ -136,7 +152,8 @@ const BrowseBooks = () => {
     const pendingReturnRequestByBookId = useMemo(() => {
         const pendingMap = new Map();
         borrowRequests.forEach((request) => {
-            if (request.status === "pending_return") pendingMap.set(request.bookId, request);
+            const itemId = request.library_item_id || request.bookId;
+            if (request.status === "pending_return" && itemId) pendingMap.set(itemId, request);
         });
         return pendingMap;
     }, [borrowRequests]);
@@ -145,21 +162,21 @@ const BrowseBooks = () => {
     // Your book objects (from the array you posted) do NOT include `borrowedBy`,
     // so we compute “what the current user borrowed” from borrow history.
     const borrowedByUserBookIds = useMemo(() => {
-        if (!user?.email) return new Set();
+        if (!currentUserId) return new Set();
 
         const set = new Set();
 
-        borrowHistory.forEach((entry) => {
-            const action = String(entry.action || "").toUpperCase();
-            const borrower = String(entry.borrowerEmail || entry.email || "").toLowerCase();
+        borrowRequests.forEach((entry) => {
+            const status = String(entry.status || "").toLowerCase();
+            const itemId = entry.library_item_id || entry.bookId;
 
-            if (action === "BORROW_BOOK" && borrower === user.email.toLowerCase() && entry.bookId) {
-                set.add(entry.bookId);
+            if (status === "approved" && itemId) {
+                set.add(itemId);
             }
         });
 
         return set;
-    }, [user?.email, borrowHistory]);
+    }, [borrowRequests, currentUserId]);
 
     const recommendedBooksLine = useMemo(() => {
         const borrowCountByTitle = borrowHistory.reduce((summary, entry) => {
@@ -186,8 +203,8 @@ const BrowseBooks = () => {
             .join(", ");
     }, [books, borrowHistory]);
 
-    const submitBorrow = async (id, code = "", handlers = {}) => {
-        const { onError, onSuccess } = handlers;
+    const submitBorrow = async (id, handlers = {}) => {
+        const { onError } = handlers;
 
         if (!user?.user?.email) return;
         if (isProcessing(id)) return;
@@ -222,7 +239,6 @@ const BrowseBooks = () => {
         const pendingRequest = pendingRequestByBookId.get(book.id);
 
         if (pendingRequest) {
-            setRequestToCancel(pendingRequest);
             return;
         }
 
@@ -242,7 +258,7 @@ const BrowseBooks = () => {
     const handleThesisApply = () => {
         if (!pendingThesisBookId) return;
 
-        submitBorrow(pendingThesisBookId, permissionCode, {
+        submitBorrow(pendingThesisBookId, {
             onError: (result) => {
                 setPermissionError(result?.error || "Unable to apply for this thesis.");
             },
@@ -255,7 +271,7 @@ const BrowseBooks = () => {
     };
 
     const handleReturn = async (bookId) => {
-        if (!user?.email) return;
+        if (!currentUserId) return;
         if (isProcessing(bookId)) return;
 
         //  Prevent returning books you didn’t borrow
@@ -273,6 +289,9 @@ const BrowseBooks = () => {
         showInfo("Submitting return request, please wait...");
 
         try {
+            const result = await requestReturn(bookId);
+            if (!result?.ok) return;
+
             showSuccess("Return request submitted. Please wait for staff confirmation.");
             await refresh();
         } catch (e) {
@@ -310,6 +329,28 @@ const BrowseBooks = () => {
         setSelectedCategory((current) => (current === category ? null : category));
     };
 
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            fetchHistory();
+            fetchBooks();
+        }, 3000);
+
+        return () => clearInterval(intervalId);
+    }, [fetchBooks, fetchHistory]);
+
+    useEffect(() => {
+        if (!currentUserId) {
+            setBorrowRequests([]);
+            return;
+        }
+
+        const requests = Array.isArray(itemRequests)
+            ? itemRequests.filter((request) => request.student_user_id === currentUserId)
+            : [];
+
+        setBorrowRequests(requests);
+    }, [currentUserId, itemRequests]);
+
     const renderBookGrid = (list) => (
         <div className="book-grid">
             {list.map((book) => {
@@ -328,7 +369,7 @@ const BrowseBooks = () => {
                         pendingMessage={hasPendingBorrow ? "Please pick it up at the library." : undefined}
                         returnLabel={hasPendingReturn ? "Pending Return" : "Return"}
                         returnMessage={hasPendingReturn ? "Waiting for staff confirmation." : undefined}
-                        canReturn={!book.is_available && borrowedByUserBookIds.has(bookId) && !hasPendingReturn}
+                        canReturn={borrowedByUserBookIds.has(bookId) && !hasPendingReturn}
                         onBorrow={handleBorrow}
                         onReturn={handleReturn}
                         onOpenDetails={setSelectedBook}
@@ -360,8 +401,8 @@ const BrowseBooks = () => {
                     <input
                         className="input search-input"
                         type="search"
-                        aria-label="Search books by title, author, or category"
-                        placeholder="Search by title, author, or category"
+                        aria-label="Search books by title, author, category, item type, or keywords"
+                        placeholder="Search by title, description subject, category, or keywords"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />

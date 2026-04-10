@@ -5,7 +5,8 @@ import {
   addReservation,
   getReservationHourOptions,
   getUnavailableReservationHours,
-  isLunchBreakHour
+  isLunchBreakHour,
+  getUserActiveReservation
 } from "../../services/reservationService";
 import { ROOMS } from "../../config/rooms";
 import { showError, showInfo, showSuccess } from "../../utils/notification";
@@ -18,6 +19,9 @@ const RoomReservation = () => {
   const [reservationHour, setReservationHour] = useState("");
   const [notes, setNotes] = useState("");
   const { user } = useStore();
+  const userEmail = user?.user?.email || user?.email || "";
+  const activeReservation = userEmail ? getUserActiveReservation(userEmail) : null;
+  
   // Recompute unavailable slots whenever selected room changes.
   const unavailableHours = useMemo(
     () => getUnavailableReservationHours(room),
@@ -50,7 +54,7 @@ const RoomReservation = () => {
         room.trim(),
         Number(reservationHour),
         notes.trim(),
-        user?.user?.email || user?.email || "unknown"
+        userEmail || "unknown"
       );
 
       if (!result.ok) {
@@ -73,68 +77,80 @@ const RoomReservation = () => {
           <p className="muted">Reserve a study space for your session.</p>
         </div>
       </div>
-      <div className="card form">
-        <div className="form-row">
-          <div className="form-field">
-            <label className="label">Room name</label>
-            <select
-              className="select"
-              value={room}
-              onChange={(e) => setRoom(e.target.value)}
-            >
-              <option value="">Select a room</option>
-              {ROOMS.map((roomOption) => (
-                <option key={roomOption.id} value={roomOption.name}>
-                  {roomOption.name} · {roomOption.capacity} seats
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="form-field">
-            <label className="label">Time slot (1 hour)</label>
-            <select
-              className="select"
-              value={reservationHour}
-              onChange={(e) => setReservationHour(e.target.value)}
-            >
-              <option value="">Select time (8:00 AM - 6:00 PM)</option>
-              {reservationHourOptions.map((slot) => {
-                // Slot can be unavailable due to lunch break or approved reservation.
-                const isUnavailable = unavailableHours.includes(slot.value);
-                const isPastSlot = slot.value <= new Date().getHours();
-                const stateLabel = isUnavailable
-                  ? isLunchBreakHour(slot.value)
-                    ? "Lunch Break"
-                    : "Reserved"
-                  : isPastSlot
-                    ? "Passed"
-                  : "";
-
-                return (
-                  <option
-                    key={slot.value}
-                    value={slot.value}
-                    disabled={isUnavailable || isPastSlot}
-                  >
-                    {stateLabel ? `${slot.label} (${stateLabel})` : slot.label}
-                  </option>
-                );
-              })}
-            </select>
-          </div>
+      
+      {activeReservation ? (
+        <div className="card alert alert--warning">
+          <p>
+            <strong>Active Reservation</strong><br />
+            You already have a reservation for <strong>{activeReservation.room}</strong> at{" "}
+            <strong>{activeReservation.reservationHour}:00</strong> ({activeReservation.status === "pending" ? "Pending Approval" : "Approved"}).
+          </p>
+          <p className="micro muted">Please close or cancel this reservation before creating a new one.</p>
         </div>
-        <label className="label">Notes</label>
-        <textarea
-          className="input input--area"
-          placeholder="Time range, team size, or equipment needs"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-        />
-        <button className="btn btn--primary" onClick={handleReserve}>
-          Reserve
-        </button>
-        <p className="micro">Slots marked "Reserved" are only staff-approved reservations.</p>
-      </div>
+      ) : (
+        <div className="card form">
+          <div className="form-row">
+            <div className="form-field">
+              <label className="label">Room name</label>
+              <select
+                className="select"
+                value={room}
+                onChange={(e) => setRoom(e.target.value)}
+              >
+                <option value="">Select a room</option>
+                {ROOMS.map((roomOption) => (
+                  <option key={roomOption.id} value={roomOption.name}>
+                    {roomOption.name} · {roomOption.capacity} seats
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-field">
+              <label className="label">Time slot (1 hour)</label>
+              <select
+                className="select"
+                value={reservationHour}
+                onChange={(e) => setReservationHour(e.target.value)}
+              >
+                <option value="">Select time (8:00 AM - 6:00 PM)</option>
+                {reservationHourOptions.map((slot) => {
+                  // Slot can be unavailable due to lunch break or approved reservation.
+                  const isUnavailable = unavailableHours.includes(slot.value);
+                  const isPastSlot = slot.value <= new Date().getHours();
+                  const stateLabel = isUnavailable
+                    ? isLunchBreakHour(slot.value)
+                      ? "Lunch Break"
+                      : "Reserved"
+                    : isPastSlot
+                      ? "Passed"
+                      : "";
+
+                  return (
+                    <option
+                      key={slot.value}
+                      value={slot.value}
+                      disabled={isUnavailable || isPastSlot}
+                    >
+                      {stateLabel ? `${slot.label} (${stateLabel})` : slot.label}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+          </div>
+          <label className="label">Notes</label>
+          <textarea
+            className="input input--area"
+            placeholder="Time range, team size, or equipment needs"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+          <button className="btn btn--primary" onClick={handleReserve}>
+            Reserve
+          </button>
+          <p className="micro">Slots marked "Reserved" are only staff-approved reservations.</p>
+        </div>
+      )}
     </section>
   );
 };

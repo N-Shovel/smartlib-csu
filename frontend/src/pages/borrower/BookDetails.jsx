@@ -1,24 +1,40 @@
 // Purpose: Detailed single-book page with borrower actions.
 // Parts: selected book state, borrow/return handlers, thesis flow, detail render.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 
 import ThesisPermissionModal from "../../components/ThesisPermissionModal";
+import {
+  borrowBook,
+  cancelBorrowRequest,
+  getBookById,
+  getBorrowRequestsByBorrower,
+  requestBookReturn,
+} from "../../services/bookService";
 import { showError, showInfo, showSuccess } from "../../utils/notification";
 import { useStore } from "../../store/useAuthStore";
 
 const BookDetails = () => {
   const { id } = useParams();
   const { user } = useStore();
-  const [book, setBook] = useState();
+  const [refreshVersion, setRefreshVersion] = useState(0);
   const [isPermissionModalOpen, setIsPermissionModalOpen] = useState(false);
   const [permissionCode, setPermissionCode] = useState("");
   const [permissionError, setPermissionError] = useState("");
-  const [borrowRequests, setBorrowRequests] = useState(
-    () => getBorrowRequestsByBorrower(user?.email)
-  );
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const queuedActionRef = useRef(null);
+  const userEmail = user?.user?.email || user?.email || "";
+  const book = useMemo(() => {
+    void refreshVersion;
+    return getBookById(id);
+  }, [id, refreshVersion]);
+  const borrowRequests = useMemo(
+    () => {
+      void refreshVersion;
+      return getBorrowRequestsByBorrower(userEmail);
+    },
+    [userEmail, refreshVersion]
+  );
 
   const clearQueuedAction = () => {
     if (queuedActionRef.current) {
@@ -33,6 +49,10 @@ const BookDetails = () => {
       queuedActionRef.current = null;
       callback();
     }, delay);
+  };
+
+  const refresh = () => {
+    setRefreshVersion((current) => current + 1);
   };
 
   useEffect(() => () => {
@@ -50,12 +70,6 @@ const BookDetails = () => {
     );
   }
 
-  // Pull the latest copy after borrow/return mutations.
-  const refresh = () => {
-    setBook(getBookById(id));
-    setBorrowRequests(getBorrowRequestsByBorrower(user?.email));
-  };
-
   // Thesis items require the permission-code modal flow.
   const isThesis = String(book.category || "").toLowerCase() === "thesis";
 
@@ -66,14 +80,14 @@ const BookDetails = () => {
     (request) => request.bookId === book.id && request.status === "pending_return"
   );
   const normalizedBorrowedBy = String(book.borrowedBy || "").trim().toLowerCase();
-  const normalizedUserEmail = String(user?.email || "").trim().toLowerCase();
+  const normalizedUserEmail = String(userEmail || "").trim().toLowerCase();
 
   const submitBorrow = (code = "", handlers = {}) => {
     const { onError, onSuccess } = handlers;
     if (!user) return;
     showInfo("Processing borrow request, please wait...");
     queueAction(() => {
-      const result = borrowBook(book.id, user.email, code);
+      const result = borrowBook(book.id, userEmail, code);
       if (!result.ok) {
         showError(result.error);
         if (onError) onError(result);
@@ -122,7 +136,7 @@ const BookDetails = () => {
     // Return operation now creates a staff-confirmed pending request.
     showInfo("Submitting return request, please wait...");
     queueAction(() => {
-      const result = requestBookReturn(book.id, user.email);
+      const result = requestBookReturn(book.id, userEmail);
       if (!result.ok) {
         showError(result.error);
         return;
@@ -139,7 +153,7 @@ const BookDetails = () => {
     // LOGIC: Mirror borrow/return delay pattern so all borrower mutations
     // have uniform processing feedback and transition timing.
     queueAction(() => {
-      const result = cancelBorrowRequest(pendingRequest.id, user.email);
+      const result = cancelBorrowRequest(pendingRequest.id, userEmail);
       if (!result.ok) {
         showError(result.error || "Unable to cancel borrow request.");
         return;

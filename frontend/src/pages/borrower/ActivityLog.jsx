@@ -1,7 +1,6 @@
 // Purpose: Borrower activity timeline for reservations and borrowing actions.
 // Parts: source data selection, derived filters, action handlers, table/list render.
-import { useEffect, useRef, useState } from "react";
-import { getBorrowHistory, getBorrowRequestsByBorrower } from "../../services/bookService";
+import { useEffect, useMemo, useRef } from "react";
 import {
     autoClosePassedReservations,
     formatReservationHour,
@@ -17,10 +16,24 @@ import { formatActivityAction } from "../../utils/activityUtils";
 import { useStore } from "../../store/useAuthStore";
 import { useRequest } from "../../store/useRequestsStore";
 
+const isBorrowHistoryStatus = (status) => {
+    const normalized = String(status || "").toLowerCase();
+    return ["approved", "returned", "cancelled"].includes(normalized);
+};
+
+const toBorrowActionLabel = (status) => {
+    const normalized = String(status || "").toLowerCase();
+    if (normalized === "approved") return "BORROW_BOOK";
+    if (normalized === "returned") return "RETURN_BOOK";
+    if (normalized === "cancelled") return "CANCELLED";
+    return normalized || "-";
+};
+
 const ActivityLog = () => {
     const { user } = useStore();
     // Use normalized current-user email to scope visible activity records.
-    const userEmail = user?.profile?.email || "";
+    const userEmail = (user?.profile?.email || user?.user?.email || user?.email || "").toLowerCase();
+    const userId = user?.profile?.user_id || user?.user?.id || "";
     
     const {fetchHistory, itemRequests} = useRequest();
     
@@ -28,43 +41,61 @@ const ActivityLog = () => {
         fetchHistory();
     },[fetchHistory])
 
-    const getUserReservationUpdates = () =>
-        getReservationHistory().filter(
-            (entry) => entry.requestedBy?.toLowerCase() === userEmail.toLowerCase()
-        );
-
-    const getUserActiveReservations = () => {
-        autoClosePassedReservations();
-        return getReservations().filter(
-            (entry) =>
-                entry.requestedBy?.toLowerCase() === userEmail.toLowerCase() &&
-                    entry.status !== RESERVATION_STATUS.CLOSED &&
-                    !isReservationTimePassed(entry)
-        );
-    };
-
-    const getUserBorrowedHistory = () =>
-        getBorrowHistory().filter(
-            (entry) => entry.borrowerEmail?.toLowerCase() === userEmail.toLowerCase()
-        );
-
-    const getUserBorrowUpdates = () =>
-        getBorrowRequestsByBorrower(userEmail);
-
-    const [reservationUpdates, setReservationUpdates] = useState(
-        getUserReservationUpdates()
-    );
-    const [myReservations, setMyReservations] = useState(getUserActiveReservations());
-    const [borrowUpdates, setBorrowUpdates] = useState([]);
-    const [borrowedHistory, setBorrowedHistory] = useState(getUserBorrowedHistory());
-    const cancellationTimeoutRef = useRef(null);
-
     useEffect(() => {
-        // Update borrowUpdates from the fetched history data
-        if (itemRequests && itemRequests.length > 0) {
-            setBorrowUpdates(itemRequests);
-        }
-    }, [itemRequests]);
+        const intervalId = setInterval(() => {
+            fetchHistory();
+        }, 3000);
+
+        return () => {
+            clearInterval(intervalId);
+        };
+    }, [fetchHistory]);
+
+    const reservationUpdates = !userEmail
+        ? []
+        : getReservationHistory().filter(
+            (entry) => String(entry.requestedBy || "").toLowerCase() === userEmail
+        );
+
+    autoClosePassedReservations();
+    const myReservations = getReservations().filter(
+        (entry) =>
+            String(entry.requestedBy || "").toLowerCase() === userEmail &&
+            entry.status === RESERVATION_STATUS.PENDING &&
+            !isReservationTimePassed(entry)
+    );
+
+    const myBorrowRequests = useMemo(() => {
+        if (!Array.isArray(itemRequests)) return [];
+
+        return itemRequests.filter((entry) => {
+            if (userId && entry.student_user_id) {
+                return entry.student_user_id === userId;
+            }
+
+            const entryEmail = String(entry.student_profiles?.email || entry.borrowerEmail || "").toLowerCase();
+            return Boolean(userEmail) && entryEmail === userEmail;
+        });
+    }, [itemRequests, userEmail, userId]);
+
+    const borrowUpdates = useMemo(
+        () => myBorrowRequests.filter((entry) => !isBorrowHistoryStatus(entry.status)),
+        [myBorrowRequests]
+    );
+
+    const borrowedHistory = useMemo(
+        () => myBorrowRequests
+            .filter((entry) => isBorrowHistoryStatus(entry.status))
+            .map((entry) => ({
+                id: entry.id,
+                title: entry.item_title,
+                action: toBorrowActionLabel(entry.status),
+                timestamp: entry.returned_at || entry.approved_at || entry.decision_at || entry.requested_at,
+            })),
+        [myBorrowRequests]
+    );
+
+    const cancellationTimeoutRef = useRef(null);
 
     useEffect(() => () => {
         if (cancellationTimeoutRef.current) {
@@ -88,11 +119,6 @@ const ActivityLog = () => {
                 return;
             }
             showSuccess("Cancellation request submitted.");
-            // Refresh local view from source data after successful mutation.
-            setMyReservations(getUserActiveReservations());
-            setReservationUpdates(getUserReservationUpdates());
-            setBorrowUpdates(getUserBorrowUpdates());
-            setBorrowedHistory(getUserBorrowedHistory());
             cancellationTimeoutRef.current = null;
         }, 500);
     };
@@ -119,7 +145,6 @@ const ActivityLog = () => {
                         <div className="table table--borrow-updates">
                             <div className="table__row table__head">
                                 <span>Book</span>
-                                <span>Borrower</span>
                                 <span>Status</span>
                                 <span>Requested</span>
                                 <span>Updated</span>
@@ -127,10 +152,9 @@ const ActivityLog = () => {
                             {borrowUpdates.map((entry) => (
                                 <div className="table__row" key={entry.id}>
                                     <span>{entry.item_title || "-"}</span>
-                                    <span>{entry.student_profiles ? `${entry.student_profiles.first_name} ${entry.student_profiles.last_name}` : "-"}</span>
                                     <span>{entry.status || "-"}</span>
                                     <span>{formatDateTime(entry.requested_at)}</span>
-                                    <span>{formatDateTime(entry.returned_at || entry.requested_at)}</span>
+                                    <span>{formatDateTime(entry.decision_at || entry.requested_at)}</span>
                                 </div>
                             ))}
                         </div>

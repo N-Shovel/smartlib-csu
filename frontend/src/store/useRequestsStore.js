@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { axiosInstance } from "./axios";
-import { showSuccess, showError, showInfo } from "../utils/notification";
+import { showSuccess, showError } from "../utils/notification";
 
 
 export const useRequest = create((set, get) => ({
@@ -15,7 +15,10 @@ export const useRequest = create((set, get) => ({
 
             console.log(res.data);
 
-            set({itemRequests: res.data?.requests || []});
+            const requests = Array.isArray(res.data?.requests) ? res.data.requests : [];
+            requests.sort((a, b) => new Date(b.requested_at || 0) - new Date(a.requested_at || 0));
+
+            set({itemRequests: requests});
 
         } catch (error) {
            showError(error?.response?.data?.message || "Failed to send request");
@@ -44,6 +47,54 @@ export const useRequest = create((set, get) => ({
         }
         finally{
             set({loading: false});
+        }
+    },
+
+    approveBorrowRequest: async (requestId) => {
+        set({ loading: true });
+        try {
+            const res = await axiosInstance.patch("/items/approve-borrow-request", { requestId });
+            showSuccess(res?.data?.message || "Borrow request approved");
+            await get().fetchHistory();
+            return { ok: true };
+        } catch (error) {
+            const message = error?.response?.data?.message || "Failed to approve borrow request";
+            showError(message);
+            return { ok: false, error: message };
+        } finally {
+            set({ loading: false });
+        }
+    },
+
+    requestReturn: async (itemId) => {
+        set({ loading: true });
+        try {
+            const res = await axiosInstance.patch("/items/request-return", { itemId });
+            showSuccess(res?.data?.message || "Return request submitted");
+            await get().fetchHistory();
+            return { ok: true };
+        } catch (error) {
+            const message = error?.response?.data?.message || "Failed to request return";
+            showError(message);
+            return { ok: false, error: message };
+        } finally {
+            set({ loading: false });
+        }
+    },
+
+    confirmReturnRequest: async (requestId) => {
+        set({ loading: true });
+        try {
+            const res = await axiosInstance.patch("/items/confirm-return", { requestId });
+            showSuccess(res?.data?.message || "Book marked as returned");
+            await get().fetchHistory();
+            return { ok: true };
+        } catch (error) {
+            const message = error?.response?.data?.message || "Failed to confirm return";
+            showError(message);
+            return { ok: false, error: message };
+        } finally {
+            set({ loading: false });
         }
     }
 

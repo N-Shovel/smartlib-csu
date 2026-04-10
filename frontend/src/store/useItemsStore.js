@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { axiosInstance } from "./axios";
-import { showSuccess, showError, showInfo } from "../utils/notification";
+import { showSuccess, showError } from "../utils/notification";
 
 const useItems = create((set, get) => ({
     books: [],
@@ -66,7 +66,7 @@ const useItems = create((set, get) => ({
             await get().fetchBooks();
 
         } catch (error) {
-            showError(error?.response?.data?.message || err?.message || "Failed to delete item");
+            showError(error?.response?.data?.message || error?.message || "Failed to delete item");
         }
         finally{
             set({isLoading: false});
@@ -84,7 +84,9 @@ const useItems = create((set, get) => ({
             showSuccess(res.data?.message);
 
         } catch (error) {
-            
+            showError(error?.response?.data?.message || error?.message || "Failed to delete item");
+        } finally {
+            set({ isLoading: false });
         }
     },
 
@@ -100,7 +102,7 @@ const useItems = create((set, get) => ({
             await get().fetchBooks();
 
         } catch (error) {
-            showError(error?.response?.data?.message || err?.message || "Failed to restore item");
+            showError(error?.response?.data?.message || error?.message || "Failed to restore item");
         }
         finally{
             set({isLoading: false});
