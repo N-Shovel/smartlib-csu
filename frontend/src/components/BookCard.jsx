@@ -1,6 +1,49 @@
 import { useEffect, useState } from "react";
 import {useRequest} from "../store/useRequestsStore"
 import { Loader2Icon } from "lucide-react";
+
+const normalizeKeywords = (keywords) => {
+	if (Array.isArray(keywords)) {
+		return keywords
+			.map((keyword) => String(keyword || "").trim())
+			.filter(Boolean);
+	}
+
+	if (typeof keywords === "string") {
+		return keywords
+			.split(",")
+			.map((keyword) => keyword.trim())
+			.filter(Boolean);
+	}
+
+	return [];
+};
+
+const normalizeCategories = (category, itemType) => {
+	if (Array.isArray(category)) {
+		const tokens = category
+			.map((entry) => String(entry || "").trim())
+			.filter(Boolean);
+
+		if (tokens.length > 0) return tokens;
+	}
+
+	if (typeof category === "string") {
+		const tokens = category
+			.split(",")
+			.map((entry) => entry.trim())
+			.filter(Boolean);
+
+		if (tokens.length > 0) return tokens;
+	}
+
+	if (itemType) {
+		return [String(itemType).trim()];
+	}
+
+	return [];
+};
+
 // Purpose: Displays a single book with availability and quick actions.
 // Parts: metadata display, status tags, borrow/return/details actions.
 const BookCard = ({
@@ -52,29 +95,59 @@ const BookCard = ({
 			? `${titleText.slice(0, MAX_TITLE_CHARS).trimEnd()}...`
 			: titleText;
 	const descriptionText = String(book.description || "").trim();
+	const keywordTokens = normalizeKeywords(book.keywords);
+	const categoryTokens = normalizeCategories(book.category, book.item_type);
 
 	return (
 		<article className="card book-card">
-			<div className="book-card__header">
-				<h3 title={book.title}>{previewTitle}</h3>
-				<span
-					className={`status status--desktop ${book.is_available ? "status--ok" : "status--busy"}`}
-				>
+			<div className="book-card__content">
+				<div className="book-card__header">
+					<h3 title={book.title} className="book-card__title-row">
+						<strong className="book-card__label">Title:</strong> <span>{previewTitle}</span>
+					</h3>
+					<span
+						className={`status status--desktop ${book.is_available ? "status--ok" : "status--busy"}`}
+					>
+						{book.is_available ? "Available" : "Borrowed"}
+					</span>
+				</div>
+				<p className="book-card__field book-card__author">
+					<strong className="book-card__label">Author:</strong> <span>{book.author || "N/A"}</span>
+				</p>
+				<div className="book-card__field">
+					<strong className="book-card__label">Keywords:</strong>
+					{keywordTokens.length > 0 ? (
+						<div className="book-card__keyword-list" aria-label="Book keywords">
+							{keywordTokens.map((keyword) => (
+								<span key={keyword} className="book-card__keyword-chip">{keyword}</span>
+							))}
+						</div>
+					) : (
+						<span className="muted"> N/A</span>
+					)}
+				</div>
+				{categoryTokens.length > 0 ? (
+					<div className="book-card__field book-card__category-line">
+						<strong className="book-card__label">Category:</strong>
+						<div className="book-card__keyword-list" aria-label="Book categories">
+							{categoryTokens.map((category) => (
+								<span key={category} className="book-card__keyword-chip">{category}</span>
+							))}
+						</div>
+					</div>
+				) : null}
+				{descriptionText ? (
+					<p className="book-card__field book-card__desc">
+						<strong className="book-card__label">Description:</strong> <span>{descriptionText}</span>
+					</p>
+				) : null}
+				{showBorrower && !book.is_available && book.borrowedBy ? (
+					<p className="micro">Borrowed by {book.borrowedBy}</p>
+				) : null}
+				<span className={`status status--mobile ${book.is_available ? "status--ok" : "status--busy"}`}>
 					{book.is_available ? "Available" : "Borrowed"}
 				</span>
 			</div>
-			{book.category ? <p className="book-card__category">{book.category}</p> : null}
-			<p className="muted book-card__author">{book.author}</p>
-			{Array.isArray(book.keywords) && book.keywords.length > 0 ? (
-				<p className="micro">Keywords: {book.keywords.join(", ")}</p>
-			) : null}
-			{descriptionText ? <p className="book-card__desc">{descriptionText}</p> : null}
-			{showBorrower && !book.is_available && book.borrowedBy ? (
-				<p className="micro">Borrowed by {book.borrowedBy}</p>
-			) : null}
-			<span className={`status status--mobile ${book.is_available ? "status--ok" : "status--busy"}`}>
-				{book.is_available ? "Available" : "Borrowed"}
-			</span>
 			<div className="book-card__actions">
 				{/* Details are always available regardless of borrow state. */}
 				<button className="btn btn--info" onClick={() => onOpenDetails(book)}>
@@ -85,7 +158,7 @@ const BookCard = ({
 					<button
 						className={`btn ${isPending ? "btn--view" : "btn--primary"}`}
 						onClick={() => onBorrow(book)}
-						disabled={isProcessing || (!canBorrow && !isPending)}
+						disabled={isProcessing || isPending || (!canBorrow && !isPending)}
 					>
 						{borrowLabel || (isThesis ? "Apply" : "Borrow") || (loading?? <Loader2Icon className="flex justify-center items-center animate-spin"/>)}
 					</button>
