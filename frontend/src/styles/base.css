@@ -1,0 +1,41 @@
+/* Global Base Styles - Resets, Typography, and Base Elements */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Roboto", sans-serif;
+  color: var(--ink);
+  background: radial-gradient(circle at top, #f8fff9 0%, var(--bg) 55%, #e2efe7 100%);
+  min-height: 100vh;
+  padding-bottom: 2.2rem;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+h2 {
+  font-family: "Roboto", sans-serif;
+  font-size: 2rem;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.micro {
+  font-size: 0.8rem;
+  color: var(--muted);
+}

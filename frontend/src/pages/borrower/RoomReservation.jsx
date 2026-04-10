@@ -1,6 +1,6 @@
 // Purpose: Borrower page to request and track room reservations.
 // Parts: form state, slot derivations, submit workflow, reservations render.
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   addReservation,
   getReservationHourOptions,
@@ -18,17 +18,41 @@ const RoomReservation = () => {
   const [room, setRoom] = useState("");
   const [reservationHour, setReservationHour] = useState("");
   const [notes, setNotes] = useState("");
+  const [unavailableHours, setUnavailableHours] = useState([]);
+  const [activeReservation, setActiveReservation] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const { user } = useStore();
   const userEmail = user?.user?.email || user?.email || "";
-  const activeReservation = userEmail ? getUserActiveReservation(userEmail) : null;
-  
-  // Recompute unavailable slots whenever selected room changes.
-  const unavailableHours = useMemo(
-    () => getUnavailableReservationHours(room),
-    [room]
-  );
 
-  const handleReserve = () => {
+  // Fetch unavailable hours and active reservation on component mount and when room changes
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch unavailable hours
+        if (room) {
+          const hours = await getUnavailableReservationHours(room);
+          setUnavailableHours(hours);
+        } else {
+          setUnavailableHours([]);
+        }
+
+        // Fetch active reservation if user email is available
+        if (userEmail) {
+          const active = await getUserActiveReservation(userEmail);
+          setActiveReservation(active);
+        }
+      } catch (error) {
+        console.error("Error fetching reservation data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [room, userEmail]);
+
+  const handleReserve = async () => {
     const currentHour = new Date().getHours();
     // Guard clauses keep validation flow straightforward and readable.
     if (!room.trim()) {
@@ -49,8 +73,8 @@ const RoomReservation = () => {
     }
 
     showInfo("Submitting reservation, please wait...");
-    setTimeout(() => {
-      const result = addReservation(
+    try {
+      const result = await addReservation(
         room.trim(),
         Number(reservationHour),
         notes.trim(),
@@ -66,7 +90,14 @@ const RoomReservation = () => {
       setReservationHour("");
       setNotes("");
       showSuccess("Reservation request submitted");
-    }, 500);
+
+      // Refresh active reservation
+      const active = await getUserActiveReservation(userEmail);
+      setActiveReservation(active);
+    } catch (error) {
+      showError("An error occurred while submitting the reservation");
+      console.error("Error submitting reservation:", error);
+    }
   };
 
   return (
@@ -145,8 +176,8 @@ const RoomReservation = () => {
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />
-          <button className="btn btn--primary" onClick={handleReserve}>
-            Reserve
+          <button className="btn btn--primary" onClick={handleReserve} disabled={isLoading}>
+            {isLoading ? "Loading..." : "Reserve"}
           </button>
           <p className="micro">Slots marked "Reserved" are only staff-approved reservations.</p>
         </div>
@@ -156,3 +187,4 @@ const RoomReservation = () => {
 };
 
 export default RoomReservation;
+

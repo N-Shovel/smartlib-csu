@@ -18,16 +18,39 @@ import { useStore } from "../../store/useAuthStore";
 const Reservation = () => {
   const { borrowers, getStudentBorrowers } = useStore();
 
-  const [reservations, setReservations] = useState(() => {
-    autoClosePassedReservations();
-    return getReservations();
-  });
-  const [history, setHistory] = useState(getReservationHistory());
+  const [reservations, setReservations] = useState([]);
+  const [history, setHistory] = useState([]);
   const [selectedReason, setSelectedReason] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     getStudentBorrowers();
   }, [getStudentBorrowers]);
+
+  // Initial load and periodic refresh
+  useEffect(() => {
+    const refresh = async () => {
+      try {
+        await autoClosePassedReservations();
+        const [reservationsData, historyData] = await Promise.all([
+          getReservations(),
+          getReservationHistory(),
+        ]);
+        setReservations(reservationsData);
+        setHistory(historyData);
+      } catch (error) {
+        console.error("Error refreshing reservations:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    refresh();
+
+    // Set up interval for periodic refresh
+    const intervalId = setInterval(refresh, 30000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   const studentIdByEmail = useMemo(() => {
     return (borrowers || []).reduce((summary, borrower) => {
@@ -65,17 +88,20 @@ const Reservation = () => {
     return "REQUESTED";
   };
 
-  const refresh = () => {
+  const refresh = async () => {
     // Keep reservations and history in sync after approve/close actions.
-    autoClosePassedReservations();
-    setReservations(getReservations());
-    setHistory(getReservationHistory());
+    try {
+      await autoClosePassedReservations();
+      const [reservationsData, historyData] = await Promise.all([
+        getReservations(),
+        getReservationHistory(),
+      ]);
+      setReservations(reservationsData);
+      setHistory(historyData);
+    } catch (error) {
+      console.error("Error refreshing reservations:", error);
+    }
   };
-
-  useEffect(() => {
-    const intervalId = setInterval(refresh, 30000);
-    return () => clearInterval(intervalId);
-  }, []);
 
   // Split live reservations into pending and currently approved sections.
   const pending = reservations.filter(
@@ -85,23 +111,33 @@ const Reservation = () => {
     (reservation) => reservation.status === RESERVATION_STATUS.APPROVED
   );
 
-  const handleApprove = (id) => {
-    const result = approveReservation(id);
-    if (result.ok) {
-      showSuccess("Reservation approved");
-      refresh();
-    } else {
-      showError(result.error ?? "Failed to approve reservation.");
+  const handleApprove = async (id) => {
+    try {
+      const result = await approveReservation(id);
+      if (result.ok) {
+        showSuccess("Reservation approved");
+        await refresh();
+      } else {
+        showError(result.error ?? "Failed to approve reservation.");
+      }
+    } catch (error) {
+      showError("An error occurred while approving the reservation.");
+      console.error("Error approving reservation:", error);
     }
   };
 
-  const handleClose = (id) => {
-    const result = closeReservation(id);
-    if (result.ok) {
-      showSuccess("Reservation closed");
-      refresh();
-    } else {
-      showError(result.error ?? "Failed to close reservation.");
+  const handleClose = async (id) => {
+    try {
+      const result = await closeReservation(id);
+      if (result.ok) {
+        showSuccess("Reservation closed");
+        await refresh();
+      } else {
+        showError(result.error ?? "Failed to close reservation.");
+      }
+    } catch (error) {
+      showError("An error occurred while closing the reservation.");
+      console.error("Error closing reservation:", error);
     }
   };
 
@@ -133,6 +169,14 @@ const Reservation = () => {
   const closeReasonModal = () => {
     setSelectedReason(null);
   };
+
+  if (isLoading) {
+    return (
+      <section className="staff-page staff-approvals-page">
+        <div className="empty-state">Loading reservations...</div>
+      </section>
+    );
+  }
 
   return (
     <section className="staff-page staff-approvals-page">

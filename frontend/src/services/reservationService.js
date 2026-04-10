@@ -1,12 +1,22 @@
-import { getData, saveData } from "./localStorageService";
-import { getIsoTimestamp } from "../utils/dateUtils";
+import {
+  createReservationAPI,
+  getReservationsAPI,
+  approveReservationAPI,
+  closeReservationAPI,
+  cancelReservationAPI,
+  getReservationHistoryAPI,
+} from "./reservationAPIService";
 import { RESERVATION_STATUS } from "../constants/status";
 
-const RESERVATIONS_KEY = "library_reservations";
-const RESERVATION_HISTORY_KEY = "library_reservation_history";
 const RESERVATION_START_HOUR = 8;
 const RESERVATION_END_HOUR = 18;
 const LUNCH_BREAK_HOURS = [11, 12];
+
+// In-memory cache for reservations to reduce API calls
+let reservationCache = null;
+let historyCacheMask = null;
+let cacheTimestamp = 0;
+const CACHE_DURATION = 10000; // 10 seconds
 
 const toHourNumber = (hour) => {
   const parsedHour = Number(hour);
@@ -34,23 +44,6 @@ export const formatReservationHour = (hour) => {
 const toDateOnly = (date) =>
   new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
-const pushReservationHistory = ({ reservation, action, status }) => {
-  const history = getReservationHistory();
-  history.unshift({
-    id: `${reservation.id}-${Date.now()}`,
-    reservationId: reservation.id,
-    room: reservation.room,
-    reservationHour: reservation.reservationHour,
-    requestedBy: reservation.requestedBy,
-    reservationDate: reservation.reservationDate || reservation.createdAt,
-    action,
-    status,
-    timestamp: getIsoTimestamp(),
-  });
-
-  saveData(RESERVATION_HISTORY_KEY, history);
-};
-
 export const isReservationTimePassed = (reservation) => {
   const reservationHour = toHourNumber(reservation?.reservationHour);
   if (reservationHour === null) return false;
@@ -71,96 +64,81 @@ export const isReservationTimePassed = (reservation) => {
   return now > endTime;
 };
 
-// Get all reservations
-export const getReservations = () => {
-  return getData(RESERVATIONS_KEY, []);
+// Invalidate cache
+const invalidateCache = () => {
+  reservationCache = null;
+  historyCacheMask = null;
+  cacheTimestamp = 0;
 };
 
-// Get reservation history
-export const getReservationHistory = () => {
-  return getData(RESERVATION_HISTORY_KEY, []);
+// Get all reservations with caching
+export const getReservations = async () => {
+  const now = Date.now();
+  if (reservationCache && now - cacheTimestamp < CACHE_DURATION) {
+    return reservationCache;
+  }
+
+  const result = await getReservationsAPI();
+  if (result.ok) {
+    reservationCache = result.reservations;
+    cacheTimestamp = now;
+    return result.reservations;
+  }
+  return [];
 };
 
-// Auto-close passed reservations
-export const autoClosePassedReservations = () => {
-  const reservations = getReservations();
-  const updated = reservations.map((res) => {
-    if (isReservationTimePassed(res) && res.status === RESERVATION_STATUS.APPROVED) {
-      const closedReservation = { ...res, status: RESERVATION_STATUS.CLOSED };
-      pushReservationHistory({
-        reservation: closedReservation,
-        action: "RESERVATION_CLOSED",
-        status: RESERVATION_STATUS.CLOSED,
-      });
-      return closedReservation;
-    }
-    return res;
-  });
-  saveData(RESERVATIONS_KEY, updated);
+// Get reservation history with caching
+export const getReservationHistory = async () => {
+  const now = Date.now();
+  if (historyCacheMask && now - cacheTimestamp < CACHE_DURATION) {
+    return historyCacheMask;
+  }
+
+  const result = await getReservationHistoryAPI();
+  if (result.ok) {
+    historyCacheMask = result.history;
+    cacheTimestamp = now;
+    return result.history;
+  }
+  return [];
+};
+
+// Auto-close passed reservations (no-op with backend, handled on API side)
+export const autoClosePassedReservations = async () => {
+  // Backend handles auto-closing via status checks
+  return;
 };
 
 // Approve reservation
-export const approveReservation = (reservationId) => {
-  try {
-    const reservations = getReservations();
-    const reservation = reservations.find((r) => r.id === reservationId);
-    if (!reservation) return { ok: false, error: "Reservation not found" };
-
-    reservation.status = RESERVATION_STATUS.APPROVED;
-    saveData(RESERVATIONS_KEY, reservations);
-    pushReservationHistory({
-      reservation,
-      action: "RESERVATION_APPROVED",
-      status: RESERVATION_STATUS.APPROVED,
-    });
-    return { ok: true };
-  } catch (error) {
-    return { ok: false, error: error.message };
+export const approveReservation = async (reservationId) => {
+  const result = await approveReservationAPI(reservationId);
+  if (result.ok) {
+    invalidateCache();
   }
+  return result;
 };
 
 // Close reservation
-export const closeReservation = (reservationId) => {
-  try {
-    const reservations = getReservations();
-    const reservation = reservations.find((r) => r.id === reservationId);
-    if (!reservation) return { ok: false, error: "Reservation not found" };
-
-    reservation.status = RESERVATION_STATUS.CLOSED;
-    saveData(RESERVATIONS_KEY, reservations);
-    pushReservationHistory({
-      reservation,
-      action: "RESERVATION_CLOSED",
-      status: RESERVATION_STATUS.CLOSED,
-    });
-    return { ok: true };
-  } catch (error) {
-    return { ok: false, error: error.message };
+export const closeReservation = async (reservationId) => {
+  const result = await closeReservationAPI(reservationId);
+  if (result.ok) {
+    invalidateCache();
   }
+  return result;
 };
 
-// Request reservation cancellation
-export const requestReservationCancellation = (reservationId, userEmail) => {
-  try {
-    const reservations = getReservations();
-    const reservation = reservations.find((r) => r.id === reservationId);
-    if (!reservation) return { ok: false, error: "Reservation not found" };
-
-    if (String(reservation.requestedBy || "").toLowerCase() !== String(userEmail || "").toLowerCase()) {
-      return { ok: false, error: "Unauthorized to cancel this reservation" };
-    }
-
-    reservation.status = RESERVATION_STATUS.CANCELLED;
-    saveData(RESERVATIONS_KEY, reservations);
-    pushReservationHistory({
-      reservation,
-      action: "RESERVATION_CANCELLATION_REQUESTED",
-      status: RESERVATION_STATUS.CANCELLED,
-    });
-    return { ok: true };
-  } catch (error) {
-    return { ok: false, error: error.message };
+// Cancel reservation
+export const cancelReservation = async (reservationId) => {
+  const result = await cancelReservationAPI(reservationId);
+  if (result.ok) {
+    invalidateCache();
   }
+  return result;
+};
+
+// Request reservation cancellation (alias for API)
+export const requestReservationCancellation = async (reservationId) => {
+  return await cancelReservation(reservationId);
 };
 
 // Get reservation hour options for form dropdown
@@ -180,11 +158,11 @@ export const isLunchBreakHour = (hour) => {
   return LUNCH_BREAK_HOURS.includes(toHourNumber(hour));
 };
 
-// Get unavailable reservation hours for a room
-export const getUnavailableReservationHours = (room) => {
+// Get unavailable reservation hours for a room (async now - uses API)
+export const getUnavailableReservationHours = async (room) => {
   if (!room) return [];
   
-  const reservations = getReservations();
+  const reservations = await getReservations();
   const unavailable = [];
   
   // Add lunch break hours
@@ -204,8 +182,8 @@ export const getUnavailableReservationHours = (room) => {
 };
 
 // Get active (pending or approved) reservations for a user
-export const getUserActiveReservation = (userEmail) => {
-  const reservations = getReservations();
+export const getUserActiveReservation = async (userEmail) => {
+  const reservations = await getReservations();
   const normalizedEmail = String(userEmail || "").toLowerCase().trim();
   
   return reservations.find(
@@ -215,8 +193,8 @@ export const getUserActiveReservation = (userEmail) => {
   ) || null;
 };
 
-// Add a new reservation
-export const addReservation = (room, reservationHour, notes, requestedBy) => {
+// Add a new reservation (now uses API)
+export const addReservation = async (room, reservationHour, notes, requestedBy) => {
   try {
     const hour = toHourNumber(reservationHour);
     if (hour === null) return { ok: false, error: "Invalid reservation hour" };
@@ -225,46 +203,11 @@ export const addReservation = (room, reservationHour, notes, requestedBy) => {
       return { ok: false, error: "Cannot reserve during lunch break hours (11 AM - 1 PM)" };
     }
 
-    const reservations = getReservations();
-    
-    // Check if user already has an active (pending or approved) reservation
-    const userActiveReservation = getUserActiveReservation(requestedBy);
-    if (userActiveReservation) {
-      return { ok: false, error: "You already have an active reservation. Please close it before creating a new one." };
+    const result = await createReservationAPI(room, hour, notes, requestedBy);
+    if (result.ok) {
+      invalidateCache();
     }
-    
-    // Check for conflicts
-    const conflict = reservations.find(
-      (res) =>
-        res.room === room &&
-        toHourNumber(res.reservationHour) === hour &&
-        res.status === RESERVATION_STATUS.APPROVED
-    );
-    
-    if (conflict) {
-      return { ok: false, error: "This time slot is already reserved" };
-    }
-
-    const newReservation = {
-      id: Date.now().toString(),
-      room: room,
-      reservationHour: hour,
-      notes: notes || "",
-      requestedBy: requestedBy,
-      status: RESERVATION_STATUS.PENDING,
-      createdAt: new Date().toISOString(),
-      reservationDate: new Date().toISOString()
-    };
-
-    reservations.push(newReservation);
-    saveData(RESERVATIONS_KEY, reservations);
-    pushReservationHistory({
-      reservation: newReservation,
-      action: "RESERVATION_CREATED",
-      status: RESERVATION_STATUS.PENDING,
-    });
-    
-    return { ok: true, reservation: newReservation };
+    return result;
   } catch (error) {
     return { ok: false, error: error.message };
   }
