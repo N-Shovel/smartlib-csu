@@ -214,12 +214,16 @@ export const refreshController = async (req, res) => {
     try {
         const refresh_token = req.cookies?.refresh_token;
         if (!refresh_token) {
+            res.clearCookie("access_token");
+            res.clearCookie("refresh_token");
             return res.status(401).json({ message: "Missing refresh token" });
         }
 
         const { data, error } = await supabase.auth.refreshSession({ refresh_token });
 
         if (error || !data.session) {
+            res.clearCookie("access_token");
+            res.clearCookie("refresh_token");
             return res.status(401).json({ message: error?.message ?? "Could not refresh session" });
         }
 

@@ -101,6 +101,15 @@ const Sidebar = () => {
 				<Menu size={18} strokeWidth={2.35} />
 			</button>
 
+			{/* Backdrop overlay closes menu when clicked */}
+			{isMobileMenuOpen && (
+				<div
+					className="sidebar-backdrop"
+					onClick={() => setIsMobileMenuOpen(false)}
+					aria-hidden="true"
+				/>
+			)}
+
 			<aside
 				className={`sidebar${isCollapsed ? " sidebar--collapsed" : ""}${
 					isMobileMenuOpen ? " sidebar--mobile-open" : ""

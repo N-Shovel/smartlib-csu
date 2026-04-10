@@ -34,6 +34,23 @@ export const formatReservationHour = (hour) => {
 const toDateOnly = (date) =>
   new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
+const pushReservationHistory = ({ reservation, action, status }) => {
+  const history = getReservationHistory();
+  history.unshift({
+    id: `${reservation.id}-${Date.now()}`,
+    reservationId: reservation.id,
+    room: reservation.room,
+    reservationHour: reservation.reservationHour,
+    requestedBy: reservation.requestedBy,
+    reservationDate: reservation.reservationDate || reservation.createdAt,
+    action,
+    status,
+    timestamp: getIsoTimestamp(),
+  });
+
+  saveData(RESERVATION_HISTORY_KEY, history);
+};
+
 export const isReservationTimePassed = (reservation) => {
   const reservationHour = toHourNumber(reservation?.reservationHour);
   if (reservationHour === null) return false;
@@ -69,7 +86,13 @@ export const autoClosePassedReservations = () => {
   const reservations = getReservations();
   const updated = reservations.map((res) => {
     if (isReservationTimePassed(res) && res.status === RESERVATION_STATUS.APPROVED) {
-      return { ...res, status: RESERVATION_STATUS.CLOSED };
+      const closedReservation = { ...res, status: RESERVATION_STATUS.CLOSED };
+      pushReservationHistory({
+        reservation: closedReservation,
+        action: "RESERVATION_CLOSED",
+        status: RESERVATION_STATUS.CLOSED,
+      });
+      return closedReservation;
     }
     return res;
   });
@@ -85,6 +108,11 @@ export const approveReservation = (reservationId) => {
 
     reservation.status = RESERVATION_STATUS.APPROVED;
     saveData(RESERVATIONS_KEY, reservations);
+    pushReservationHistory({
+      reservation,
+      action: "RESERVATION_APPROVED",
+      status: RESERVATION_STATUS.APPROVED,
+    });
     return { ok: true };
   } catch (error) {
     return { ok: false, error: error.message };
@@ -100,6 +128,11 @@ export const closeReservation = (reservationId) => {
 
     reservation.status = RESERVATION_STATUS.CLOSED;
     saveData(RESERVATIONS_KEY, reservations);
+    pushReservationHistory({
+      reservation,
+      action: "RESERVATION_CLOSED",
+      status: RESERVATION_STATUS.CLOSED,
+    });
     return { ok: true };
   } catch (error) {
     return { ok: false, error: error.message };
@@ -117,8 +150,13 @@ export const requestReservationCancellation = (reservationId, userEmail) => {
       return { ok: false, error: "Unauthorized to cancel this reservation" };
     }
 
-    reservation.status = RESERVATION_STATUS.CANCELLED || "cancelled";
+    reservation.status = RESERVATION_STATUS.CANCELLED;
     saveData(RESERVATIONS_KEY, reservations);
+    pushReservationHistory({
+      reservation,
+      action: "RESERVATION_CANCELLATION_REQUESTED",
+      status: RESERVATION_STATUS.CANCELLED,
+    });
     return { ok: true };
   } catch (error) {
     return { ok: false, error: error.message };
@@ -165,6 +203,18 @@ export const getUnavailableReservationHours = (room) => {
   return unavailable;
 };
 
+// Get active (pending or approved) reservations for a user
+export const getUserActiveReservation = (userEmail) => {
+  const reservations = getReservations();
+  const normalizedEmail = String(userEmail || "").toLowerCase().trim();
+  
+  return reservations.find(
+    (res) =>
+      String(res.requestedBy || "").toLowerCase().trim() === normalizedEmail &&
+      (res.status === RESERVATION_STATUS.PENDING || res.status === RESERVATION_STATUS.APPROVED)
+  ) || null;
+};
+
 // Add a new reservation
 export const addReservation = (room, reservationHour, notes, requestedBy) => {
   try {
@@ -176,6 +226,12 @@ export const addReservation = (room, reservationHour, notes, requestedBy) => {
     }
 
     const reservations = getReservations();
+    
+    // Check if user already has an active (pending or approved) reservation
+    const userActiveReservation = getUserActiveReservation(requestedBy);
+    if (userActiveReservation) {
+      return { ok: false, error: "You already have an active reservation. Please close it before creating a new one." };
+    }
     
     // Check for conflicts
     const conflict = reservations.find(
@@ -202,6 +258,11 @@ export const addReservation = (room, reservationHour, notes, requestedBy) => {
 
     reservations.push(newReservation);
     saveData(RESERVATIONS_KEY, reservations);
+    pushReservationHistory({
+      reservation: newReservation,
+      action: "RESERVATION_CREATED",
+      status: RESERVATION_STATUS.PENDING,
+    });
     
     return { ok: true, reservation: newReservation };
   } catch (error) {

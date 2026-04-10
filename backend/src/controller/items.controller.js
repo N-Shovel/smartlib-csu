@@ -348,7 +348,6 @@ export const approveBorrowRequestController = async (req, res) => {
 
             if (itemErr) return res.status(400).json({ message: itemErr.message });
             if (!item) return res.status(404).json({ message: "Library item not found" });
-            if (!item.is_available) return res.status(409).json({ message: "Item is already unavailable" });
 
             const { error: itemUpdateErr } = await supabase
                 .from("library_items")
@@ -464,6 +463,15 @@ export const confirmReturnController = async (req, res) => {
 
         // Re-open item availability after return confirmation.
         if (pendingReturn.library_item_id) {
+            const { data: item, error: itemErr } = await supabase
+                .from("library_items")
+                .select("id, is_available")
+                .eq("id", pendingReturn.library_item_id)
+                .maybeSingle();
+
+            if (itemErr) return res.status(400).json({ message: itemErr.message });
+            if (!item) return res.status(404).json({ message: "Library item not found" });
+
             const { error: itemUpdateErr } = await supabase
                 .from("library_items")
                 .update({ is_available: true })

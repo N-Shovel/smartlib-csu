@@ -2,6 +2,26 @@ import { create } from "zustand";
 import { axiosInstance } from "./axios";
 import { showSuccess, showError } from "../utils/notification";
 
+const ERROR_DEDUPE_WINDOW_MS = 10000;
+let lastFetchBooksErrorMessage = "";
+let lastFetchBooksErrorAt = 0;
+
+const notifyFetchBooksError = (message) => {
+    const now = Date.now();
+    if (message === lastFetchBooksErrorMessage && now - lastFetchBooksErrorAt < ERROR_DEDUPE_WINDOW_MS) {
+        return;
+    }
+
+    lastFetchBooksErrorMessage = message;
+    lastFetchBooksErrorAt = now;
+    showError(message);
+};
+
+const clearFetchBooksErrorDedupe = () => {
+    lastFetchBooksErrorMessage = "";
+    lastFetchBooksErrorAt = 0;
+};
+
 const useItems = create((set, get) => ({
     books: [],
     count: 0,
@@ -20,13 +40,14 @@ const useItems = create((set, get) => ({
             const count = res?.data?.count ?? books.length;
             
             set({ books: books, count });
+            clearFetchBooksErrorDedupe();
         } catch (err) {
             console.error("fetchBooks error:", err);
             const msg =
                 err?.response?.data?.message ||
                     err?.message ||
                     "Failed to fetch books";
-            showError(msg);
+            notifyFetchBooksError(msg);
         } finally {
             set({ isLoading: false });
         }

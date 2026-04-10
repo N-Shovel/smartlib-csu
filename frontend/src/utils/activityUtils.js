@@ -9,6 +9,9 @@ export const formatActivityAction = (action) => {
   if (normalizedAction === "RESERVATION_CANCELLATION_REQUESTED") {
     return "ROOM CANCELED";
   }
+  if (normalizedAction === "BORROW_REQUESTED") return "BOOK REQUESTED";
+  if (normalizedAction === "BORROW_APPROVED") return "BOOK RECEIVED";
+  if (normalizedAction === "RETURN_REQUESTED") return "RETURN REQUESTED";
 
   return String(action || "-").replace(/_/g, " ");
 };

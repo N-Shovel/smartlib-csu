@@ -13,32 +13,31 @@ import { RESERVATION_STATUS } from "../../constants/status";
 import { formatDateTime } from "../../utils/dateUtils";
 import { showError, showSuccess } from "../../utils/notification";
 import { exportToCSV } from "../../services/exportService";
-import { getUserProfileByEmail } from "../../services/authService";
+import { useStore } from "../../store/useAuthStore";
 
 const Reservation = () => {
+  const { borrowers, getStudentBorrowers } = useStore();
+
   const [reservations, setReservations] = useState(() => {
     autoClosePassedReservations();
     return getReservations();
   });
   const [history, setHistory] = useState(getReservationHistory());
   const [selectedReason, setSelectedReason] = useState(null);
+
+  useEffect(() => {
+    getStudentBorrowers();
+  }, [getStudentBorrowers]);
+
   const studentIdByEmail = useMemo(() => {
-    const lookupEmails = new Set();
+    return (borrowers || []).reduce((summary, borrower) => {
+      const email = String(borrower?.email || "").trim().toLowerCase();
+      if (!email) return summary;
 
-    reservations.forEach((entry) => {
-      const email = String(entry.requestedBy || "").trim().toLowerCase();
-      if (email) lookupEmails.add(email);
-    });
-    history.forEach((entry) => {
-      const email = String(entry.requestedBy || "").trim().toLowerCase();
-      if (email) lookupEmails.add(email);
-    });
-
-    return Array.from(lookupEmails).reduce((summary, email) => {
-      summary[email] = getUserProfileByEmail(email)?.id || "-";
+      summary[email] = borrower?.id_number || "-";
       return summary;
     }, {});
-  }, [reservations, history]);
+  }, [borrowers]);
 
   // Student ID is resolved from a memoized profile map to avoid repeated lookups.
   const getStudentIdByEmail = (email) =>
@@ -255,7 +254,7 @@ const Reservation = () => {
                   </td>
                   <td data-label="Action">
                     <button
-                      className="btn btn--secondary"
+                      className="btn btn--danger"
                       onClick={() => handleClose(reservation.id)}
                     >
                       Close
@@ -337,7 +336,7 @@ const Reservation = () => {
               <strong>Reason:</strong> {selectedReason.reason}
             </p>
             <div className="modal-actions">
-              <button className="btn btn--secondary" onClick={closeReasonModal}>
+              <button className="btn btn--danger" onClick={closeReasonModal}>
                 Close
               </button>
             </div>

@@ -1,6 +1,6 @@
 import express from "express";
 import protectRoute from "../middleware/protectRoute.js";
-import { createLibraryItemController, softDeleteItemController, getBooksController, restoreItemController, deleteItemController, requestItemController, updateItemStatusController } from "../controller/items.controller.js";
+import { createLibraryItemController, softDeleteItemController, getBooksController, restoreItemController, deleteItemController, requestItemController, updateItemStatusController, approveBorrowRequestController, requestReturnController, confirmReturnController } from "../controller/items.controller.js";
 
 const router = express.Router();
 
@@ -22,6 +22,12 @@ router.get("/get-items", protectRoute, getBooksController);
 /*------------------FOR BORRWER--------------------------*/
 
 router.post("/borrow-item", protectRoute, requestItemController);
+// Staff confirms borrower pickup and moves request to approved.
+router.patch("/approve-borrow-request", protectRoute, approveBorrowRequestController);
+// Borrower asks staff to process return for an approved borrow.
+router.patch("/request-return", protectRoute, requestReturnController);
+// Staff confirms return and marks item available again.
+router.patch("/confirm-return", protectRoute, confirmReturnController);
 
 export default router;
 

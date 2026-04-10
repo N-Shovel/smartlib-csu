@@ -1,8 +1,50 @@
 import { useMemo, useState, useEffect } from "react";
-import { Loader2Icon, LoaderIcon, Search, X } from "lucide-react";
-import { showError, showSuccess } from "../../utils/notification";
+import { Loader2Icon, LoaderIcon, Search } from "lucide-react";
+import { showError } from "../../utils/notification";
 import BookDetailsModal from "../../components/BookDetailsModal";
 import useItems from "../../store/useItemsStore";
+
+const normalizeKeywordTokens = (keywords) => {
+    if (Array.isArray(keywords)) {
+        return keywords
+            .map((keyword) => String(keyword || "").trim())
+            .filter(Boolean);
+    }
+
+    if (typeof keywords === "string") {
+        return keywords
+            .split(",")
+            .map((keyword) => keyword.trim())
+            .filter(Boolean);
+    }
+
+    return [];
+};
+
+const getItemCapacity = (itemType) => {
+    return String(itemType || "").toLowerCase() === "thesis" ? 1 : 3;
+};
+
+const resolveItemAvailability = (item) => {
+    const fallbackTotal = getItemCapacity(item.item_type);
+    const dbTotal = Number(item.total_copies);
+    const totalCopies = Number.isInteger(dbTotal) && dbTotal > 0 ? dbTotal : fallbackTotal;
+
+    const dbAvailable = Number(item.available_copies);
+    const availableCopies = Number.isInteger(dbAvailable)
+        ? Math.min(Math.max(dbAvailable, 0), totalCopies)
+        : (item.is_available ? totalCopies : 0);
+
+    return {
+        availableCopies,
+        totalCopies,
+    };
+};
+
+const getDisplayAvailability = (item) => {
+    const { availableCopies, totalCopies } = resolveItemAvailability(item);
+    return `${availableCopies}/${totalCopies}`;
+};
 
 const INITIAL_FORM = {
     itemType: "book", // "book" | "thesis"
@@ -37,12 +79,29 @@ const BookManagement = () => {
 
         if (!query) return byCategory;
 
-        return byCategory.filter((book) =>
-            [book.title, book.author, book.item_type, ...(book.keywords || [])]
+        return byCategory.filter((book) => {
+            const searchTerms = [
+                book.title,
+                book.author,
+                book.description,
+                book.item_type,
+                book.category,
+                ...normalizeKeywordTokens(book.keywords),
+            ];
+
+            return searchTerms
             .filter(Boolean)
-            .some((value) => String(value).toLowerCase().includes(query))
-        );
+            .some((value) => String(value).toLowerCase().includes(query));
+        });
     }, [books, searchQuery, selectedCategory]);
+
+    const regularBooks = useMemo(() => {
+        return filteredBooks.filter((book) => String(book.item_type || "").toLowerCase() !== "thesis");
+    }, [filteredBooks]);
+
+    const thesisBooks = useMemo(() => {
+        return filteredBooks.filter((book) => String(book.item_type || "").toLowerCase() === "thesis");
+    }, [filteredBooks]);
 
     const handleCategoryToggle = (category) => {
         setSelectedCategory((current) => (current === category ? null : category));
@@ -115,29 +174,38 @@ const BookManagement = () => {
                 </div>
 
                 <div className="book-category-filter" role="group" aria-label="Item type filter">
-                    <button
-                        type="button"
-                        aria-pressed={selectedCategory === "book"}
-                        className={`btn btn--ghost${
+                    <div className="book-category-filter__tabs">
+                        <button
+                            type="button"
+                            aria-pressed={selectedCategory === "book"}
+                            className={`btn btn--ghost${
 selectedCategory === "book" ? " book-category-filter__btn--active" : ""
 }`}
-                        onClick={() => handleCategoryToggle("book")}
-                    >
-                        {selectedCategory === "book" ? "✓ Books" : "Books"}
-                    </button>
+                            onClick={() => handleCategoryToggle("book")}
+                        >
+                            {selectedCategory === "book" ? "✓ Books" : "Books"}
+                        </button>
+
+                        <button
+                            type="button"
+                            aria-pressed={selectedCategory === "thesis"}
+                            className={`btn btn--ghost${
+selectedCategory === "thesis" ? " book-category-filter__btn--active" : ""
+}`}
+                            onClick={() => handleCategoryToggle("thesis")}
+                        >
+                            {selectedCategory === "thesis" ? "✓ Thesis" : "Thesis"}
+                        </button>
+                    </div>
 
                     <button
                         type="button"
-                        aria-pressed={selectedCategory === "thesis"}
-                        className={`btn btn--ghost${
-selectedCategory === "thesis" ? " book-category-filter__btn--active" : ""
-}`}
-                        onClick={() => handleCategoryToggle("thesis")}
+                        className="btn btn--primary"
+                        onClick={() => {
+                            setForm(INITIAL_FORM);
+                            setIsAddModalOpen(true);
+                        }}
                     >
-                        {selectedCategory === "thesis" ? "✓ Thesis" : "Thesis"}
-                    </button>
-
-                    <button type="button" className="btn btn--primary" onClick={() => setIsAddModalOpen(true)}>
                         Add
                     </button>
 
@@ -151,38 +219,138 @@ selectedCategory === "thesis" ? " book-category-filter__btn--active" : ""
             ) : filteredBooks.length === 0 ? (
                     <div className="empty-state">No items found.</div>
                 ) : (
-                        <div className="book-grid">
-                            {filteredBooks.map((book) => (
+                    <>
+                        {selectedCategory === null || selectedCategory === "book" ? (
+                            <div className="book-grid">
+                                {regularBooks.map((book) => {
+                                const keywordTokens = normalizeKeywordTokens(book.keywords);
+                                const { availableCopies } = resolveItemAvailability(book);
+                                const isAvailable = availableCopies > 0;
+                                const displayAvailability = getDisplayAvailability(book);
+                                const keywordsLine = keywordTokens.join(", ");
+                                const displayCategory = String(book.item_type || book.category || "").trim().toLowerCase() || "n/a";
+
+                                return (
                                 <article className="card book-card" key={book.id}>
-                                    <div className="book-card__header">
-                                        <h3 title={book.title}>{book.title}</h3>
-                                        <button
-                                            className="book-management-delete-btn"
-                                            onClick={() => handleDelete(book)}
-                                            aria-label={`Delete ${book.title}`}
-                                            disabled={isLoading}
-                                        >
-                                            <X size={14} strokeWidth={2.6} aria-hidden="true" />
-                                        </button>
+                                    <div className="book-card__content">
+                                        <div className="book-card__header">
+                                            <h3 title={book.title} className="book-card__title-row">
+                                                <strong className="book-card__label">Title:</strong> <span>{book.title}</span>
+                                            </h3>
+                                            <div className="book-card__header-actions">
+                                                <span
+                                                    className={`book-card__stock-badge ${isAvailable ? "book-card__stock-badge--ok" : "book-card__stock-badge--busy"}`}
+                                                >
+                                                    {displayAvailability}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <p className="book-card__field book-card__author">
+                                            <strong className="book-card__label">Author:</strong> <span>{book.author || "N/A"}</span>
+                                        </p>
+
+                                        <p className="book-card__field book-card__keywords-line" title={keywordsLine || "N/A"}>
+                                            <strong className="book-card__label">Keywords:</strong> <span>{keywordsLine || "N/A"}</span>
+                                        </p>
+
+                                        <p className="book-card__field book-card__category-line">{displayCategory}</p>
+
+                                        <p className="book-card__field book-card__desc">
+                                            <strong className="book-card__label">Description:</strong> <span>{book.description || "N/A"}</span>
+                                        </p>
                                     </div>
-
-                                    {book.item_type ? <p className="book-card__category">{book.item_type}</p> : null}
-                                    {book.author ? <p className="muted book-card__author">{book.author}</p> : null}
-
-                                    {Array.isArray(book.keywords) && book.keywords.length > 0 ? (
-                                        <p className="micro">Keywords: {book.keywords.join(", ")}</p>
-                                    ) : null}
-
-                                    <p className="book-card__desc">{book.description}</p>
 
                                     <div className="book-card__actions">
                                         <button className="btn btn--info" onClick={() => setSelectedBook(book)} disabled={isLoading}>
                                             Details
                                         </button>
+                                        <button
+                                            className="btn btn--danger"
+                                            onClick={() => handleDelete(book)}
+                                            aria-label={`Delete ${book.title}`}
+                                            disabled={isLoading}
+                                        >
+                                            Delete
+                                        </button>
                                     </div>
                                 </article>
-                            ))}
-                        </div>
+                            );
+                                })}
+                            </div>
+                        ) : null}
+
+                        {(selectedCategory === null || selectedCategory === "thesis") && thesisBooks.length > 0 ? (
+                            <>
+                                {selectedCategory === null && regularBooks.length > 0 ? (
+                                    <div className="book-section-separator" aria-hidden="true" />
+                                ) : null}
+                                <div className="page-header page-header--thesis-scroller">
+                                    <div>
+                                        <h2>Thesis Collection</h2>
+                                        <p className="muted">Swipe sideways to browse thesis titles.</p>
+                                    </div>
+                                </div>
+                                <div className="book-grid book-grid--thesis-scroller">
+                                    {thesisBooks.map((book) => {
+                                        const keywordTokens = normalizeKeywordTokens(book.keywords);
+                                        const { availableCopies } = resolveItemAvailability(book);
+                                        const isAvailable = availableCopies > 0;
+                                        const displayAvailability = getDisplayAvailability(book);
+                                        const keywordsLine = keywordTokens.join(", ");
+                                        const displayCategory = String(book.item_type || book.category || "").trim().toLowerCase() || "n/a";
+
+                                        return (
+                                            <article className="card book-card" key={book.id}>
+                                                <div className="book-card__content">
+                                                    <div className="book-card__header">
+                                                        <h3 title={book.title} className="book-card__title-row">
+                                                            <strong className="book-card__label">Title:</strong> <span>{book.title}</span>
+                                                        </h3>
+                                                        <div className="book-card__header-actions">
+                                                            <span
+                                                                className={`book-card__stock-badge ${isAvailable ? "book-card__stock-badge--ok" : "book-card__stock-badge--busy"}`}
+                                                            >
+                                                                {displayAvailability}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    <p className="book-card__field book-card__author">
+                                                        <strong className="book-card__label">Author:</strong> <span>{book.author || "N/A"}</span>
+                                                    </p>
+
+                                                    <p className="book-card__field book-card__keywords-line" title={keywordsLine || "N/A"}>
+                                                        <strong className="book-card__label">Keywords:</strong> <span>{keywordsLine || "N/A"}</span>
+                                                    </p>
+
+                                                    <p className="book-card__field book-card__category-line">{displayCategory}</p>
+
+                                                    <p className="book-card__field book-card__desc">
+                                                        <strong className="book-card__label">Description:</strong> <span>{book.description || "N/A"}</span>
+                                                    </p>
+                                                </div>
+
+                                                <div className="book-card__actions">
+                                                    <button className="btn btn--info" onClick={() => setSelectedBook(book)} disabled={isLoading}>
+                                                        Details
+                                                    </button>
+                                                    <button
+                                                        className="btn btn--danger"
+                                                        onClick={() => handleDelete(book)}
+                                                        aria-label={`Delete ${book.title}`}
+                                                        disabled={isLoading}
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            </article>
+                                        );
+                                    })}
+                                </div>
+                            </>
+                        ) : null}
+                    </>
                     )}
 
             <BookDetailsModal isOpen={Boolean(selectedBook)} book={selectedBook} onClose={() => setSelectedBook(null)} />
@@ -219,7 +387,13 @@ selectedCategory === "thesis" ? " book-category-filter__btn--active" : ""
                         <select
                             className="select"
                             value={form.itemType}
-                            onChange={(event) => setForm((c) => ({ ...c, itemType: event.target.value }))}
+                            onChange={(event) => {
+                                const nextType = event.target.value;
+                                setForm((current) => ({
+                                    ...current,
+                                    itemType: nextType,
+                                }));
+                            }}
                             disabled={isLoading}
                         >
                             <option value="book">Book</option>

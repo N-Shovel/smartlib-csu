@@ -9,7 +9,6 @@ import {
   cancelBorrowRequest,
   getBookById,
   getBorrowRequestsByBorrower,
-  requestBookReturn,
 } from "../../services/bookService";
 import { showError, showInfo, showSuccess } from "../../utils/notification";
 import { useStore } from "../../store/useAuthStore";
@@ -76,11 +75,6 @@ const BookDetails = () => {
   const pendingRequest = borrowRequests.find(
     (request) => request.bookId === book.id && request.status === "pending"
   );
-  const pendingReturnRequest = borrowRequests.find(
-    (request) => request.bookId === book.id && request.status === "pending_return"
-  );
-  const normalizedBorrowedBy = String(book.borrowedBy || "").trim().toLowerCase();
-  const normalizedUserEmail = String(userEmail || "").trim().toLowerCase();
 
   const submitBorrow = (code = "", handlers = {}) => {
     const { onError, onSuccess } = handlers;
@@ -131,22 +125,6 @@ const BookDetails = () => {
     });
   };
 
-  const handleReturn = () => {
-    if (!user) return;
-    // Return operation now creates a staff-confirmed pending request.
-    showInfo("Submitting return request, please wait...");
-    queueAction(() => {
-      const result = requestBookReturn(book.id, userEmail);
-      if (!result.ok) {
-        showError(result.error);
-        return;
-      }
-
-      showSuccess("Return request submitted. Please wait for staff confirmation.");
-      refresh();
-    }, 500);
-  };
-
   const handleCancelPendingRequest = () => {
     if (!user || !pendingRequest) return;
     showInfo("Cancelling borrow request, please wait...");
@@ -189,12 +167,8 @@ const BookDetails = () => {
               {pendingRequest ? "Pending" : isThesis ? "Apply" : "Borrow"}
             </button>
           ) : (
-            <button
-              className="btn btn--return"
-              onClick={handleReturn}
-              disabled={normalizedBorrowedBy !== normalizedUserEmail || Boolean(pendingReturnRequest)}
-            >
-              {pendingReturnRequest ? "Pending Return" : "Return"}
+            <button className="btn btn--return" disabled>
+              Borrowed
             </button>
           )}
           <Link className="btn btn--ghost" to="/borrower/browse">
@@ -202,9 +176,6 @@ const BookDetails = () => {
           </Link>
         </div>
         {pendingRequest ? <p className="micro">Please pick it up at the library.</p> : null}
-        {pendingReturnRequest ? (
-          <p className="micro">Waiting for staff confirmation of your return request.</p>
-        ) : null}
       </div>
 
       <ThesisPermissionModal

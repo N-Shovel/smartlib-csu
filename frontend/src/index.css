@@ -1,7 +1,6 @@
 /* Purpose: Global design system and shared UI styles for the whole app.
   Parts: theme/base rules, layout containers, component states, responsive rules. */
 @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap");
-@import "tailwindcss";
 
 :root {
   --bg: #edf5f0;
@@ -55,6 +54,7 @@ body {
   color: var(--ink);
   background: radial-gradient(circle at top, #f8fff9 0%, var(--bg) 55%, #e2efe7 100%);
   min-height: 100vh;
+  padding-bottom: 2.2rem;
 }
 
 a {
@@ -79,6 +79,8 @@ textarea {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-width: 0;
+  overflow-x: auto;
 }
 
 .header {
@@ -163,6 +165,8 @@ textarea {
 .sidebar {
   display: flex;
   flex-direction: column;
+  flex: 0 0 240px;
+  flex-shrink: 0;
   position: sticky;
   top: 0;
   align-self: flex-start;
@@ -266,6 +270,7 @@ textarea {
 
 .sidebar--collapsed {
   width: 84px;
+  flex-basis: 84px;
   padding: 2rem 0.75rem;
 }
 
@@ -319,18 +324,29 @@ textarea {
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
-  background: rgba(237, 245, 240, 0.86);
+  min-height: 100vh;
+  padding: 1rem;
+  background: rgba(237, 245, 240, 0.9);
+  backdrop-filter: blur(2px);
   color: var(--accent);
   font-weight: 600;
+  text-align: center;
 }
 
 .route-loader__spinner {
-  width: 2rem;
-  height: 2rem;
+  width: 2.4rem;
+  height: 2.4rem;
   border-radius: 999px;
-  border: 3px solid var(--line);
+  border: 3px solid rgba(46, 125, 50, 0.2);
   border-top-color: var(--accent);
   animation: spin 0.75s linear infinite;
+}
+
+.route-loader__label {
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  animation: loaderPulse 1.4s ease-in-out infinite;
 }
 
 .app-copyright {
@@ -550,15 +566,47 @@ h2 {
   grid-auto-rows: 1fr;
 }
 
+.staff-book-management-page .book-grid,
+.browse-books-page .book-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .book-section-separator {
   border-top: 2px solid var(--line);
   margin: 1.45rem 0 1.25rem;
+}
+
+.page-header--thesis-scroller {
+  margin-top: 0.25rem;
+}
+
+.book-grid--thesis-scroller {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.4rem;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.book-grid--thesis-scroller .book-card {
+  flex: 0 0 min(84vw, 360px);
+  min-width: min(84vw, 360px);
+  max-width: min(84vw, 360px);
+  scroll-snap-align: start;
 }
 
 .book-card {
   display: flex;
   flex-direction: column;
   min-height: 350px;
+}
+
+.book-card__content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 .book-card__header {
@@ -568,7 +616,104 @@ h2 {
   gap: 1rem;
 }
 
-.book-card__category,
+.book-card__header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.book-card__stock-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3rem;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+}
+
+.book-card__stock-badge--ok {
+  background: #e7f8ee;
+  color: #166534;
+  border-color: #b7ebcb;
+}
+
+.book-card__stock-badge--busy {
+  background: #fdeaea;
+  color: #991b1b;
+  border-color: #f6b7b7;
+}
+
+.book-card__title-row {
+  color: var(--ink);
+  font-size: 1.24rem;
+  font-weight: 800;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.book-card__field {
+  margin-top: 0.45rem;
+  color: var(--ink);
+  line-height: 1.45;
+  font-size: 0.88rem;
+}
+
+.book-card__label {
+  font-weight: 800;
+  color: #15345b;
+}
+
+.book-card__keywords-line,
+.book-card__category-line {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.book-card__keywords-line {
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  font-size: 0.86rem;
+}
+
+.book-card__category-line {
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  text-transform: lowercase;
+  color: #0f5b8e;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.book-card__keyword-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.35rem;
+}
+
+.book-card__keyword-chip {
+  display: inline-block;
+  background: #eaf4ff;
+  color: #14416b;
+  border: 1px solid #c6dff8;
+  border-radius: 999px;
+  padding: 0.2rem 0.62rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
 .detail-card__category {
   margin-top: 0.35rem;
   color: var(--accent);
@@ -580,19 +725,32 @@ h2 {
 
 .book-card__author {
   color: var(--ink);
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 0.95rem;
   line-height: 1.35;
   margin-top: 0.2rem;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  overflow: hidden;
+}
+
+.book-card__author span,
+.book-details__author span {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .book-card__desc {
-  margin: 0.8rem 0 1.2rem;
-  color: var(--muted);
+  margin: 0.7rem 0 1.2rem;
+  color: var(--ink);
   line-height: 1.45;
-  min-height: 4.35em;
+  font-size: 0.8rem;
+  min-height: 5.8em;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -609,11 +767,62 @@ h2 {
 }
 
 .browse-books-page .book-card h3 {
-  display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .book-card__title-row {
+    font-size: 1.12rem;
+  }
+
+  .book-card__author {
+    font-size: 0.9rem;
+  }
+
+  .book-card__keywords-line {
+    font-size: 0.83rem;
+  }
+
+  .book-card__category-line {
+    font-size: 0.8rem;
+  }
+
+  .book-card__desc {
+    font-size: 0.78rem;
+  }
+
+  .book-card__stock-badge {
+    font-size: 0.74rem;
+    min-width: 2.8rem;
+  }
+
+  .browse-books-page .book-grid,
+  .staff-book-management-page .book-grid {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 0.35rem;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .browse-books-page .book-grid .book-card,
+  .staff-book-management-page .book-grid .book-card {
+    width: min(86vw, 360px);
+    min-width: min(86vw, 360px);
+    max-width: min(86vw, 360px);
+    flex: 0 0 min(86vw, 360px);
+    scroll-snap-align: start;
+  }
+
+  .book-grid--thesis-scroller .book-card {
+    width: min(86vw, 360px);
+    min-width: min(86vw, 360px);
+    max-width: min(86vw, 360px);
+    flex: 0 0 min(86vw, 360px);
+  }
 }
 
 .browse-books-page .book-card .micro {
@@ -858,9 +1067,19 @@ textarea.input.input--warning {
 
 .book-category-filter {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.6rem;
   margin-top: 0.9rem;
+}
+
+.book-category-filter__tabs {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.6rem;
 }
 
 .book-category-filter .btn--ghost {
@@ -911,6 +1130,12 @@ textarea.input.input--warning {
   border-radius: 12px;
 }
 
+.alert--warning {
+  background: rgba(180, 83, 9, 0.12);
+  border: 1px solid rgba(180, 83, 9, 0.25);
+  color: #92400e;
+}
+
 .empty-state {
   padding: 2rem;
   border-radius: 18px;
@@ -951,6 +1176,50 @@ textarea.input.input--warning {
   gap: 0.25rem;
 }
 
+.borrower-scoreboard {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.45rem;
+}
+
+.scoreboard-rank {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.65rem 0.75rem;
+  background: linear-gradient(135deg, rgba(25, 118, 210, 0.08) 0%, rgba(25, 118, 210, 0.04) 100%);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+}
+
+.rank-number {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--accent);
+  min-width: 2.2rem;
+  text-align: center;
+}
+
+.rank-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.rank-email {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.rank-count {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
 .dashboard-summary-sublist {
   margin-top: 0.3rem;
   padding-left: 1rem;
@@ -982,11 +1251,109 @@ textarea.input.input--warning {
 
 .table-scroll {
   max-height: 330px;
+  width: 100%;
+  overflow-x: auto;
   overflow-y: auto;
 }
 
 .table-scroll--five {
   max-height: 285px;
+}
+
+/* Keep all target staff tables horizontally scrollable with stable column widths. */
+.staff-dashboard-page .table-scroll,
+.staff-tracking-page .table-scroll,
+.staff-approvals-page .table-scroll,
+.staff-signups-page .table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.staff-dashboard-page .table--staff-dashboard-activity {
+  min-width: 760px;
+}
+
+.staff-tracking-page .table--staff-borrow-requests {
+  min-width: 1040px;
+}
+
+.staff-tracking-page .table--staff-current-borrowers {
+  min-width: 980px;
+}
+
+.staff-tracking-page .table--staff-borrow-history {
+  min-width: 900px;
+}
+
+.staff-approvals-page .staff-data-table {
+  min-width: 980px;
+}
+
+.staff-signups-page .staff-signups-data-table {
+  min-width: 820px;
+}
+
+/* Tablet keeps sidebar and content side-by-side; drawer mode starts on smaller screens. */
+@media (min-width: 769px) and (max-width: 900px) {
+  .app-shell {
+    flex-direction: row;
+  }
+
+  .mobile-menu-fab,
+  .sidebar-backdrop {
+    display: none;
+  }
+
+  .sidebar {
+    position: sticky;
+    left: auto;
+    top: 0;
+    bottom: auto;
+    width: 240px;
+    min-width: 240px;
+    max-height: none;
+    height: 100vh;
+    border: 1px solid transparent;
+    border-right-color: var(--line);
+    border-radius: 0;
+    box-shadow: none;
+    transform: none;
+    opacity: 1;
+    pointer-events: auto;
+    padding: 2rem 1.5rem;
+  }
+
+  .sidebar--collapsed {
+    width: 84px;
+    min-width: 84px;
+    padding: 2rem 0.75rem;
+  }
+
+  .sidebar__head,
+  .sidebar__toggle {
+    display: flex;
+  }
+
+  .page {
+    margin-left: 0;
+    padding: 1.25rem 0.9rem 1.7rem;
+  }
+
+  .table__row {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+  }
+
+  .staff-page .table__row.table__head {
+    display: grid;
+  }
+
+  .staff-page .table__row,
+  .activity-log-page .table__row {
+    grid-template-columns: inherit;
+  }
 }
 
 .table--reservation-updates .table__row {
@@ -1067,11 +1434,14 @@ textarea.input.input--warning {
 .activity-log-page .activity-log-table-card {
   padding: 1rem;
   overflow-x: auto;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .activity-log-page .table {
   gap: 0.55rem;
-  min-width: 780px;
+  min-width: auto;
+  width: 100%;
 }
 
 .activity-log-page .table__row {
@@ -1112,13 +1482,27 @@ textarea.input.input--warning {
 }
 
 .staff-tracking-page .table--staff-borrow-requests .table__row {
-  grid-template-columns: minmax(170px, 1.2fr) minmax(110px, 0.75fr) minmax(170px, 1.2fr) minmax(150px, 1fr) minmax(110px, 0.8fr);
+  grid-template-columns: minmax(170px, 1.2fr) minmax(110px, 0.75fr) minmax(160px, 1fr) minmax(180px, 1.25fr) minmax(100px, 0.72fr) minmax(165px, 1.05fr) minmax(110px, 0.75fr);
   gap: 0.75rem;
+}
+
+.staff-tracking-page .table--staff-borrow-requests {
+  min-width: 1040px;
+}
+
+.staff-tracking-page .table--staff-borrow-requests .table__row:not(.table__head) > span:nth-child(6) {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .staff-tracking-page .table--staff-borrow-history .table__row {
   grid-template-columns: minmax(170px, 1.2fr) minmax(110px, 0.75fr) minmax(170px, 1.2fr) minmax(120px, 0.9fr) minmax(150px, 1fr);
   gap: 0.75rem;
+}
+
+.staff-tracking-page .table--staff-current-borrowers {
+  min-width: 980px;
 }
 
 .staff-approvals-page .table--staff-pending .table__row {
@@ -1336,6 +1720,12 @@ textarea.input.input--warning {
   place-items: center;
   padding: 1rem;
   z-index: 1200;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+body:has(.modal-overlay) {
+  overflow: hidden;
 }
 
 .modal-card {
@@ -1346,6 +1736,28 @@ textarea.input.input--warning {
 
 .modal-card--book-details {
   width: min(620px, 100%);
+  max-height: min(88vh, 760px);
+  overflow-y: auto;
+}
+
+.book-details__title {
+  font-size: 1.35rem !important;
+  font-weight: 900 !important;
+  color: #0d2438 !important;
+  margin-bottom: 0.75rem;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+}
+
+.book-details__author {
+  font-weight: 700;
+  color: #1a3a52;
+  font-size: 1rem;
+  margin-bottom: 1rem;
 }
 
 .modal-card--signup-details {
@@ -1381,12 +1793,15 @@ textarea.input.input--warning {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 2rem;
-  width: 2rem;
-  height: 2rem;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   padding: 0;
   font-weight: 700;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 @media (max-width: 1200px) {
@@ -1409,6 +1824,18 @@ textarea.input.input--warning {
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes loaderPulse {
+  0%,
+  100% {
+    opacity: 0.62;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-1px);
   }
 }
 
@@ -1515,6 +1942,38 @@ textarea.input.input--warning {
     pointer-events: auto;
   }
 
+  .sidebar-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 34;
+    animation: fadeIn 0.2s ease;
+  }
+
+  /* Prevent scrollable content from appearing above fixed sidebar at tablet sizes */
+  .table-scroll,
+  .table-scroll--five {
+    z-index: 0;
+    position: relative;
+  }
+
+  .page {
+    z-index: 0;
+  }
+
+  .card {
+    z-index: 0;
+    position: relative;
+  }
+
+  .staff-page,
+  .activity-log-page {
+    z-index: 0;
+  }
+
   .sidebar,
   .sidebar--collapsed {
     width: min(260px, calc(100vw - 1.9rem));
@@ -1556,6 +2015,40 @@ textarea.input.input--warning {
 
   .page {
     padding: 1.25rem 0.9rem 1.7rem;
+    margin-left: 280px;
+    width: auto;
+    box-sizing: border-box;
+  }
+
+  main.page {
+    width: 100%;
+  }
+
+  .table {
+    font-size: 0.87rem;
+  }
+
+  .table__row:not(.table__head) > span {
+    font-size: 0.87rem;
+    line-height: 1.32;
+  }
+
+  .table__row.table__head > span {
+    font-size: 0.85rem;
+  }
+
+  .staff-page .table,
+  .activity-log-page .table {
+    font-size: 0.87rem;
+  }
+
+  .staff-page .table__row:not(.table__head) > span,
+  .activity-log-page .table__row:not(.table__head) > span {
+    font-size: 0.87rem;
+  }
+
+  .page section {
+    width: 100%;
   }
 
   .book-grid {
@@ -1595,12 +2088,9 @@ textarea.input.input--warning {
   }
 
   .book-card__desc {
-    min-height: 3em;
     margin: 0.6rem 0 0.9rem;
     font-size: 0.82rem;
     line-height: 1.3;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
   }
 
   .book-card .btn {
@@ -1673,6 +2163,27 @@ textarea.input.input--warning {
     grid-template-columns: 1fr;
     gap: 0.45rem;
     padding: 0.72rem;
+  }
+
+  .staff-tracking-page .table--staff-borrow-requests {
+    min-width: 1040px;
+  }
+
+  .staff-tracking-page .table--staff-borrow-requests .table__row {
+    grid-template-columns: minmax(170px, 1.2fr) minmax(110px, 0.75fr) minmax(160px, 1fr) minmax(180px, 1.25fr) minmax(100px, 0.72fr) minmax(165px, 1.05fr) minmax(110px, 0.75fr);
+    gap: 0.65rem;
+  }
+
+  .staff-tracking-page .table--staff-current-borrowers {
+    min-width: 980px;
+  }
+
+  .staff-tracking-page .table--staff-current-borrowers .table__row {
+    grid-template-columns: minmax(145px, 0.95fr) minmax(80px, 0.5fr) minmax(170px, 1.1fr) minmax(175px, 1.15fr) minmax(115px, 0.8fr) minmax(90px, 0.6fr);
+  }
+
+  .staff-tracking-page .table--staff-borrow-history {
+    min-width: 860px;
   }
 
   .staff-tracking-page .table--staff-borrow-requests .table__row.table__head,
@@ -2174,9 +2685,134 @@ textarea.input.input--warning {
   .modal-actions .btn {
     width: 100%;
   }
+
+  /* Enhanced staff page tablet/mobile responsiveness */
+  .staff-page .staff-table-card {
+    padding: 0.75rem;
+    overflow-x: auto;
+  }
+
+  .staff-tracking-page .table--staff-borrow-requests,
+  .staff-tracking-page .table--staff-current-borrowers,
+  .staff-tracking-page .table--staff-borrow-history {
+    min-width: auto;
+    overflow-x: visible;
+  }
+
+  .staff-dashboard-page .dashboard-activity-table-card {
+    padding: 0.75rem;
+  }
+
+  .staff-dashboard-page .table {
+    min-width: auto;
+  }
+}
+
+@media (min-width: 561px) and (max-width: 900px) {
+  .mobile-menu-fab {
+    display: none;
+  }
+
+  .sidebar-backdrop {
+    display: none;
+  }
+
+  .sidebar,
+  .sidebar--collapsed {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 260px;
+    min-width: 260px;
+    max-width: 260px;
+    height: 100vh;
+    max-height: 100vh;
+    border-right: 1px solid var(--line);
+    border-radius: 0;
+    padding: 0.95rem 0.75rem;
+    transform: none;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .app-shell__main {
+    margin-left: 260px;
+    width: calc(100% - 260px);
+  }
+
+  .page {
+    margin-left: 0;
+    width: 100%;
+    padding: 1.2rem 0.95rem 1.7rem;
+  }
 }
 
 @media (max-width: 560px) {
+  .search-input-icon {
+    display: none;
+  }
+
+  .search-input {
+    padding-left: 0.75rem;
+    font-size: 0.84rem;
+    line-height: 1.25;
+  }
+
+  .search-input::placeholder {
+    font-size: 0.78rem;
+  }
+
+  .table-scroll,
+  .table-scroll--five,
+  .staff-page .staff-table-card,
+  .activity-log-page .activity-log-table-card,
+  .staff-approvals-page .staff-table-card,
+  .staff-signups-page .staff-table-card {
+    overflow-x: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table {
+    min-width: 760px;
+    width: max-content;
+  }
+
+  .staff-page .table,
+  .activity-log-page .table {
+    min-width: 900px;
+  }
+
+  .table__row {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .table--reservation-updates .table__row {
+    grid-template-columns: minmax(120px, 1fr) minmax(160px, 1.1fr) minmax(120px, 0.95fr) minmax(110px, 0.9fr) minmax(150px, 1.1fr);
+  }
+
+  .table--reservation-actions .table__row {
+    grid-template-columns: minmax(120px, 1fr) minmax(160px, 1.1fr) minmax(120px, 0.95fr) minmax(150px, 1fr);
+  }
+
+  .staff-page .table__row.table__head,
+  .activity-log-page .table__row.table__head {
+    display: grid;
+  }
+
+  .table__row > span::before,
+  .table__row > button::before {
+    content: none !important;
+  }
+
+  .table__row:not(.table__head) > span {
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
   .book-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.7rem;
@@ -2192,10 +2828,7 @@ textarea.input.input--warning {
   }
 
   .browse-books-page .book-card__desc {
-    min-height: 2.9em;
     margin: 0.55rem 0 0.75rem;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
   }
 
   .browse-books-page .book-card .btn {
@@ -2234,6 +2867,29 @@ textarea.input.input--warning {
   .page h2,
   .auth-card h2 {
     font-size: 1.2rem;
+  }
+
+  .table {
+    font-size: 0.78rem;
+  }
+
+  .table__row:not(.table__head) > span {
+    font-size: 0.78rem;
+    line-height: 1.28;
+  }
+
+  .table__row.table__head > span {
+    font-size: 0.76rem;
+  }
+
+  .staff-page .table,
+  .activity-log-page .table {
+    font-size: 0.78rem;
+  }
+
+  .staff-page .table__row:not(.table__head) > span,
+  .activity-log-page .table__row:not(.table__head) > span {
+    font-size: 0.78rem;
   }
 
   .page .page-header .muted,
@@ -2295,9 +2951,81 @@ textarea.input.input--warning {
     font-size: 0.68rem;
     padding: 0.34rem 0.52rem;
   }
+
+  /* Staff pages further tablet/mobile responsiveness at 560px */
+  .staff-page .table__row {
+    padding: 0.55rem;
+    gap: 0.35rem;
+    font-size: 0.76rem;
+  }
+
+  .staff-page .table__row > span::before {
+    font-size: 0.68rem;
+    margin-bottom: 0.15rem;
+  }
+
+  .staff-tracking-page .table--staff-borrow-requests .table__row > span,
+  .staff-tracking-page .table--staff-current-borrowers .table__row > span,
+  .staff-tracking-page .table--staff-borrow-history .table__row > span {
+    font-size: 0.76rem;
+  }
+
+  .staff-dashboard-page .table__row {
+    padding: 0.55rem;
+    gap: 0.35rem;
+    font-size: 0.76rem;
+  }
+
+  .staff-dashboard-page .table__row > span {
+    font-size: 0.76rem;
+  }
+
+  .staff-dashboard-page .table__row > span::before {
+    font-size: 0.68rem;
+    margin-bottom: 0.15rem;
+  }
+
+  .staff-page .table__row .btn {
+    padding: 0.32rem 0.56rem;
+    font-size: 0.68rem;
+  }
+
+  .card {
+    padding: 0.85rem;
+  }
+
+  .page h2 {
+    font-size: 1.15rem;
+  }
 }
 
 @media (max-width: 430px) {
+  .search-input-icon {
+    display: none;
+  }
+
+  .search-input {
+    padding-left: 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .search-input::placeholder {
+    font-size: 0.72rem;
+  }
+
+  .table {
+    min-width: 720px;
+  }
+
+  .staff-page .table,
+  .activity-log-page .table {
+    min-width: 860px;
+  }
+
+  .page {
+    margin-left: 0;
+  }
+
   .book-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.6rem;
@@ -2319,8 +3047,8 @@ textarea.input.input--warning {
   .browse-books-page .book-card__desc {
     min-height: 2.6em;
     margin: 0.5rem 0 0.65rem;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
   }
 
   .browse-books-page .book-card .micro {
@@ -2399,8 +3127,9 @@ textarea.input.input--warning {
   }
 
   .activity-log-page .table__row {
-    padding: 0.58rem;
-    gap: 0.34rem;
+    padding: 0.48rem;
+    gap: 0.3rem;
+    font-size: 0.72rem;
   }
 
   .activity-log-page .table__row > span {
@@ -2409,11 +3138,197 @@ textarea.input.input--warning {
   }
 
   .activity-log-page .table__row > span::before {
-    font-size: 0.64rem;
+    font-size: 0.62rem;
+    margin-bottom: 0.08rem;
   }
 
   .activity-log-page .table--reservation-actions .table__row .btn {
     font-size: 0.64rem;
     padding: 0.32rem 0.48rem;
+    width: 100%;
+  }
+
+  /* Staff pages maximum responsiveness at 430px mobile */
+  .staff-page .table__row {
+    padding: 0.48rem;
+    gap: 0.3rem;
+    font-size: 0.72rem;
+  }
+
+  .staff-page .table__row > span {
+    font-size: 0.72rem;
+    line-height: 1.3;
+  }
+
+  .staff-page .table__row > span::before {
+    font-size: 0.64rem;
+    margin-bottom: 0.1rem;
+  }
+
+  .staff-page .table__row .btn {
+    padding: 0.28rem 0.48rem;
+    font-size: 0.64rem;
+    width: 100%;
+  }
+
+  .staff-tracking-page .table--staff-borrow-requests .table__row > span,
+  .staff-tracking-page .table--staff-current-borrowers .table__row > span,
+  .staff-tracking-page .table--staff-borrow-history .table__row > span {
+    font-size: 0.72rem;
+  }
+
+  .staff-dashboard-page .table__row {
+    padding: 0.48rem;
+    gap: 0.3rem;
+    font-size: 0.72rem;
+  }
+
+  .staff-dashboard-page .table__row > span {
+    font-size: 0.72rem;
+    line-height: 1.3;
+  }
+
+  .staff-dashboard-page .table__row > span::before {
+    font-size: 0.64rem;
+    margin-bottom: 0.1rem;
+  }
+
+  .staff-page .staff-table-card {
+    padding: 0.6rem;
+  }
+
+  .page {
+    padding: 1rem 0.75rem 1.5rem;
+  }
+
+  .card {
+    padding: 0.75rem;
+  }
+
+
+/* Final responsive guardrails for SmartLib staff pages */
+@media (min-width: 769px) and (max-width: 900px) {
+  .app-shell {
+    flex-direction: row;
+  }
+
+  .mobile-menu-fab,
+  .sidebar-backdrop {
+    display: none;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 0;
+    left: auto;
+    width: 240px;
+    min-width: 240px;
+    max-height: none;
+    height: 100vh;
+    transform: none;
+    opacity: 1;
+    pointer-events: auto;
+    border-radius: 0;
+    box-shadow: none;
+    border: 0;
+    border-right: 1px solid var(--line);
+    padding: 2rem 1.5rem;
+  }
+
+  .sidebar--collapsed {
+    width: 84px;
+    min-width: 84px;
+    padding: 2rem 0.75rem;
+  }
+
+  .sidebar__head,
+  .sidebar__toggle {
+    display: flex;
+  }
+
+  .page {
+    margin-left: 0;
   }
 }
+
+@media (max-width: 900px) {
+  .staff-dashboard-page .table__row.table__head,
+  .staff-tracking-page .table__row.table__head {
+    display: grid;
+  }
+
+  .staff-dashboard-page .table--staff-dashboard-activity .table__row {
+    grid-template-columns: minmax(150px, 1fr) minmax(170px, 1.2fr) minmax(90px, 0.7fr) minmax(140px, 1fr);
+    gap: 0.75rem;
+  }
+
+  .staff-tracking-page .table--staff-borrow-requests .table__row {
+    grid-template-columns: minmax(170px, 1.2fr) minmax(110px, 0.75fr) minmax(170px, 1.2fr) minmax(150px, 1fr) minmax(110px, 0.8fr) minmax(150px, 1fr) minmax(110px, 0.8fr);
+    gap: 0.75rem;
+  }
+
+  .staff-tracking-page .table--staff-current-borrowers .table__row {
+    grid-template-columns: minmax(145px, 0.95fr) minmax(80px, 0.5fr) minmax(170px, 1.1fr) minmax(175px, 1.15fr) minmax(115px, 0.8fr) minmax(90px, 0.6fr);
+    gap: 0.42rem;
+  }
+
+  .staff-tracking-page .table--staff-borrow-history .table__row {
+    grid-template-columns: minmax(170px, 1.2fr) minmax(110px, 0.75fr) minmax(170px, 1.2fr) minmax(120px, 0.9fr) minmax(150px, 1fr);
+    gap: 0.75rem;
+  }
+
+  .staff-dashboard-page .table--staff-dashboard-activity .table__row > span::before,
+  .staff-tracking-page .table--staff-borrow-requests .table__row > span::before,
+  .staff-tracking-page .table--staff-current-borrowers .table__row > span::before,
+  .staff-tracking-page .table--staff-borrow-history .table__row > span::before,
+  .staff-tracking-page .table--staff-borrow-requests .table__row .btn::before,
+  .staff-tracking-page .table--staff-current-borrowers .table__row .btn::before,
+  .staff-tracking-page .table--staff-borrow-history .table__row .btn::before {
+    content: none;
+  }
+
+  .staff-dashboard-page .table-scroll,
+  .staff-tracking-page .table-scroll,
+  .staff-approvals-page .table-scroll,
+  .staff-signups-page .table-scroll {
+    overflow-x: auto;
+    overflow-y: auto;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+  .page h2 {
+    font-size: 1.02rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .page-header {
+    margin-bottom: 1rem;
+  }
+
+  .form-row {
+    gap: 0.6rem;
+  }
+
+  .form-field,
+  .form-field label {
+    gap: 0.3rem;
+  }
+
+  .label {
+    font-size: 0.82rem;
+  }
+
+  .input,
+  .select,
+  .input--area {
+    padding: 0.5rem 0.55rem;
+    font-size: 0.82rem;
+  }
+
+  .btn {
+    padding: 0.42rem 0.68rem;
+    font-size: 0.74rem;
+  }
+}
+

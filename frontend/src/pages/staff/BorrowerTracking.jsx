@@ -1,120 +1,112 @@
 // Purpose: Staff borrower monitoring with active records and history export.
 // Parts: pending borrow requests, current borrower table, history export table.
 import { useEffect, useMemo, useState } from "react";
-import {
-  getBorrowHistory,
-  getBorrowRequests,
-  receiveBorrowRequest,
-  receiveReturnRequest
-} from "../../services/bookService";
 import { exportToCSV } from "../../services/exportService";
 import { formatDateTime, formatDateTimeFull } from "../../utils/dateUtils";
-import { showError, showSuccess } from "../../utils/notification";
-import { getUserProfileByEmail } from "../../services/authService";
+import { showError } from "../../utils/notification";
 import useItems from "../../store/useItemsStore";
+import { formatActivityAction } from "../../utils/activityUtils";
 import { useRequest } from "../../store/useRequestsStore";
 
 const BorrowerTracking = () => {
   const storeBooks = useItems((state) => state.books);
   const fetchBooks = useItems((state) => state.fetchBooks);
-  const { fetchHistory, itemRequests } = useRequest();
-  const [history, setHistory] = useState(() => getBorrowHistory());
-  const [borrowRequests, setBorrowRequests] = useState(() => getBorrowRequests());
+  const { fetchHistory, itemRequests, approveBorrowRequest, confirmReturnRequest } = useRequest();
+  const [receivingRequestId, setReceivingRequestId] = useState(null);
+  const [returningRequestId, setReturningRequestId] = useState(null);
 
   useEffect(() => {
     fetchBooks();
     fetchHistory();
   }, [fetchBooks, fetchHistory]);
 
-  const books = useMemo(
-    () =>
-      (storeBooks || [])
-        .filter((item) => !item?.is_deleted)
-        .map((item) => ({
-          ...item,
-          available: item?.is_available ?? item?.available ?? true,
-          borrowedBy: item?.borrowedBy ?? null,
-        })),
-    [storeBooks]
-  );
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      fetchHistory();
+    }, 3000);
 
-  const getStudentIdByEmail = (email) =>
-    getUserProfileByEmail(email)?.id || "-";
+    return () => clearInterval(intervalId);
+  }, [fetchHistory]);
+
+  const booksById = useMemo(() => {
+    const map = new Map();
+    (storeBooks || []).forEach((item) => {
+      if (item?.id) map.set(item.id, item);
+    });
+    return map;
+  }, [storeBooks]);
+
   const formatHistoryAction = (action) => String(action || "-").replace(/_/g, " ");
 
-  const pendingRequests = borrowRequests.filter((entry) => entry.status === "pending");
-  const pendingReturnRequestByBookAndUser = borrowRequests
-    .filter((entry) => entry.status === "pending_return")
-    .reduce((summary, entry) => {
-      const key = `${entry.bookId}-${String(entry.borrowerEmail || "").toLowerCase()}`;
-      summary[key] = entry;
-      return summary;
-    }, {});
+  const pendingRequests = (itemRequests || []).filter((entry) => entry.status === "pending");
 
-  const currentBorrowers = books
-    .filter((book) => !book.available && book.borrowedBy)
-    .map((book) => {
-      const borrowEvent = history.find(
-        (entry) =>
-          entry.bookId === book.id &&
-          String(entry.borrowerEmail || "").toLowerCase().trim() ===
-            String(book.borrowedBy || "").toLowerCase().trim() &&
-          entry.action === "BORROW_BOOK"
-      );
+  const currentBorrowers = (itemRequests || [])
+    .filter((entry) => String(entry.status || "").toLowerCase() === "approved")
+    .sort((a, b) => new Date(b.approved_at || b.decision_at || 0) - new Date(a.approved_at || a.decision_at || 0))
+    .map((entry) => {
+      const fullName = `${entry.student_profiles?.first_name || ""} ${entry.student_profiles?.last_name || ""}`.trim();
+      const itemId = entry.library_item_id;
+      const book = itemId ? booksById.get(itemId) : null;
 
       return {
-        user: book.borrowedBy,
-        studentId: getStudentIdByEmail(book.borrowedBy),
-        book: book.title,
-        bookId: book.id,
-        time: borrowEvent?.timestamp || null,
-        pendingReturnRequest:
-          pendingReturnRequestByBookAndUser[
-            `${book.id}-${String(book.borrowedBy || "").toLowerCase()}`
-          ] || null
+        requestId: entry.id,
+        user: fullName || entry.student_profiles?.last_name || "-",
+        studentId: entry.student_profiles?.id_number || "-",
+        book: entry.item_title || book?.title || "-",
+        bookId: itemId || entry.id,
+        time: entry.approved_at || entry.decision_at || entry.requested_at,
       };
+    });
+
+  const borrowHistoryRows = (itemRequests || [])
+    .filter((entry) => ["approved", "returned", "cancelled"].includes(String(entry.status || "").toLowerCase()))
+    .sort((a, b) => {
+      const aTime = a.returned_at || a.approved_at || a.decision_at || a.requested_at;
+      const bTime = b.returned_at || b.approved_at || b.decision_at || b.requested_at;
+      return new Date(bTime || 0) - new Date(aTime || 0);
     });
 
   const refresh = () => {
     fetchBooks();
-    setHistory(getBorrowHistory());
-    setBorrowRequests(getBorrowRequests());
+    fetchHistory();
   };
 
-  const handleReceive = (requestId) => {
-    const result = receiveBorrowRequest(requestId);
-    if (!result.ok) {
-      showError(result.error || "Unable to receive borrow request.");
-      return;
+  const handleApprove = async (requestId) => {
+    if (!requestId || receivingRequestId) return;
+    setReceivingRequestId(requestId);
+    const result = await approveBorrowRequest(requestId);
+    if (result?.ok) {
+      refresh();
     }
-
-    showSuccess("Book release received and recorded.");
-    refresh();
+    setReceivingRequestId(null);
   };
 
-  const handleReturn = (requestId) => {
+  const handleReturn = async (requestId) => {
     if (!requestId) {
       showError("Return request not found.");
       return;
     }
-    const result = receiveReturnRequest(requestId);
-    if (!result.ok) {
-      showError(result.error || "Unable to return book.");
+    if (returningRequestId) return;
+
+    setReturningRequestId(requestId);
+    const result = await confirmReturnRequest(requestId);
+    if (!result?.ok) {
+      setReturningRequestId(null);
       return;
     }
 
-    showSuccess("Book returned.");
     refresh();
+    setReturningRequestId(null);
   };
 
   const handleHistoryExport = () => {
-    if (history.length === 0) return;
-    const historyData = history.map((entry) => ({
-      "Book ID": entry.bookId || "-",
-      "Book Title": entry.bookTitle || "-",
-      "Borrower Email": entry.borrowerEmail || "-",
-      "Action": formatHistoryAction(entry.action),
-      "Timestamp": formatDateTimeFull(entry.timestamp),
+    if (borrowHistoryRows.length === 0) return;
+    const historyData = borrowHistoryRows.map((entry) => ({
+      "Book ID": entry.library_item_id || "-",
+      "Book Title": entry.item_title || "-",
+      "Borrower": `${entry.student_profiles?.first_name || ""} ${entry.student_profiles?.last_name || ""}`.trim() || "-",
+      "Action": formatHistoryAction(String(entry.status || "")),
+      "Timestamp": formatDateTimeFull(entry.returned_at || entry.approved_at || entry.decision_at || entry.requested_at),
     }));
     exportToCSV(historyData, "borrow-history.csv");
   };
@@ -134,7 +126,7 @@ const BorrowerTracking = () => {
           <p className="muted">Confirm book pickup by clicking receive.</p>
         </div>
       </div>
-      {(!itemRequests || itemRequests.length === 0) ? (
+      {pendingRequests.length === 0 ? (
         <div className="empty-state">No pending borrow requests.</div>
       ) : (
         <div className="card table-scroll table-scroll--five staff-table-card">
@@ -144,19 +136,25 @@ const BorrowerTracking = () => {
               <span>ID Number</span>
               <span>Program</span>
               <span>Item</span>
-              <span>Type</span>
               <span>Status</span>
               <span>Requested</span>
+              <span>Action</span>
             </div>
-            {itemRequests.map((entry) => (
+            {pendingRequests.map((entry) => (
               <div className="table__row" key={entry.id}>
-                <span>{entry.student_profiles?.last_name || "-"}</span>
+                <span>{`${entry.student_profiles?.first_name || ""} ${entry.student_profiles?.last_name || ""}`.trim() || "-"}</span>
                 <span>{entry.student_profiles?.id_number || "-"}</span>
                 <span>{entry.student_profiles?.program || "-"}</span>
                 <span>{entry.item_title || "-"}</span>
-                <span>{entry.item_type || "-"}</span>
                 <span>{entry.status || "-"}</span>
                 <span>{formatDateTime(entry.requested_at)}</span>
+                <button
+                  className="btn btn--primary"
+                  onClick={() => handleApprove(entry.id)}
+                  disabled={Boolean(receivingRequestId)}
+                >
+                  {receivingRequestId === entry.id ? "Receiving..." : "Receive"}
+                </button>
               </div>
             ))}
           </div>
@@ -188,17 +186,13 @@ const BorrowerTracking = () => {
                 <span>{entry.studentId}</span>
                 <span>{entry.book}</span>
                 <span>{formatDateTimeFull(entry.time)}</span>
-                <span>
-                  {entry.pendingReturnRequest
-                    ? "returning"
-                    : "borrowed"}
-                </span>
+                <span>borrowed</span>
                 <button
                   className="btn btn--return"
-                  onClick={() => handleReturn(entry.pendingReturnRequest?.id)}
-                  disabled={!entry.pendingReturnRequest}
+                  onClick={() => handleReturn(entry.requestId)}
+                  disabled={Boolean(returningRequestId)}
                 >
-                  Return
+                  {returningRequestId === entry.requestId ? "Returning..." : "Returned"}
                 </button>
               </div>
             ))}
@@ -214,12 +208,12 @@ const BorrowerTracking = () => {
         <button
           className="btn btn--ghost"
           onClick={handleHistoryExport}
-          disabled={history.length === 0}
+          disabled={borrowHistoryRows.length === 0}
         >
           Export CSV
         </button>
       </div>
-      {history.length === 0 ? (
+      {borrowHistoryRows.length === 0 ? (
         <div className="empty-state">No history yet.</div>
       ) : (
         <div className="card table-scroll table-scroll--five staff-table-card">
@@ -231,13 +225,13 @@ const BorrowerTracking = () => {
               <span>Action</span>
               <span>Time</span>
             </div>
-            {history.slice(0, 6).map((entry) => (
+            {borrowHistoryRows.slice(0, 6).map((entry) => (
               <div className="table__row" key={entry.id}>
-                <span>{entry.borrowerEmail}</span>
-                <span>{getStudentIdByEmail(entry.borrowerEmail)}</span>
-                <span>{entry.title}</span>
-                <span>{formatHistoryAction(entry.action)}</span>
-                <span>{formatDateTime(entry.timestamp)}</span>
+                <span>{`${entry.student_profiles?.first_name || ""} ${entry.student_profiles?.last_name || ""}`.trim() || "-"}</span>
+                <span>{entry.student_profiles?.id_number || "-"}</span>
+                <span>{entry.item_title || "-"}</span>
+                <span>{formatActivityAction(`BORROW_${String(entry.status || "").toUpperCase()}`)}</span>
+                <span>{formatDateTime(entry.returned_at || entry.approved_at || entry.decision_at || entry.requested_at)}</span>
               </div>
             ))}
           </div>

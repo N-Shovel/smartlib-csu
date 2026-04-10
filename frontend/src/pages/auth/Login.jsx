@@ -6,6 +6,16 @@ import { useStore } from "../../store/useAuthStore";
 import AuthCard from "../../components/AuthCard";
 import EmailConfirmationPopup from "../../confirmation/EmailConfirmationPopup";
 
+const isEmailVerified = (authUser) => {
+  const confirmedAt = authUser?.email_confirmed_at;
+  const metadataVerified = authUser?.user_metadata?.email_verified;
+  const appMetadataVerified = authUser?.app_metadata?.email_verified;
+
+  return Boolean(confirmedAt || metadataVerified || appMetadataVerified);
+};
+
+const isStaffRole = (role) => ["staff", "admin"].includes(String(role || "").toLowerCase());
+
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,13 +49,13 @@ const Login = () => {
 
     const {user} = useStore.getState();
 
-    if(!user?.user?.user_metadata?.email_verified){
+    if (!isEmailVerified(user?.user)) {
         setPendingEmail(email);
         setIsEmailPopupOpen(true);
         return;
     }
     
-    if (user?.profile?.role === "staff") {
+    if (isStaffRole(user?.profile?.role)) {
       navigate("/staff/dashboard");
     } else {
       navigate("/borrower/browse");
@@ -100,6 +110,7 @@ const Login = () => {
     <EmailConfirmationPopup
       isOpen={isEmailPopupOpen}
       email={pendingEmail}
+      onClose={() => setIsEmailPopupOpen(false)}
       onResend={() => {
         // TODO(BACKEND): Call resend verification endpoint for `pendingEmail`.
       }}
