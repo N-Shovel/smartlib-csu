@@ -2,7 +2,7 @@
 // Parts: pending borrow requests, current borrower table, history export table.
 import { useEffect, useMemo, useState } from "react";
 import { exportToCSV } from "../../services/exportService";
-import { formatDateTime, formatDateTimeFull } from "../../utils/dateUtils";
+import { formatDateTimeFull } from "../../utils/dateUtils";
 import { showError } from "../../utils/notification";
 import useItems from "../../store/useItemsStore";
 import { formatActivityAction } from "../../utils/activityUtils";
@@ -41,7 +41,10 @@ const BorrowerTracking = () => {
   const pendingRequests = (itemRequests || []).filter((entry) => entry.status === "pending");
 
   const currentBorrowers = (itemRequests || [])
-    .filter((entry) => String(entry.status || "").toLowerCase() === "approved")
+    .filter((entry) => {
+      const normalizedStatus = String(entry.status || "").toLowerCase();
+      return normalizedStatus === "approved" || normalizedStatus === "pending_return";
+    })
     .sort((a, b) => new Date(b.approved_at || b.decision_at || 0) - new Date(a.approved_at || a.decision_at || 0))
     .map((entry) => {
       const fullName = `${entry.student_profiles?.first_name || ""} ${entry.student_profiles?.last_name || ""}`.trim();
@@ -55,6 +58,7 @@ const BorrowerTracking = () => {
         book: entry.item_title || book?.title || "-",
         bookId: itemId || entry.id,
         time: entry.approved_at || entry.decision_at || entry.requested_at,
+        status: String(entry.status || "").toLowerCase() === "pending_return" ? "return requested" : "borrowed",
       };
     });
 
@@ -127,7 +131,7 @@ const BorrowerTracking = () => {
         </div>
       </div>
       {pendingRequests.length === 0 ? (
-        <div className="empty-state">No pending borrow requests.</div>
+        <div className="empty-state">No borrow requests yet.</div>
       ) : (
         <div className="card table-scroll table-scroll--five staff-table-card">
           <div className="table table--staff-borrow-requests">
@@ -147,7 +151,7 @@ const BorrowerTracking = () => {
                 <span>{entry.student_profiles?.program || "-"}</span>
                 <span>{entry.item_title || "-"}</span>
                 <span>{entry.status || "-"}</span>
-                <span>{formatDateTime(entry.requested_at)}</span>
+                <span>{formatDateTimeFull(entry.requested_at)}</span>
                 <button
                   className="btn btn--primary"
                   onClick={() => handleApprove(entry.id)}
@@ -168,9 +172,9 @@ const BorrowerTracking = () => {
         </div>
       </div>
       {currentBorrowers.length === 0 ? (
-        <div className="empty-state">No current borrowers.</div>
+        <div className="empty-state">No active borrower requests.</div>
       ) : (
-        <div className="card table-scroll table-scroll--five staff-table-card">
+        <div className="card table-scroll table-scroll--current-borrowers staff-table-card">
           <div className="table table--staff-current-borrowers">
             <div className="table__row table__head">
               <span>User</span>
@@ -181,12 +185,12 @@ const BorrowerTracking = () => {
               <span>Action</span>
             </div>
             {currentBorrowers.map((entry) => (
-              <div className="table__row" key={`${entry.user}-${entry.bookId}`}>
+              <div className="table__row" key={entry.requestId}>
                 <span>{entry.user}</span>
                 <span>{entry.studentId}</span>
                 <span>{entry.book}</span>
                 <span>{formatDateTimeFull(entry.time)}</span>
-                <span>borrowed</span>
+                <span>{entry.status}</span>
                 <button
                   className="btn btn--return"
                   onClick={() => handleReturn(entry.requestId)}
@@ -206,7 +210,7 @@ const BorrowerTracking = () => {
           <p className="muted">Latest 6 book activity entries for borrowers.</p>
         </div>
         <button
-          className="btn btn--ghost"
+          className="btn btn--ghost btn--export-soft"
           onClick={handleHistoryExport}
           disabled={borrowHistoryRows.length === 0}
         >
@@ -214,7 +218,7 @@ const BorrowerTracking = () => {
         </button>
       </div>
       {borrowHistoryRows.length === 0 ? (
-        <div className="empty-state">No history yet.</div>
+        <div className="empty-state">No request history yet.</div>
       ) : (
         <div className="card table-scroll table-scroll--five staff-table-card">
           <div className="table table--staff-borrow-history">
@@ -231,7 +235,7 @@ const BorrowerTracking = () => {
                 <span>{entry.student_profiles?.id_number || "-"}</span>
                 <span>{entry.item_title || "-"}</span>
                 <span>{formatActivityAction(`BORROW_${String(entry.status || "").toUpperCase()}`)}</span>
-                <span>{formatDateTime(entry.returned_at || entry.approved_at || entry.decision_at || entry.requested_at)}</span>
+                <span>{formatDateTimeFull(entry.returned_at || entry.approved_at || entry.decision_at || entry.requested_at)}</span>
               </div>
             ))}
           </div>

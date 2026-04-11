@@ -35,7 +35,9 @@ const AppRoutes = () => {
 
 	return (
 <BrowserRouter>
-			<Routes>
+			<div className="app-root-shell">
+				<div className="app-root-content">
+					<Routes>
 				{/* Default entry redirects to login. */}
 				<Route path="/" element={<Navigate to="/login" replace />} />
 				{/* Public authentication routes. */}
@@ -157,10 +159,12 @@ const AppRoutes = () => {
 
 				{/* Catch-all fallback for unknown URLs. */}
 				<Route path="*" element={<NotFound />} />
-			</Routes>
-			<footer className="app-copyright" aria-label="Copyright">
-				© {new Date().getFullYear()} SmartLib CSU. All rights reserved.
-			</footer>
+					</Routes>
+				</div>
+				<footer className="app-copyright" aria-label="Copyright">
+					© {new Date().getFullYear()} SmartLib CSU. All rights reserved.
+				</footer>
+			</div>
 		</BrowserRouter>
 	);
 };

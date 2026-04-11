@@ -143,9 +143,15 @@ export const useStore = create((set, get) => ({
     refreshToken: async () => {
         try {
             const res = await axiosInstance.post("/auth/refresh-token");
-                        if (res?.data?.user) {
-                            set({ user: res.data.user });
-                        }
+
+            if (!res?.data?.user) {
+                return false;
+            }
+
+            // Refresh endpoint returns auth user only; re-fetch profile to keep role/menu intact.
+            const profileRes = await axiosInstance.get("/profile/profile");
+            set({ user: profileRes.data });
+
             return true;
         } catch (error) {
                         if (error?.response?.status !== 401) {

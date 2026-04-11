@@ -60,25 +60,86 @@
   .app-shell__main {
     flex-direction: column;
     min-height: auto;
+    margin-left: 0;
+    width: 100%;
   }
 
   .sidebar {
-    display: none;
-    position: absolute;
+    display: flex;
+    position: fixed;
     top: 0;
     left: 0;
     height: 100vh;
-    width: 100%;
-    max-width: none;
+    width: min(86vw, 300px);
+    max-width: min(86vw, 300px);
+    transform: translateX(-108%);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.22s ease, opacity 0.18s ease;
     z-index: 1400;
   }
 
-  .sidebar--open {
-    display: flex;
+  .sidebar--open,
+  .sidebar--mobile-open {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .sidebar--mobile-open .sidebar__link:hover {
+    background: rgba(15, 106, 61, 0.18);
+    transform: translateX(5px);
+  }
+
+  .sidebar--mobile-open .sidebar__link:active {
+    background: rgba(15, 106, 61, 0.24);
+  }
+
+  .sidebar--mobile-open .sidebar__logout:hover {
+    filter: brightness(1.05);
+    transform: translateY(-1px);
+  }
+
+  .sidebar--mobile-open .sidebar__logout:active {
+    transform: scale(0.98);
+  }
+
+  .sidebar--collapsed {
+    width: min(86vw, 300px);
+    max-width: min(86vw, 300px);
+    padding: 2.2rem 1.2rem;
+  }
+
+  .sidebar--collapsed .sidebar__title,
+  .sidebar--collapsed .sidebar__link-label {
+    display: inline;
+  }
+
+  .sidebar--collapsed .sidebar__link {
+    justify-content: flex-start;
+    text-align: left;
+    padding: 0.72rem 1rem;
+  }
+
+  .sidebar--collapsed .sidebar__logout {
+    font-size: inherit;
+    padding: 0.68rem 1.3rem;
+  }
+
+  body:has(.sidebar--mobile-open) {
+    overflow: hidden;
   }
 
   .mobile-menu-fab {
     display: flex;
+  }
+
+  .sidebar--mobile-open .sidebar__toggle--desktop {
+    display: none;
+  }
+
+  .sidebar--mobile-open .sidebar__head {
+    justify-content: flex-start;
   }
 
   .header {
@@ -214,20 +275,90 @@
   .staff-table-card__search {
     max-width: 100%;
   }
+
+  .auth-card {
+    max-width: 100%;
+    margin: 5vh auto;
+    padding: 1.25rem 1rem;
+  }
+
+  .auth-card--signup {
+    max-width: 100%;
+    width: 100%;
+    height: auto;
+    margin: 4vh auto;
+    padding: 1rem 0.9rem;
+    display: block;
+    overflow: visible;
+  }
+
+  .auth-card--signup .auth-card__form {
+    overflow-y: visible;
+    padding-right: 0;
+  }
+
+  .signup-form {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
 }
 
 /* Small Devices - Landscape / Tablets (480px - 767px) */
 @media (min-width: 480px) and (max-width: 767px) {
+  .app-shell__main {
+    margin-left: 0;
+    width: 100%;
+  }
+
   .sidebar {
-    width: 200px;
-    flex: 0 0 200px;
+    width: min(74vw, 260px);
+    max-width: min(74vw, 260px);
     padding: 1.5rem 1rem;
+    transform: translateX(-108%);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.22s ease, opacity 0.18s ease;
+    z-index: 1400;
+  }
+
+  .sidebar--mobile-open {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .sidebar--collapsed {
-    width: 80px;
-    flex-basis: 80px;
+    width: min(74vw, 260px);
+    max-width: min(74vw, 260px);
     padding: 1.5rem 0.6rem;
+  }
+
+  .sidebar--collapsed .sidebar__title,
+  .sidebar--collapsed .sidebar__link-label {
+    display: inline;
+  }
+
+  .sidebar--collapsed .sidebar__link {
+    justify-content: flex-start;
+    text-align: left;
+    padding: 0.72rem 1rem;
+  }
+
+  .sidebar--collapsed .sidebar__logout {
+    font-size: inherit;
+    padding: 0.68rem 1.3rem;
+  }
+
+  .mobile-menu-fab {
+    display: flex;
+  }
+
+  .sidebar--mobile-open .sidebar__toggle--desktop {
+    display: none;
+  }
+
+  .sidebar--mobile-open .sidebar__head {
+    justify-content: flex-start;
   }
 
   .page {
@@ -284,15 +415,23 @@
 
 /* Medium Devices - Tablets (768px - 1023px) */
 @media (min-width: 768px) and (max-width: 1023px) {
+  .app-shell__main {
+    margin-left: 220px;
+    width: calc(100% - 220px);
+  }
+
   .sidebar {
     width: 220px;
-    flex: 0 0 220px;
     padding: 1.75rem;
+  }
+
+  .sidebar--collapsed + .app-shell__main {
+    margin-left: 84px;
+    width: calc(100% - 84px);
   }
 
   .sidebar--collapsed {
     width: 84px;
-    flex-basis: 84px;
     padding: 1.75rem 0.75rem;
   }
 
@@ -363,9 +502,13 @@
 
 /* Large Devices - Desktop (1024px - 1439px) */
 @media (min-width: 1024px) and (max-width: 1439px) {
+  .app-shell__main {
+    margin-left: 240px;
+    width: calc(100% - 240px);
+  }
+
   .sidebar {
     width: 240px;
-    flex: 0 0 240px;
     padding: 2rem;
   }
 

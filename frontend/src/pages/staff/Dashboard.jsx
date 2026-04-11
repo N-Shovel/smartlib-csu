@@ -2,7 +2,7 @@
 // Parts: metric derivation, formatting helpers, summary cards, activity list render.
 import { useMemo, useState, useEffect } from "react";
 import { getReservationHistory } from "../../services/reservationService";
-import { formatDateTime } from "../../utils/dateUtils";
+import { formatDateTimeFull } from "../../utils/dateUtils";
 import { formatActivityAction } from "../../utils/activityUtils";
 import { useRequest } from "../../store/useRequestsStore";
 import { useStore } from "../../store/useAuthStore";
@@ -27,7 +27,7 @@ const Dashboard = () => {
     const initialLoad = async () => {
       try {
         setLoading(true);
-        const reservationData = getReservationHistory();
+        const reservationData = await getReservationHistory();
         await getStudentBorrowers();
         await fetchHistory();
         setReservationHistory(reservationData || []);
@@ -40,7 +40,7 @@ const Dashboard = () => {
     };
 
     const refreshFeed = async () => {
-      const reservationData = getReservationHistory();
+      const reservationData = await getReservationHistory();
       await getStudentBorrowers();
       await fetchHistory();
       setReservationHistory(reservationData || []);
@@ -76,6 +76,7 @@ const Dashboard = () => {
     logs.push({
       id: `${entry.id}-requested`,
       action: "BORROW_REQUESTED",
+      room: "-",
       userEmail: entry.student_profiles?.email || "",
       firstName: entry.student_profiles?.first_name || "",
       lastName: entry.student_profiles?.last_name || "",
@@ -88,6 +89,7 @@ const Dashboard = () => {
       logs.push({
         id: `${entry.id}-approved`,
         action: "BORROW_APPROVED",
+        room: "-",
         userEmail: entry.student_profiles?.email || "",
         firstName: entry.student_profiles?.first_name || "",
         lastName: entry.student_profiles?.last_name || "",
@@ -207,8 +209,9 @@ const Dashboard = () => {
               <li>No confirmed borrow activity yet</li>
             ) : (
               bookActivityRows.map(([title, count]) => (
-                <li key={title}>
-                  {title} - Borrowed : {count}
+                <li key={title} className="dashboard-summary-item">
+                  <span className="dashboard-summary-item-title">{title}</span>
+                  <span className="dashboard-summary-item-meta">Borrowed {count}</span>
                 </li>
               ))
             )}
@@ -221,9 +224,11 @@ const Dashboard = () => {
             <div className="empty-state">No borrower activity yet</div>
           ) : (
             <ol className="dashboard-summary-list">
-              {borrowerActivityRows.map((item) => (
-                <li key={item.email}>
-                  {item.email} - {item.count} {item.count === 1 ? "book" : "books"}
+              {borrowerActivityRows.map((item, index) => (
+                <li key={item.email} className="dashboard-rank-item">
+                  <span className="dashboard-rank-index">{index + 1}</span>
+                  <span className="dashboard-rank-email">{item.email}</span>
+                  <span className="dashboard-rank-count">{item.count} {item.count === 1 ? "book" : "books"}</span>
                 </li>
               ))}
             </ol>
@@ -234,7 +239,7 @@ const Dashboard = () => {
       <div className="page-header" style={{ marginTop: "2rem" }}>
         <div>
           <h2>Recent Activity</h2>
-          <p className="muted">Live updates for pending borrower, book receive, reservation request, and reservation approval.</p>
+          <p className="muted">Live updates for pending borrower, book receive, reservation request, reservation approval, and reservation close.</p>
         </div>
       </div>
       {logs.length === 0 ? (
@@ -253,7 +258,7 @@ const Dashboard = () => {
                 <span>{formatActivityAction(entry.action)}</span>
                 <span>{entry.userEmail || "-"}</span>
                 <span>{getStudentId(entry)}</span>
-                <span>{formatDateTime(entry.sourceTimestamp)}</span>
+                <span>{formatDateTimeFull(entry.sourceTimestamp)}</span>
               </div>
             ))}
           </div>

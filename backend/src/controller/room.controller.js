@@ -50,6 +50,20 @@ const getHourFromTimestamp = (timestamp) => {
     return date.getHours();
 };
 
+const autoCloseExpiredPendingReservations = async (supabase) => {
+    const nowIso = new Date().toISOString();
+
+    const { error } = await supabase
+        .from("student_room_reservations")
+        .update({ status: "rejected" })
+        .eq("status", "pending")
+        .lt("time_end", nowIso);
+
+    if (error) {
+        throw new Error(error.message);
+    }
+};
+
 /**
  * Create a new room reservation
  * POST /api/room/reservations
@@ -74,6 +88,9 @@ export const createReservationController = async (req, res) => {
         }
 
         const supabase = supabaseForRequest(access_token);
+
+        // Expired pending requests should no longer block a new reservation.
+        await autoCloseExpiredPendingReservations(supabase);
 
         // Check if student profile exists
         const { data: studentProfile, error: studentErr } = await supabase
@@ -125,6 +142,11 @@ export const createReservationController = async (req, res) => {
             return res.status(400).json({ message: "Selected time slot is unavailable" });
         }
 
+        // Reject if time slot is in the past
+        if (time_start < new Date()) {
+            return res.status(400).json({ message: "Cannot reserve for a past time slot" });
+        }
+
         // Create reservation
         const { data: newReservation, error: createErr } = await supabase
             .from("student_room_reservations")
@@ -168,6 +190,9 @@ export const getReservationsController = async (req, res) => {
         const { status, room_number } = req.query;
 
         const supabase = supabaseForRequest(access_token);
+
+        // Ensure pending reservations that already passed are auto-closed before listing.
+        await autoCloseExpiredPendingReservations(supabase);
 
         // Check staff access for filtering
         const staffAccess = await hasStaffAccess(supabase, userId, req.user);
@@ -248,6 +273,9 @@ export const approveReservationController = async (req, res) => {
         const { id } = req.params;
 
         const supabase = supabaseForRequest(access_token);
+
+        // Keep history/status accurate by auto-closing expired pending reservations first.
+        await autoCloseExpiredPendingReservations(supabase);
 
         // Check staff access
         const staffAccess = await hasStaffAccess(supabase, userId, req.user);
@@ -439,7 +467,14 @@ export const getReservationHistoryController = async (req, res) => {
             reservationDate: res.time_start,
             studentId: res.student_profiles?.id_number || "-",
             studentName: `${res.student_profiles?.first_name || ""} ${res.student_profiles?.last_name || ""}`.trim(),
-            action: res.status === "approved" ? "APPROVED" : (res.status === "cancelled" ? "Canceled" : "REQUESTED"),
+            action:
+                res.status === "approved"
+                    ? "RESERVATION_APPROVED"
+                    : res.status === "rejected" || res.status === "closed"
+                        ? "RESERVATION_CLOSED"
+                        : res.status === "cancelled"
+                            ? "RESERVATION_CANCELLATION_REQUESTED"
+                            : "RESERVATION_CREATED",
         }));
 
         return res.status(200).json({

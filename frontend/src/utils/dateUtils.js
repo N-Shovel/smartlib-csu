@@ -22,7 +22,6 @@ export const formatDateTimeFull = (isoString) => {
 	if (Number.isNaN(date.getTime())) return "-";
 
 	return date.toLocaleString("en-US", {
-		weekday: "long",
 		year: "numeric",
 		month: "long",
 		day: "2-digit",

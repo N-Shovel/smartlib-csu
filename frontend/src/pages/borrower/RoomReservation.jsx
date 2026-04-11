@@ -52,8 +52,9 @@ const RoomReservation = () => {
     fetchData();
   }, [room, userEmail]);
 
+  const currentHour = new Date().getHours();
+
   const handleReserve = async () => {
-    const currentHour = new Date().getHours();
     // Guard clauses keep validation flow straightforward and readable.
     if (!room.trim()) {
       showError("Please choose a room");
@@ -64,7 +65,7 @@ const RoomReservation = () => {
       return;
     }
     if (Number(reservationHour) <= currentHour) {
-      showError("Selected time slot has already passed.");
+      showError("Cannot reserve for a past time slot");
       return;
     }
     if (unavailableHours.includes(Number(reservationHour))) {
@@ -101,7 +102,7 @@ const RoomReservation = () => {
   };
 
   return (
-    <section>
+    <section className="room-reservation-page">
       <div className="page-header">
         <div>
           <h2>Room Reservation</h2>
@@ -145,22 +146,22 @@ const RoomReservation = () => {
               >
                 <option value="">Select time (8:00 AM - 6:00 PM)</option>
                 {reservationHourOptions.map((slot) => {
-                  // Slot can be unavailable due to lunch break or approved reservation.
-                  const isUnavailable = unavailableHours.includes(slot.value);
-                  const isPastSlot = slot.value <= new Date().getHours();
-                  const stateLabel = isUnavailable
+                  // Slot can be unavailable due to lunch break, approved reservation, or past time.
+                  const isPastSlot = Number(slot.value) <= currentHour;
+                  const isUnavailable = unavailableHours.includes(slot.value) || isPastSlot;
+                  const stateLabel = isPastSlot
+                    ? "Passed"
+                    : isUnavailable
                     ? isLunchBreakHour(slot.value)
                       ? "Lunch Break"
                       : "Reserved"
-                    : isPastSlot
-                      ? "Passed"
-                      : "";
+                    : "";
 
                   return (
                     <option
                       key={slot.value}
                       value={slot.value}
-                      disabled={isUnavailable || isPastSlot}
+                      disabled={isUnavailable}
                     >
                       {stateLabel ? `${slot.label} (${stateLabel})` : slot.label}
                     </option>

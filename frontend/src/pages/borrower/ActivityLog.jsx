@@ -1,6 +1,6 @@
 // Purpose: Borrower activity timeline for reservations and borrowing actions.
 // Parts: source data selection, derived filters, action handlers, table/list render.
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
     autoClosePassedReservations,
     formatReservationHour,
@@ -9,7 +9,7 @@ import {
     isReservationTimePassed,
     requestReservationCancellation
 } from "../../services/reservationService";
-import { formatDateTime } from "../../utils/dateUtils";
+import { formatDateTimeFull } from "../../utils/dateUtils";
 import { showError, showInfo, showSuccess } from "../../utils/notification";
 import { RESERVATION_STATUS } from "../../constants/status";
 import { formatActivityAction } from "../../utils/activityUtils";
@@ -36,6 +36,10 @@ const ActivityLog = () => {
     const userId = user?.profile?.user_id || user?.user?.id || "";
     
     const {fetchHistory, itemRequests} = useRequest();
+    const [reservationUpdates, setReservationUpdates] = useState([]);
+    const [myReservations, setMyReservations] = useState([]);
+    const [isReservationLoading, setIsReservationLoading] = useState(true);
+    const latestReservationLoadRef = useRef(0);
     
     useEffect(() => {
         fetchHistory();
@@ -44,26 +48,74 @@ const ActivityLog = () => {
     useEffect(() => {
         const intervalId = setInterval(() => {
             fetchHistory();
-        }, 3000);
+        }, 5000);
 
         return () => {
             clearInterval(intervalId);
         };
     }, [fetchHistory]);
 
-    const reservationUpdates = !userEmail
-        ? []
-        : getReservationHistory().filter(
-            (entry) => String(entry.requestedBy || "").toLowerCase() === userEmail
-        );
+    const loadReservationData = useCallback(async () => {
+        const loadId = latestReservationLoadRef.current + 1;
+        latestReservationLoadRef.current = loadId;
 
-    autoClosePassedReservations();
-    const myReservations = getReservations().filter(
-        (entry) =>
-            String(entry.requestedBy || "").toLowerCase() === userEmail &&
-            entry.status === RESERVATION_STATUS.PENDING &&
-            !isReservationTimePassed(entry)
-    );
+        if (!userEmail) {
+            setReservationUpdates([]);
+            setMyReservations([]);
+            setIsReservationLoading(false);
+            return;
+        }
+
+        try {
+            await autoClosePassedReservations();
+
+            const [history, reservations] = await Promise.all([
+                getReservationHistory(),
+                getReservations(),
+            ]);
+
+            const scopedHistory = Array.isArray(history)
+                ? history.filter((entry) => String(entry.requestedBy || "").toLowerCase() === userEmail)
+                : [];
+
+            const scopedReservations = Array.isArray(reservations)
+                ? reservations.filter(
+                    (entry) =>
+                        String(entry.requestedBy || "").toLowerCase() === userEmail &&
+                        entry.status === RESERVATION_STATUS.PENDING &&
+                        !isReservationTimePassed(entry)
+                )
+                : [];
+
+            if (latestReservationLoadRef.current !== loadId) {
+                return;
+            }
+
+            setReservationUpdates(scopedHistory);
+            setMyReservations(scopedReservations);
+            setIsReservationLoading(false);
+        } catch (error) {
+            console.error("Error loading reservation activity:", error);
+            // Preserve previous data so transient API hiccups do not blank the table.
+            if (latestReservationLoadRef.current === loadId) {
+                setIsReservationLoading(false);
+            }
+        }
+    }, [userEmail]);
+
+    useEffect(() => {
+        loadReservationData();
+    }, [loadReservationData]);
+
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            loadReservationData();
+        }, 5000);
+
+        return () => {
+            clearInterval(intervalId);
+        };
+    }, [loadReservationData]);
 
     const myBorrowRequests = useMemo(() => {
         if (!Array.isArray(itemRequests)) return [];
@@ -111,15 +163,23 @@ const ActivityLog = () => {
         }
         // LOGIC: Match cancellation UX timing with other borrower mutations
         // (borrow/return/cancel) so feedback feels consistent across actions.
-        cancellationTimeoutRef.current = setTimeout(() => {
-            const result = requestReservationCancellation(id, userEmail);
-            if (!result.ok) {
-                showError(result.error || "Unable to request cancellation.");
+        cancellationTimeoutRef.current = setTimeout(async () => {
+            try {
+                const result = await requestReservationCancellation(id, userEmail);
+                if (!result.ok) {
+                    showError(result.error || "Unable to request cancellation.");
+                    cancellationTimeoutRef.current = null;
+                    return;
+                }
+
+                showSuccess("Cancellation request submitted.");
+                await loadReservationData();
+            } catch (error) {
+                showError("Unable to request cancellation.");
+                console.error("Cancellation request error:", error);
+            } finally {
                 cancellationTimeoutRef.current = null;
-                return;
             }
-            showSuccess("Cancellation request submitted.");
-            cancellationTimeoutRef.current = null;
         }, 500);
     };
 
@@ -153,8 +213,8 @@ const ActivityLog = () => {
                                 <div className="table__row" key={entry.id}>
                                     <span>{entry.item_title || "-"}</span>
                                     <span>{entry.status || "-"}</span>
-                                    <span>{formatDateTime(entry.requested_at)}</span>
-                                    <span>{formatDateTime(entry.decision_at || entry.requested_at)}</span>
+                                    <span>{formatDateTimeFull(entry.requested_at)}</span>
+                                    <span>{formatDateTimeFull(entry.decision_at || entry.requested_at)}</span>
                                 </div>
                             ))}
                         </div>
@@ -181,7 +241,7 @@ const ActivityLog = () => {
                                 <div className="table__row" key={entry.id}>
                                     <span>{entry.title || "-"}</span>
                                     <span>{formatActivityAction(entry.action)}</span>
-                                    <span>{formatDateTime(entry.timestamp)}</span>
+                                    <span>{formatDateTimeFull(entry.timestamp)}</span>
                                 </div>
                             ))}
                         </div>
@@ -215,7 +275,7 @@ const ActivityLog = () => {
                                             : entry.status}
                                     </span>
                                     <button
-                                        className="btn btn--danger"
+                                        className="btn btn--danger btn--cancel"
                                         onClick={() => handleCancellationRequest(entry.id)}
                                         disabled={entry.cancellationRequested}
                                     >
@@ -233,7 +293,9 @@ const ActivityLog = () => {
                     <p className="muted">Latest updates for your room reservation requests.</p>
                 </div>
             </div>
-            {reservationUpdates.length === 0 ? (
+            {isReservationLoading && reservationUpdates.length === 0 ? (
+                <div className="empty-state">Loading reservation updates...</div>
+            ) : reservationUpdates.length === 0 ? (
                 <div className="empty-state">No reservation updates yet.</div>
             ) : (
                     <div className="card table-scroll table-scroll--five activity-log-table-card">
@@ -251,7 +313,7 @@ const ActivityLog = () => {
                                     <span>{formatReservationHour(entry.reservationHour)}</span>
                                     <span>{formatActivityAction(entry.action)}</span>
                                     <span>{entry.status || "-"}</span>
-                                    <span>{formatDateTime(entry.timestamp)}</span>
+                                    <span>{formatDateTimeFull(entry.timestamp)}</span>
                                 </div>
                             ))}
                         </div>

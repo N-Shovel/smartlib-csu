@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PenSquare } from "lucide-react";
+import { Eye, EyeOff, PenSquare } from "lucide-react";
 import { getUserProfileByEmail, updateBorrowerAccountUser } from "../../services/authService";
 import { showError, showSuccess } from "../../utils/notification";
 import { useStore } from "../../store/useAuthStore";
@@ -12,6 +12,9 @@ const Account = () => {
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const accountEmail = user?.user?.email || user?.email || "";
   const profile = accountEmail ? getUserProfileByEmail(accountEmail) : null;
 
@@ -29,6 +32,9 @@ const Account = () => {
       setOldPassword("");
       setNewPassword("");
       setConfirmNewPassword("");
+      setShowOldPassword(false);
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
     }
 
     setActiveModal(type);
@@ -40,6 +46,9 @@ const Account = () => {
     setOldPassword("");
     setNewPassword("");
     setConfirmNewPassword("");
+    setShowOldPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
   };
 
   const handleUpdateEmail = async () => {
@@ -163,7 +172,7 @@ const Account = () => {
               <p style={{ flex: 1 }}>{profile.email || "-"}</p>
               <button
                 type="button"
-                className="btn btn--ghost"
+                className="btn btn--ghost account-update-action"
                 onClick={() => openModal("email")}
                 aria-label="Change email"
               >
@@ -178,7 +187,7 @@ const Account = () => {
               <p style={{ flex: 1 }}>{user?.profile?.contact_number || "-"}</p>
               <button
                 type="button"
-                className="btn btn--ghost"
+                className="btn btn--ghost account-update-action"
                 onClick={() => openModal("contact")}
                 aria-label="Change contact number"
               >
@@ -190,7 +199,7 @@ const Account = () => {
           <div style={{ display: "grid", gap: "0.4rem" }}>
             <span className="label">Password</span>
             <div>
-              <button className="btn btn--primary" onClick={() => openModal("password")}>
+              <button className="btn btn--primary account-update-action" onClick={() => openModal("password")}>
                 Change Password
               </button>
             </div>
@@ -200,7 +209,7 @@ const Account = () => {
 
       {activeModal === "email" ? (
         <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="update-email-title">
-          <div className="card modal-card">
+          <div className="card modal-card modal-card--account">
             <h3 id="update-email-title">Update Email</h3>
             <label className="label">New Email</label>
             <input
@@ -210,7 +219,7 @@ const Account = () => {
               onChange={(event) => setEmailDraft(event.target.value)}
             />
             <div className="modal-actions">
-              <button className="btn btn--danger" onClick={closeModal}>
+              <button className="btn btn--danger btn--cancel" onClick={closeModal}>
                 Cancel
               </button>
               <button className="btn btn--primary" onClick={handleUpdateEmail}>
@@ -223,7 +232,7 @@ const Account = () => {
 
       {activeModal === "contact" ? (
         <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="update-contact-title">
-          <div className="card modal-card">
+          <div className="card modal-card modal-card--account">
             <h3 id="update-contact-title">Update Contact Number</h3>
             <label className="label">New Contact Number</label>
             <input
@@ -233,7 +242,7 @@ const Account = () => {
               onChange={(event) => setContactDraft(event.target.value)}
             />
             <div className="modal-actions">
-              <button className="btn btn--danger" onClick={closeModal}>
+              <button className="btn btn--danger btn--cancel" onClick={closeModal}>
                 Cancel
               </button>
               <button className="btn btn--primary" onClick={handleUpdateContact}>
@@ -246,34 +255,64 @@ const Account = () => {
 
       {activeModal === "password" ? (
         <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="change-password-title">
-          <div className="card modal-card">
+          <div className="card modal-card modal-card--account">
             <h3 id="change-password-title">Change Password</h3>
             <label className="label">Old Password</label>
-            <input
-              className="input"
-              type="password"
-              value={oldPassword}
-              onChange={(event) => setOldPassword(event.target.value)}
-            />
+            <div className="password-input-wrapper">
+              <input
+                className="input"
+                type={showOldPassword ? "text" : "password"}
+                value={oldPassword}
+                onChange={(event) => setOldPassword(event.target.value)}
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowOldPassword((prev) => !prev)}
+                aria-label={showOldPassword ? "Hide old password" : "Show old password"}
+              >
+                {showOldPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
 
             <label className="label">New Password</label>
-            <input
-              className="input"
-              type="password"
-              value={newPassword}
-              onChange={(event) => setNewPassword(event.target.value)}
-            />
+            <div className="password-input-wrapper">
+              <input
+                className="input"
+                type={showNewPassword ? "text" : "password"}
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowNewPassword((prev) => !prev)}
+                aria-label={showNewPassword ? "Hide new password" : "Show new password"}
+              >
+                {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
 
             <label className="label">Confirm New Password</label>
-            <input
-              className="input"
-              type="password"
-              value={confirmNewPassword}
-              onChange={(event) => setConfirmNewPassword(event.target.value)}
-            />
+            <div className="password-input-wrapper">
+              <input
+                className="input"
+                type={showConfirmPassword ? "text" : "password"}
+                value={confirmNewPassword}
+                onChange={(event) => setConfirmNewPassword(event.target.value)}
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowConfirmPassword((prev) => !prev)}
+                aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+              >
+                {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
 
             <div className="modal-actions">
-              <button className="btn btn--danger" onClick={closeModal}>
+              <button className="btn btn--danger btn--cancel" onClick={closeModal}>
                 Cancel
               </button>
               <button className="btn btn--primary" onClick={handleUpdatePassword}>

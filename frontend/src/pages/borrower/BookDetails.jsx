@@ -203,7 +203,7 @@ const BookDetails = () => {
               <button className="btn btn--ghost" onClick={() => setIsCancelModalOpen(false)}>
                 Keep Pending
               </button>
-              <button className="btn btn--danger" onClick={handleCancelPendingRequest}>
+              <button className="btn btn--danger btn--cancel" onClick={handleCancelPendingRequest}>
                 Cancel Request
               </button>
             </div>

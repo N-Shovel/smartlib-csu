@@ -1,4 +1,5 @@
 import express from "express";
+import protectRoute from "../middleware/protectRoute.js";
 import {
     createReservationController,
     getReservationsController,
@@ -11,13 +12,13 @@ import {
 const router = express.Router();
 
 // Borrower endpoints (student creates and cancels)
-router.post("/reservations", createReservationController);
-router.get("/reservations", getReservationsController);
-router.patch("/reservations/:id/cancel", cancelReservationController);
+router.post("/reservations", protectRoute, createReservationController);
+router.get("/reservations", protectRoute, getReservationsController);
+router.patch("/reservations/:id/cancel", protectRoute, cancelReservationController);
 
 // Staff endpoints (approve, close, view history)
-router.patch("/reservations/:id/approve", approveReservationController);
-router.patch("/reservations/:id/close", closeReservationController);
-router.get("/reservations/history", getReservationHistoryController);
+router.patch("/reservations/:id/approve", protectRoute, approveReservationController);
+router.patch("/reservations/:id/close", protectRoute, closeReservationController);
+router.get("/reservations/history", protectRoute, getReservationHistoryController);
 
 export default router;

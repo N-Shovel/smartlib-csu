@@ -10,7 +10,7 @@ import {
   closeReservation
 } from "../../services/reservationService";
 import { RESERVATION_STATUS } from "../../constants/status";
-import { formatDateTime } from "../../utils/dateUtils";
+import { formatDateTimeFull } from "../../utils/dateUtils";
 import { showError, showSuccess } from "../../utils/notification";
 import { exportToCSV } from "../../services/exportService";
 import { useStore } from "../../store/useAuthStore";
@@ -148,7 +148,7 @@ const Reservation = () => {
       "Room": entry.room || "-",
       "Requester": entry.requestedBy || "-",
       "Reservation Hour": formatReservationHour(entry.reservationHour),
-      "Date": formatDateTime(entry.reservationDate),
+      "Date": formatDateTimeFull(entry.reservationDate),
       "Status": entry.status || "-",
     }));
     exportToCSV(
@@ -170,6 +170,12 @@ const Reservation = () => {
     setSelectedReason(null);
   };
 
+  const getReservationReason = (reservation) => {
+    const reasonValue = reservation?.notes ?? reservation?.reason ?? "";
+    const normalizedReason = String(reasonValue).trim();
+    return normalizedReason;
+  };
+
   if (isLoading) {
     return (
       <section className="staff-page staff-approvals-page">
@@ -179,7 +185,7 @@ const Reservation = () => {
   }
 
   return (
-    <section className="staff-page staff-approvals-page">
+    <section className="staff-page staff-approvals-page reservation-page">
       <div className="page-header">
         <div>
           <h2>Approval</h2>
@@ -187,14 +193,13 @@ const Reservation = () => {
         </div>
       </div>
       {pending.length === 0 ? (
-        <div className="empty-state">No pending reservations.</div>
+        <div className="empty-state">No reservation requests yet.</div>
       ) : (
-        <div className="card table-scroll table-scroll--five staff-table-card">
+        <div className="card staff-table-card reservation-table-wrap">
           <table className="staff-data-table">
             <colgroup>
               <col style={{ width: "10ch" }} />
               <col style={{ width: "22ch" }} />
-              <col style={{ width: "20ch" }} />
               <col style={{ width: "12ch" }} />
               <col style={{ width: "24ch" }} />
               <col style={{ width: "10ch" }} />
@@ -204,7 +209,6 @@ const Reservation = () => {
               <tr>
                 <th>Room</th>
                 <th>Time Slot</th>
-                <th>Email</th>
                 <th>ID</th>
                 <th>Requested</th>
                 <th>Reason</th>
@@ -216,9 +220,8 @@ const Reservation = () => {
                 <tr key={reservation.id}>
                   <td data-label="Room">{reservation.room}</td>
                   <td data-label="Time Slot">{formatReservationHour(reservation.reservationHour)}</td>
-                  <td data-label="Email">{reservation.requestedBy}</td>
                   <td data-label="ID">{getStudentIdByEmail(reservation.requestedBy)}</td>
-                  <td data-label="Requested">{formatDateTime(reservation.createdAt)}</td>
+                  <td data-label="Requested">{formatDateTimeFull(reservation.createdAt)}</td>
                   <td data-label="Reason">
                     <button
                       className="btn btn--view"
@@ -245,29 +248,27 @@ const Reservation = () => {
       <div className="page-header" style={{ marginTop: "2rem" }}>
         <div>
           <h2>Current Reservations</h2>
-          <p className="muted">Approved reservations currently in use.</p>
+          <p className="muted">Latest 6 approved reservations currently in use.</p>
         </div>
       </div>
       {currentReservations.length === 0 ? (
-        <div className="empty-state">No current approved reservations.</div>
+        <div className="empty-state">No active reservation requests.</div>
       ) : (
-        <div className="card table-scroll table-scroll--five staff-table-card">
+        <div className="card staff-table-card reservation-table-wrap">
           <table className="staff-data-table">
             <colgroup>
               <col style={{ width: "10ch" }} />
               <col style={{ width: "22ch" }} />
-              <col style={{ width: "20ch" }} />
               <col style={{ width: "12ch" }} />
               <col style={{ width: "24ch" }} />
+              <col style={{ width: "16ch" }} />
+              <col style={{ width: "24ch" }} />
               <col style={{ width: "18ch" }} />
-              <col style={{ width: "10ch" }} />
-              <col style={{ width: "10ch" }} />
             </colgroup>
             <thead>
               <tr>
                 <th>Room</th>
                 <th>Time Slot</th>
-                <th>Email</th>
                 <th>ID</th>
                 <th>Requested</th>
                 <th>Status</th>
@@ -276,25 +277,29 @@ const Reservation = () => {
               </tr>
             </thead>
             <tbody>
-              {currentReservations.map((reservation) => (
+              {currentReservations.slice(0, 6).map((reservation) => (
                 <tr key={reservation.id}>
                   <td data-label="Room">{reservation.room}</td>
                   <td data-label="Time Slot">{formatReservationHour(reservation.reservationHour)}</td>
-                  <td data-label="Email">{reservation.requestedBy}</td>
                   <td data-label="ID">{getStudentIdByEmail(reservation.requestedBy)}</td>
-                  <td data-label="Requested">{formatDateTime(reservation.createdAt)}</td>
+                  <td data-label="Requested">{formatDateTimeFull(reservation.createdAt)}</td>
                   <td data-label="Status">
                     {reservation.cancellationRequested
                       ? "approved · cancellation requested"
                       : reservation.status}
                   </td>
                   <td data-label="Reason">
-                    <button
-                      className="btn btn--view"
-                      onClick={() => openReasonModal(reservation)}
-                    >
-                      View
-                    </button>
+                    <div className="reservation-reason-cell">
+                      {getReservationReason(reservation) ? (
+                        <span>{getReservationReason(reservation)}</span>
+                      ) : null}
+                      <button
+                        className="btn btn--view"
+                        onClick={() => openReasonModal(reservation)}
+                      >
+                        View
+                      </button>
+                    </div>
                   </td>
                   <td data-label="Action">
                     <button
@@ -317,7 +322,7 @@ const Reservation = () => {
           <p className="muted">Latest 6 reservation updates.</p>
         </div>
         <button
-          className="btn btn--ghost"
+          className="btn btn--ghost btn--export-soft"
           onClick={handleHistoryExport}
           disabled={history.length === 0}
         >
@@ -325,9 +330,9 @@ const Reservation = () => {
         </button>
       </div>
       {history.length === 0 ? (
-        <div className="empty-state">No reservation history yet.</div>
+        <div className="empty-state">No reservation request history yet.</div>
       ) : (
-        <div className="card table-scroll table-scroll--five staff-table-card">
+        <div className="card staff-table-card reservation-table-wrap">
           <table className="staff-data-table">
             <colgroup>
               <col style={{ width: "10ch" }} />
@@ -358,7 +363,7 @@ const Reservation = () => {
                   <td data-label="ID">{getStudentIdByEmail(entry.requestedBy)}</td>
                   <td data-label="Action">{formatHistoryAction(entry.action)}</td>
                   <td data-label="Status">{entry.status}</td>
-                  <td data-label="Time">{formatDateTime(entry.timestamp)}</td>
+                  <td data-label="Time">{formatDateTimeFull(entry.timestamp)}</td>
                 </tr>
               ))}
             </tbody>

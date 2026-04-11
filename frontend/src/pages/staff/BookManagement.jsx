@@ -221,63 +221,70 @@ selectedCategory === "thesis" ? " book-category-filter__btn--active" : ""
                 ) : (
                     <>
                         {selectedCategory === null || selectedCategory === "book" ? (
-                            <div className="book-grid">
-                                {regularBooks.map((book) => {
-                                const keywordTokens = normalizeKeywordTokens(book.keywords);
-                                const { availableCopies } = resolveItemAvailability(book);
-                                const isAvailable = availableCopies > 0;
-                                const displayAvailability = getDisplayAvailability(book);
-                                const keywordsLine = keywordTokens.join(", ");
-                                const displayCategory = String(book.item_type || book.category || "").trim().toLowerCase() || "n/a";
+                            <>
+                                <div className="page-header page-header--thesis-scroller">
+                                    <div>
+                                        <h2>General Book Collection</h2>
+                                    </div>
+                                </div>
+                                <div className="book-grid">
+                                    {regularBooks.map((book) => {
+                                    const keywordTokens = normalizeKeywordTokens(book.keywords);
+                                    const { availableCopies } = resolveItemAvailability(book);
+                                    const isAvailable = availableCopies > 0;
+                                    const displayAvailability = getDisplayAvailability(book);
+                                    const keywordsLine = keywordTokens.join(", ");
+                                    const displayCategory = String(book.item_type || book.category || "").trim().toLowerCase() || "n/a";
 
-                                return (
-                                <article className="card book-card" key={book.id}>
-                                    <div className="book-card__content">
-                                        <div className="book-card__header">
-                                            <h3 title={book.title} className="book-card__title-row">
-                                                <strong className="book-card__label">Title:</strong> <span>{book.title}</span>
-                                            </h3>
-                                            <div className="book-card__header-actions">
-                                                <span
-                                                    className={`book-card__stock-badge ${isAvailable ? "book-card__stock-badge--ok" : "book-card__stock-badge--busy"}`}
-                                                >
-                                                    {displayAvailability}
-                                                </span>
+                                    return (
+                                    <article className="card book-card" key={book.id}>
+                                        <div className="book-card__content">
+                                            <div className="book-card__header">
+                                                <h3 title={book.title} className="book-card__title-row">
+                                                    <strong className="book-card__label">Title:</strong> <span>{book.title}</span>
+                                                </h3>
+                                                <div className="book-card__header-actions">
+                                                    <span
+                                                        className={`book-card__stock-badge ${isAvailable ? "book-card__stock-badge--ok" : "book-card__stock-badge--busy"}`}
+                                                    >
+                                                        {displayAvailability}
+                                                    </span>
+                                                </div>
                                             </div>
+
+                                            <p className="book-card__field book-card__author">
+                                                <strong className="book-card__label">Author:</strong> <span>{book.author || "N/A"}</span>
+                                            </p>
+
+                                            <p className="book-card__field book-card__keywords-line" title={keywordsLine || "N/A"}>
+                                                <strong className="book-card__label">Keywords:</strong> <span>{keywordsLine || "N/A"}</span>
+                                            </p>
+
+                                            <p className="book-card__field book-card__category-line">{displayCategory}</p>
+
+                                            <p className="book-card__field book-card__desc">
+                                                <strong className="book-card__label">Description:</strong> <span>{book.description || "N/A"}</span>
+                                            </p>
                                         </div>
 
-                                        <p className="book-card__field book-card__author">
-                                            <strong className="book-card__label">Author:</strong> <span>{book.author || "N/A"}</span>
-                                        </p>
-
-                                        <p className="book-card__field book-card__keywords-line" title={keywordsLine || "N/A"}>
-                                            <strong className="book-card__label">Keywords:</strong> <span>{keywordsLine || "N/A"}</span>
-                                        </p>
-
-                                        <p className="book-card__field book-card__category-line">{displayCategory}</p>
-
-                                        <p className="book-card__field book-card__desc">
-                                            <strong className="book-card__label">Description:</strong> <span>{book.description || "N/A"}</span>
-                                        </p>
-                                    </div>
-
-                                    <div className="book-card__actions">
-                                        <button className="btn btn--info" onClick={() => setSelectedBook(book)} disabled={isLoading}>
-                                            Details
-                                        </button>
-                                        <button
-                                            className="btn btn--danger"
-                                            onClick={() => handleDelete(book)}
-                                            aria-label={`Delete ${book.title}`}
-                                            disabled={isLoading}
-                                        >
-                                            Delete
-                                        </button>
-                                    </div>
-                                </article>
-                            );
-                                })}
-                            </div>
+                                        <div className="book-card__actions">
+                                            <button className="btn btn--info" onClick={() => setSelectedBook(book)} disabled={isLoading}>
+                                                Details
+                                            </button>
+                                            <button
+                                                className="btn btn--danger"
+                                                onClick={() => handleDelete(book)}
+                                                aria-label={`Delete ${book.title}`}
+                                                disabled={isLoading}
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </article>
+                                );
+                                    })}
+                                </div>
+                            </>
                         ) : null}
 
                         {(selectedCategory === null || selectedCategory === "thesis") && thesisBooks.length > 0 ? (
@@ -288,7 +295,6 @@ selectedCategory === "thesis" ? " book-category-filter__btn--active" : ""
                                 <div className="page-header page-header--thesis-scroller">
                                     <div>
                                         <h2>Thesis Collection</h2>
-                                        <p className="muted">Swipe sideways to browse thesis titles.</p>
                                     </div>
                                 </div>
                                 <div className="book-grid book-grid--thesis-scroller">
@@ -442,7 +448,7 @@ selectedCategory === "thesis" ? " book-category-filter__btn--active" : ""
 
                         <div className="modal-actions">
                             <button
-                                className="btn btn--danger"
+                                className="btn btn--danger btn--cancel"
                                 onClick={() => {
                                     setIsAddModalOpen(false);
                                     setForm(INITIAL_FORM);

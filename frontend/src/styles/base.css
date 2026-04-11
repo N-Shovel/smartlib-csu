@@ -11,7 +11,7 @@ body {
   color: var(--ink);
   background: radial-gradient(circle at top, #f8fff9 0%, var(--bg) 55%, #e2efe7 100%);
   min-height: 100vh;
-  padding-bottom: 2.2rem;
+  line-height: 1.5;
 }
 
 a {
@@ -29,6 +29,7 @@ textarea {
 h2 {
   font-family: "Roboto", sans-serif;
   font-size: 2rem;
+  margin-bottom: 0.35rem;
 }
 
 .muted {

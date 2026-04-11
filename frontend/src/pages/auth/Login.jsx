@@ -1,6 +1,7 @@
 // Purpose: Login page handling borrower/staff authentication flow.
 // Parts: form state, submit handler, validation/errors, render.
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useStore } from "../../store/useAuthStore";
 import AuthCard from "../../components/AuthCard";
@@ -19,6 +20,7 @@ const isStaffRole = (role) => ["staff", "admin"].includes(String(role || "").toL
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isEmailPopupOpen, setIsEmailPopupOpen] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
@@ -81,16 +83,28 @@ const Login = () => {
           disabled={isLoading}
         />
         <label className="label" htmlFor="login-password">Password</label>
-        <input
-          className="input"
-          type="password"
-          id="login-password"
-          autoComplete="current-password"
-          placeholder="Enter your password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          disabled={isLoading}
-        />
+        <div className="password-input-wrapper">
+          <input
+            className="input"
+            type={showPassword ? "text" : "password"}
+            id="login-password"
+            autoComplete="current-password"
+            placeholder="Enter your password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={isLoading}
+          />
+          <button
+            type="button"
+            className="password-toggle"
+            onClick={() => setShowPassword(!showPassword)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            title={showPassword ? "Hide password" : "Show password"}
+            disabled={isLoading}
+          >
+            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        </div>
         {error ? <div className="alert">{error}</div> : null}
         <button 
           className={`btn ${isLoading? "bg-gray-500 cursor-not-allowed": "btn--primary"}`} 

@@ -1,22 +1,3630 @@
-﻿/* Purpose: Modular CSS Architecture
-   Imports organized CSS files by concern for maintainability and scalability
-   Files: variables, base, layouts, components, pages, responsive
- */
+/* Purpose: Global design system and shared UI styles for the whole app.
+  Parts: theme/base rules, layout containers, component states, responsive rules. */
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap");
 
-/* Design tokens and CSS custom properties */
-@import "./styles/variables.css";
+:root {
+  --bg: #edf5f0;
+  --ink: #14171a;
+  --muted: #3f5a4f;
+  --card: #ffffff;
+  --line: #cfe0d6;
+  --accent: #1b5e20;
+  --accent-2: #2e7d32;
+  --btn-primary-bg: #1b7a35;
+  --btn-primary-border: #155d29;
+  --btn-primary-hover: #176b2f;
+  --btn-primary-active: #125224;
+  --btn-ghost-bg: #eef5f0;
+  --btn-ghost-border: #9fbaa8;
+  --btn-ghost-text: #1d5b2e;
+  --btn-ghost-hover: #e1ece5;
+  --btn-ghost-active: #d5e4da;
+  --btn-info-bg: #1976d2;
+  --btn-info-border: #0d47a1;
+  --btn-info-hover: #1565c0;
+  --btn-info-active: #0d47a1;
+  --btn-view-bg: #fdd835;
+  --btn-view-border: #f9a825;
+  --btn-view-text: #4e342e;
+  --btn-view-hover: #fbc02d;
+  --btn-view-active: #f9a825;
+  --btn-success-bg: #2e7d32;
+  --btn-success-border: #1b5e20;
+  --btn-success-hover: #2a7330;
+  --btn-success-active: #1b5e20;
+  --btn-return-bg: #00897b;
+  --btn-return-border: #00695c;
+  --btn-return-hover: #00796b;
+  --btn-return-active: #00695c;
+  --btn-danger-bg: #d32f2f;
+  --btn-danger-border: #b71c1c;
+  --btn-danger-hover: #c62828;
+  --btn-danger-active: #b71c1c;
+  --shadow: 0 18px 40px rgba(12, 15, 20, 0.12);
+}
 
-/* Global resets and base element styles */
-@import "./styles/base.css";
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
-/* App shell, header, sidebar, and page layouts */
-@import "./styles/layouts.css";
+body {
+  font-family: "Roboto", sans-serif;
+  color: var(--ink);
+  background: radial-gradient(circle at top, #f8fff9 0%, var(--bg) 55%, #e2efe7 100%);
+  min-height: 100vh;
+  padding-bottom: 2.2rem;
+}
 
-/* Reusable UI components: buttons, cards, forms, inputs */
-@import "./styles/components.css";
+a {
+  text-decoration: none;
+  color: inherit;
+}
 
-/* Page-specific styles: tables, modals, activity logs */
-@import "./styles/pages.css";
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
 
-/* Responsive design and media queries */
-@import "./styles/responsive.css";
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-shell__main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-width: 0;
+  overflow: visible;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.2rem 2rem;
+  border-bottom: 1px solid rgba(27, 94, 32, 0.35);
+  background: rgba(27, 94, 32, 0.95);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: "Roboto", sans-serif;
+  font-size: 1.6rem;
+  color: #ffffff;
+}
+
+.brand__logo {
+  width: 2rem;
+  height: 2rem;
+  object-fit: contain;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 0.12rem;
+}
+
+.header__meta,
+.header__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.header__email {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.header__email-mobile {
+  display: none;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.header .pill {
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+}
+
+.header .btn--ghost,
+.header .btn--primary {
+  background: #ffffff;
+  color: var(--accent);
+  border-color: rgba(255, 255, 255, 0.8);
+  box-shadow: none;
+}
+
+.header .btn--ghost:hover,
+.header .btn--primary:hover {
+  background: #eef7ef;
+}
+
+.pill {
+  background: rgba(47, 143, 91, 0.16);
+  color: var(--accent-2);
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 240px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: 100vh;
+  overflow-y: auto;
+  width: 240px;
+  padding: 2rem 1.5rem;
+  border-right: 1px solid var(--line);
+  background: linear-gradient(180deg, #eef8ef 0%, #dff1e2 100%);
+  transition: width 0.25s ease, padding 0.25s ease;
+  overflow-x: hidden;
+}
+
+.sidebar__head {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.sidebar__toggle {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  width: 2rem;
+  height: 2rem;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.sidebar__toggle:hover {
+  color: var(--ink);
+  transform: translateY(-1px) scale(1.08);
+}
+
+.sidebar__title {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 0;
+}
+
+.sidebar__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.sidebar__footer {
+  margin-top: auto;
+  padding-top: 0.85rem;
+}
+
+.sidebar__logout {
+  width: 100%;
+  background: #d32f2f;
+  border: 1px solid #b71c1c;
+  color: #ffffff;
+  box-shadow: 0 8px 16px rgba(211, 47, 47, 0.26);
+}
+
+.sidebar__logout:hover {
+  background: #c62828;
+  border-color: #9f1717;
+}
+
+.sidebar__logout:active {
+  background: #b71c1c;
+}
+
+.sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 12px;
+  color: var(--ink);
+  font-weight: 600;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.sidebar__link-icon {
+  flex: 0 0 auto;
+}
+
+.sidebar__link:hover {
+  background: rgba(15, 106, 61, 0.12);
+  transform: translateX(4px);
+}
+
+.sidebar__link--active {
+  background: rgba(15, 106, 61, 0.18);
+  color: var(--accent);
+}
+
+.sidebar--collapsed {
+  width: 84px;
+  flex-basis: 84px;
+  padding: 2rem 0.75rem;
+}
+
+.sidebar--collapsed .sidebar__head {
+  justify-content: center;
+}
+
+.sidebar--collapsed .sidebar__title,
+.sidebar--collapsed .sidebar__link-label {
+  display: none;
+}
+
+.sidebar--collapsed .sidebar__link {
+  justify-content: center;
+  text-align: center;
+  padding: 0.6rem;
+}
+
+.sidebar--collapsed .sidebar__footer {
+  padding-top: 0.7rem;
+}
+
+.sidebar--collapsed .sidebar__logout {
+  padding: 0.5rem 0.35rem;
+  font-size: 0.72rem;
+}
+
+.sidebar--collapsed .sidebar__link:hover {
+  transform: none;
+}
+
+.mobile-menu-fab {
+  position: fixed;
+  left: 0.75rem;
+  top: calc(0.85rem + env(safe-area-inset-top));
+  z-index: 1300;
+  transform: translateZ(0);
+  display: none;
+}
+
+.mobile-menu-fab--idle {
+  opacity: 0.55;
+}
+
+.route-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 1600;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 100vh;
+  padding: 1rem;
+  background: rgba(237, 245, 240, 0.9);
+  backdrop-filter: blur(2px);
+  color: var(--accent);
+  font-weight: 600;
+  text-align: center;
+}
+
+.route-loader__spinner {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 999px;
+  border: 3px solid rgba(46, 125, 50, 0.2);
+  border-top-color: var(--accent);
+  animation: spin 0.75s linear infinite;
+}
+
+.route-loader__label {
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  animation: loaderPulse 1.4s ease-in-out infinite;
+}
+
+.app-copyright {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1200;
+  padding: 0.35rem 0.85rem;
+  border-top: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--muted);
+  text-align: center;
+  font-size: 0.78rem;
+}
+
+.page {
+  padding: 2.5rem 3rem 3rem;
+  animation: fadeIn 0.5s ease;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 1.5rem;
+}
+
+h2 {
+  font-family: "Roboto", sans-serif;
+  font-size: 2rem;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.micro {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.btn {
+  border: none;
+  padding: 0.65rem 1.2rem;
+  border-radius: 999px;
+  font-weight: 600;
+  color: var(--ink);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.btn--primary {
+  background: var(--btn-primary-bg);
+  border: 1px solid var(--btn-primary-border);
+  color: white;
+  box-shadow: 0 10px 20px rgba(21, 93, 41, 0.26);
+}
+
+.btn--primary:hover {
+  transform: translateY(-2px);
+  background: var(--btn-primary-hover);
+}
+
+.btn--primary:active {
+  transform: translateY(0);
+  background: var(--btn-primary-active);
+}
+
+.btn--ghost {
+  background: var(--btn-ghost-bg);
+  border: 1px solid var(--btn-ghost-border);
+  color: var(--btn-ghost-text);
+  box-shadow: 0 4px 10px rgba(18, 73, 40, 0.1);
+}
+
+.btn--ghost:hover {
+  transform: translateY(-2px);
+  background: var(--btn-ghost-hover);
+  border-color: #7fa38b;
+}
+
+.btn--ghost:active {
+  transform: translateY(0);
+  background: var(--btn-ghost-active);
+}
+
+.btn--danger {
+  background: var(--btn-danger-bg);
+  border: 1px solid var(--btn-danger-border);
+  color: #ffffff;
+  box-shadow: 0 8px 16px rgba(211, 47, 47, 0.24);
+}
+
+.btn--danger:hover {
+  transform: translateY(-2px);
+  background: var(--btn-danger-hover);
+  border-color: #9f1717;
+}
+
+.btn--danger:active {
+  transform: translateY(0);
+  background: var(--btn-danger-active);
+}
+
+.btn--view {
+  background: var(--btn-view-bg);
+  border: 1px solid var(--btn-view-border);
+  color: var(--btn-view-text);
+  box-shadow: 0 6px 14px rgba(249, 168, 37, 0.24);
+}
+
+.btn--view:hover {
+  transform: translateY(-2px);
+  background: var(--btn-view-hover);
+  border-color: #f57f17;
+}
+
+.btn--view:active {
+  transform: translateY(0);
+  background: var(--btn-view-active);
+}
+
+.btn--success {
+  background: var(--btn-success-bg);
+  border: 1px solid var(--btn-success-border);
+  color: #ffffff;
+  box-shadow: 0 8px 16px rgba(46, 125, 50, 0.26);
+}
+
+.btn--success:hover {
+  transform: translateY(-2px);
+  background: var(--btn-success-hover);
+  border-color: #16501c;
+}
+
+.btn--success:active {
+  transform: translateY(0);
+  background: var(--btn-success-active);
+}
+
+.btn--info {
+  background: var(--btn-info-bg);
+  border: 1px solid var(--btn-info-border);
+  color: #ffffff;
+  box-shadow: 0 8px 16px rgba(25, 118, 210, 0.26);
+}
+
+.btn--info:hover {
+  transform: translateY(-2px);
+  background: var(--btn-info-hover);
+  border-color: #0b3f91;
+}
+
+.btn--info:active {
+  transform: translateY(0);
+  background: var(--btn-info-active);
+}
+
+.btn--return {
+  background: var(--btn-return-bg);
+  border: 1px solid var(--btn-return-border);
+  color: #ffffff;
+  box-shadow: 0 8px 16px rgba(0, 137, 123, 0.24);
+}
+
+.btn--return:hover {
+  transform: translateY(-2px);
+  background: var(--btn-return-hover);
+  border-color: #005b4f;
+}
+
+.btn--return:active {
+  transform: translateY(0);
+  background: var(--btn-return-active);
+}
+
+.btn:disabled {
+  opacity: 0.56;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn:focus-visible {
+  outline: 3px solid rgba(33, 150, 243, 0.35);
+  outline-offset: 2px;
+}
+
+.sidebar__logout.btn--ghost {
+  background: var(--btn-danger-bg);
+  border: 1px solid var(--btn-danger-border);
+  color: #ffffff;
+  box-shadow: 0 8px 16px rgba(211, 47, 47, 0.26);
+}
+
+.sidebar__logout.btn--ghost:hover {
+  background: var(--btn-danger-hover);
+  border-color: #9f1717;
+}
+
+.sidebar__logout.btn--ghost:active {
+  background: var(--btn-danger-active);
+}
+
+.card {
+  background: var(--card);
+  border-radius: 20px;
+  padding: 1.6rem;
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.book-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.5rem;
+  grid-auto-rows: 1fr;
+}
+
+.browse-books-page .book-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.staff-book-management-page .book-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.browse-books-page .browse-recommend-card {
+  margin-bottom: 0.9rem;
+  padding: 1rem 1.15rem;
+  background: linear-gradient(135deg, rgba(21, 101, 192, 0.09) 0%, rgba(15, 106, 61, 0.08) 100%);
+  border: 1px solid rgba(21, 101, 192, 0.18);
+}
+
+.browse-books-page .browse-recommend-card p {
+  margin: 0;
+  color: #0f3d5f;
+  line-height: 1.45;
+}
+
+.browse-books-page .browse-tools-card {
+  margin-bottom: 1.15rem;
+}
+
+.browse-books-page .browse-tools-card .search-input {
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.browse-books-page .browse-tools-card .book-category-filter {
+  margin-top: 0.85rem;
+}
+
+.book-section-separator {
+  border-top: 2px solid var(--line);
+  margin: 1.45rem 0 1.25rem;
+}
+
+.page-header--thesis-scroller {
+  margin-top: 0.25rem;
+}
+
+.book-grid--thesis-scroller {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.4rem;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.book-grid--thesis-scroller .book-card {
+  flex: 0 0 min(84vw, 360px);
+  min-width: min(84vw, 360px);
+  max-width: min(84vw, 360px);
+  scroll-snap-align: start;
+}
+
+.book-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 350px;
+}
+
+.book-card__content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.book-card__header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.book-card__header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.book-card__stock-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3rem;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+}
+
+.book-card__stock-badge--ok {
+  background: #e7f8ee;
+  color: #166534;
+  border-color: #b7ebcb;
+}
+
+.book-card__stock-badge--busy {
+  background: #fdeaea;
+  color: #991b1b;
+  border-color: #f6b7b7;
+}
+
+.book-card__title-row {
+  color: var(--ink);
+  font-size: 1.24rem;
+  font-weight: 800;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.book-card__field {
+  margin-top: 0.45rem;
+  color: var(--ink);
+  line-height: 1.45;
+  font-size: 0.88rem;
+}
+
+.book-card__label {
+  font-weight: 800;
+  color: #15345b;
+}
+
+.book-card__keywords-line,
+.book-card__category-line {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.book-card__keywords-line {
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  font-size: 0.86rem;
+}
+
+.book-card__category-line {
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  text-transform: lowercase;
+  color: #0f5b8e;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.book-card__keyword-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.35rem;
+}
+
+.book-card__keyword-chip {
+  display: inline-block;
+  background: #eaf4ff;
+  color: #14416b;
+  border: 1px solid #c6dff8;
+  border-radius: 999px;
+  padding: 0.2rem 0.62rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.detail-card__category {
+  margin-top: 0.35rem;
+  color: var(--accent);
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.book-card__author {
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  margin-top: 0.2rem;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  overflow: hidden;
+}
+
+.book-card__author span,
+.book-details__author span {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.book-card__desc {
+  margin: 0.7rem 0 1.2rem;
+  color: var(--ink);
+  line-height: 1.45;
+  font-size: 0.8rem;
+  min-height: 5.8em;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.book-card__actions,
+.detail-card__actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.book-card__actions {
+  margin-top: auto;
+}
+
+.browse-books-page .book-card h3 {
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+@media (max-width: 900px) {
+  .book-card__title-row {
+    font-size: 1.12rem;
+  }
+
+  .book-card__author {
+    font-size: 0.9rem;
+  }
+
+  .book-card__keywords-line {
+    font-size: 0.83rem;
+  }
+
+  .book-card__category-line {
+    font-size: 0.8rem;
+  }
+
+  .book-card__desc {
+    font-size: 0.78rem;
+  }
+
+  .book-card__stock-badge {
+    font-size: 0.74rem;
+    min-width: 2.8rem;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .staff-book-management-page .book-grid,
+  .browse-books-page .book-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: visible;
+    padding-bottom: 0;
+    scroll-snap-type: none;
+  }
+
+  .browse-books-page .book-grid .book-card,
+  .staff-book-management-page .book-grid .book-card,
+  .book-grid--thesis-scroller .book-card {
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    flex: 1 1 auto;
+    scroll-snap-align: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  .staff-book-management-page .book-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .staff-book-management-page .book-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1200px) {
+  .staff-book-management-page .book-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .browse-books-page .book-grid,
+  .staff-book-management-page .book-grid {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 0.35rem;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .browse-books-page .book-grid .book-card,
+  .staff-book-management-page .book-grid .book-card,
+  .book-grid--thesis-scroller .book-card {
+    width: min(92vw, 420px);
+    min-width: min(92vw, 420px);
+    max-width: min(92vw, 420px);
+    flex: 0 0 min(92vw, 420px);
+    scroll-snap-align: start;
+  }
+}
+
+.browse-books-page .book-card .micro {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.status {
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.status--mobile {
+  display: none;
+}
+
+.status--ok {
+  background: rgba(15, 106, 61, 0.15);
+  color: var(--accent-2);
+}
+
+.status--busy {
+  background: rgba(15, 106, 61, 0.2);
+  color: #0b5130;
+}
+
+.detail-card {
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: 2fr 1fr;
+  background: var(--card);
+  padding: 2rem;
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+}
+
+.detail-card__desc {
+  margin: 1rem 0;
+  color: var(--muted);
+}
+
+.detail-card__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.form {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.form-field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.auth-card__form {
+  margin-top: 1rem;
+}
+
+.auth-card__switch {
+  text-align: center;
+  margin-top: 0.35rem;
+}
+
+.auth-card__switch a {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.label {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.input,
+.select,
+textarea.input {
+  padding: 0.75rem 1rem;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: white;
+  width: 100%;
+}
+
+.input--area {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.auth-card {
+  max-width: 420px;
+  margin: 12vh auto;
+  background: var(--card);
+  padding: 2.5rem;
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  animation: fadeIn 0.5s ease;
+}
+
+.auth-card--signup {
+  width: 620px;
+  max-width: 620px;
+  height: min(80vh, 680px);
+  margin: 4.5vh auto;
+  padding: 0.95rem 1rem;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.auth-card--signup h2 {
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+.auth-card--signup > .muted {
+  margin-top: 0.2rem;
+  font-size: 0.9rem;
+}
+
+.auth-card--signup .auth-card__form {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+  margin-top: 0.55rem;
+}
+
+.signup-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem 0.65rem;
+}
+
+.signup-field {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.signup-name-row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(82px, 0.42fr);
+  align-items: end;
+  gap: 0.5rem;
+}
+
+.signup-name-row .signup-field--suffix {
+  min-width: 82px;
+}
+
+.signup-row-triple {
+  grid-template-columns: minmax(0, .6fr) minmax(0, 0.85fr) minmax(0, 0.95fr);
+  align-items: end;
+  gap: 0.45rem;
+}
+
+.signup-field--full {
+  grid-column: 1 / -1;
+}
+
+.signup-input--address {
+  min-height: 52px;
+  max-height: 82px;
+}
+
+.auth-card--signup .label {
+  font-size: 0.74rem;
+  letter-spacing: 0.07em;
+}
+
+.auth-card--signup .input,
+.auth-card--signup .select,
+.auth-card--signup textarea.input {
+  padding: 0.42rem 0.62rem;
+  font-size: 0.86rem;
+  border-radius: 12px;
+}
+
+.auth-card--signup .input::placeholder,
+.auth-card--signup textarea.input::placeholder {
+  font-size: 0.76rem;
+}
+
+.signup-input--suffix {
+  width: 100%;
+  text-transform: uppercase;
+}
+
+.signup-input--suffix::placeholder {
+  font-size: 0.7rem;
+}
+
+.auth-card--signup .btn {
+  width: 100%;
+  padding-block: 0.45rem;
+}
+
+.label .required {
+  color: #ef4444;
+}
+
+.input.input--warning,
+textarea.input.input--warning {
+  border-color: #fbbf24;
+}
+
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-input-wrapper {
+  position: relative;
+}
+
+.search-input-icon {
+  position: absolute;
+  left: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.search-input {
+  padding-left: 2.5rem;
+}
+
+.book-category-filter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+}
+
+.book-category-filter__tabs {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.book-category-filter .btn--ghost {
+  background: rgba(25, 118, 210, 0.14);
+  border-color: rgba(25, 118, 210, 0.38);
+  color: #1565c0;
+}
+
+.book-category-filter .btn--ghost:hover {
+  background: rgba(25, 118, 210, 0.22);
+  border-color: rgba(25, 118, 210, 0.48);
+}
+
+.book-category-filter__btn--active {
+  background: #1976d2;
+  border-color: #0d47a1;
+  color: #ffffff;
+  box-shadow: 0 8px 16px rgba(25, 118, 210, 0.28);
+  transform: translateY(-1px);
+}
+
+.password-input-wrapper .input {
+  padding-right: 4.5rem;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.password-toggle:hover {
+  color: var(--ink);
+}
+
+.alert {
+  background: rgba(15, 106, 61, 0.12);
+  border: 1px solid rgba(15, 106, 61, 0.2);
+  color: var(--accent);
+  padding: 0.7rem 0.9rem;
+  border-radius: 12px;
+}
+
+.alert--warning {
+  background: rgba(180, 83, 9, 0.12);
+  border: 1px solid rgba(180, 83, 9, 0.25);
+  color: #92400e;
+}
+
+.empty-state {
+  padding: 2rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px dashed var(--line);
+  display: grid;
+  gap: 0.8rem;
+  justify-items: start;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.summary-card__stats {
+  margin-top: 0.9rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.summary-card__stat {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: rgba(15, 106, 61, 0.1);
+  border: 1px solid rgba(15, 106, 61, 0.2);
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+}
+
+.dashboard-summary-list {
+  margin: 0.5rem 0 0;
+  padding-left: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.borrower-scoreboard {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.45rem;
+}
+
+.scoreboard-rank {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.65rem 0.75rem;
+  background: linear-gradient(135deg, rgba(25, 118, 210, 0.08) 0%, rgba(25, 118, 210, 0.04) 100%);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+}
+
+.rank-number {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--accent);
+  min-width: 2.2rem;
+  text-align: center;
+}
+
+.rank-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.rank-email {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.rank-count {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.dashboard-summary-sublist {
+  margin-top: 0.3rem;
+  padding-left: 1rem;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.staff-dashboard-page .dashboard-summary-card {
+  height: 230px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid rgba(15, 106, 61, 0.16);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(246, 250, 247, 0.94) 100%);
+  box-shadow: 0 10px 26px rgba(9, 49, 31, 0.08);
+  padding: 1rem 1.05rem;
+}
+
+.staff-dashboard-page .dashboard-summary-title {
+  font-size: 1.06rem;
+  font-weight: 800;
+  color: var(--accent);
+  margin-bottom: 0.35rem;
+  letter-spacing: 0.01em;
+}
+
+.staff-dashboard-page .dashboard-summary-card li {
+  overflow-wrap: anywhere;
+}
+
+.staff-dashboard-page .dashboard-summary-item {
+  display: grid;
+  gap: 0.18rem;
+  padding: 0.52rem 0.62rem;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 106, 61, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.staff-dashboard-page .dashboard-summary-item-title {
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: #10231a;
+  line-height: 1.25;
+}
+
+.staff-dashboard-page .dashboard-summary-item-meta {
+  width: fit-content;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #0c5736;
+  background: rgba(15, 106, 61, 0.12);
+  border-radius: 999px;
+  padding: 0.18rem 0.52rem;
+}
+
+.staff-dashboard-page .dashboard-rank-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.62rem;
+  border: 1px solid rgba(15, 106, 61, 0.12);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.staff-dashboard-page .dashboard-rank-index {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #0c5736;
+  background: rgba(15, 106, 61, 0.13);
+}
+
+.staff-dashboard-page .dashboard-rank-email {
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: #10231a;
+}
+
+.staff-dashboard-page .dashboard-rank-count {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #0c5736;
+  white-space: nowrap;
+}
+
+.staff-dashboard-page .dashboard-summary-card::-webkit-scrollbar {
+  width: 10px;
+}
+
+.staff-dashboard-page .dashboard-summary-card::-webkit-scrollbar-thumb {
+  background: rgba(15, 106, 61, 0.35);
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+}
+
+.staff-dashboard-page .stats-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .staff-dashboard-page .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .staff-dashboard-page .dashboard-summary-card {
+    height: 210px;
+  }
+}
+
+.table {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.table-scroll {
+  max-height: 330px;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+.table-scroll--five {
+  max-height: 285px;
+}
+
+.table-scroll--signups {
+  max-height: 460px;
+}
+
+/* Keep all target staff tables horizontally scrollable with stable column widths. */
+.staff-dashboard-page .table-scroll,
+.staff-tracking-page .table-scroll,
+.staff-approvals-page .table-scroll,
+.staff-signups-page .table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.staff-dashboard-page .table--staff-dashboard-activity {
+  min-width: 760px;
+}
+
+.staff-tracking-page .table--staff-borrow-requests {
+  min-width: 1040px;
+}
+
+.staff-tracking-page .table--staff-current-borrowers {
+  min-width: 980px;
+}
+
+.staff-tracking-page .table--staff-borrow-history {
+  min-width: 900px;
+}
+
+.staff-approvals-page .staff-data-table {
+  min-width: 980px;
+}
+
+.staff-signups-page .staff-signups-data-table {
+  min-width: 820px;
+}
+
+/* Tablet keeps sidebar and content side-by-side; drawer mode starts on smaller screens. */
+@media (min-width: 769px) and (max-width: 900px) {
+  .app-shell {
+    flex-direction: row;
+  }
+
+  .mobile-menu-fab,
+  .sidebar-backdrop {
+    display: none;
+  }
+
+  .sidebar {
+    position: sticky;
+    left: auto;
+    top: 0;
+    bottom: auto;
+    width: 240px;
+    min-width: 240px;
+    max-height: none;
+    height: 100vh;
+    border: 1px solid transparent;
+    border-right-color: var(--line);
+    border-radius: 0;
+    box-shadow: none;
+    transform: none;
+    opacity: 1;
+    pointer-events: auto;
+    padding: 2rem 1.5rem;
+  }
+
+  .sidebar--collapsed {
+    width: 84px;
+    min-width: 84px;
+    padding: 2rem 0.75rem;
+  }
+
+  .sidebar__head,
+  .sidebar__toggle {
+    display: flex;
+  }
+
+  .page {
+    margin-left: 0;
+    padding: 1.25rem 0.9rem 1.7rem;
+  }
+
+  .table__row {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+  }
+
+  .staff-page .table__row.table__head {
+    display: grid;
+  }
+
+  .staff-page .table__row,
+  .activity-log-page .table__row {
+    grid-template-columns: inherit;
+  }
+}
+
+.table--reservation-updates .table__row {
+  grid-template-columns: minmax(120px, 1fr) minmax(160px, 1.1fr) minmax(120px, 0.95fr) minmax(110px, 0.9fr) minmax(150px, 1.1fr);
+  gap: 0.75rem;
+}
+
+.table--reservation-updates .table__row > * {
+  min-width: 0;
+}
+
+.table--reservation-actions .table__row {
+  grid-template-columns: minmax(120px, 1fr) minmax(160px, 1.1fr) minmax(120px, 0.95fr) minmax(150px, 1fr);
+  gap: 0.75rem;
+}
+
+.table__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  align-items: center;
+}
+
+.table__row > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.table__row:not(.table__head) > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.table__row .btn {
+  justify-self: start;
+}
+
+.table__head {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.staff-page .staff-table-card {
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+.staff-page .table {
+  gap: 0.55rem;
+  min-width: 780px;
+}
+
+.staff-page .table__row {
+  border: 1px solid rgba(15, 106, 61, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.7rem 0.72rem;
+}
+
+.staff-page .table__row.table__head {
+  border: none;
+  background: transparent;
+  border-radius: 0;
+  padding: 0 0.72rem 0.2rem;
+}
+
+.staff-page .table__row:not(.table__head) > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.35;
+}
+
+.activity-log-page .activity-log-table-card {
+  padding: 1rem;
+  overflow-x: auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.activity-log-page .table {
+  gap: 0.55rem;
+  min-width: auto;
+  width: 100%;
+}
+
+.activity-log-page .table__row {
+  border: 1px solid rgba(15, 106, 61, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.72rem 0.75rem;
+}
+
+.activity-log-page .table__row.table__head {
+  border: none;
+  background: transparent;
+  border-radius: 0;
+  padding: 0 0.75rem 0.2rem;
+}
+
+.activity-log-page .table__row:not(.table__head) > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.35;
+}
+
+.activity-log-page .table--reservation-updates .table__row {
+  grid-template-columns: minmax(90px, 0.8fr) minmax(145px, 1fr) minmax(120px, 0.95fr) minmax(110px, 0.8fr) minmax(150px, 1fr);
+}
+
+.activity-log-page .table--reservation-actions .table__row {
+  grid-template-columns: minmax(90px, 0.9fr) minmax(145px, 1fr) minmax(120px, 0.9fr) minmax(165px, 1fr);
+}
+
+.activity-log-page .table--borrow-history .table__row {
+  grid-template-columns: minmax(160px, 1.2fr) minmax(120px, 0.85fr) minmax(145px, 1fr);
+}
+
+.activity-log-page .table--borrow-updates .table__row {
+  grid-template-columns: minmax(180px, 1.4fr) minmax(100px, 0.85fr) minmax(140px, 1fr) minmax(140px, 1fr);
+}
+
+.activity-log-page .table--reservation-updates {
+  min-width: 860px;
+}
+
+.activity-log-page .table--borrow-history {
+  min-width: 620px;
+}
+
+.activity-log-page .table--borrow-updates {
+  min-width: 820px;
+}
+
+.activity-log-page .table--reservation-updates .table__row {
+  grid-template-columns: minmax(90px, 0.8fr) minmax(145px, 1fr) minmax(120px, 0.95fr) minmax(110px, 0.8fr) minmax(230px, 1.2fr);
+}
+
+.activity-log-page .table--borrow-history .table__row {
+  grid-template-columns: minmax(160px, 1.1fr) minmax(120px, 0.85fr) minmax(230px, 1.2fr);
+}
+
+.activity-log-page .table--borrow-updates .table__row {
+  grid-template-columns: minmax(180px, 1.2fr) minmax(100px, 0.75fr) minmax(220px, 1.1fr) minmax(220px, 1.1fr);
+}
+
+.activity-log-page .table--reservation-updates .table__row:not(.table__head) > span:nth-child(5),
+.activity-log-page .table--borrow-history .table__row:not(.table__head) > span:nth-child(3),
+.activity-log-page .table--borrow-updates .table__row:not(.table__head) > span:nth-child(3),
+.activity-log-page .table--borrow-updates .table__row:not(.table__head) > span:nth-child(4) {
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.staff-tracking-page .table--staff-borrow-requests .table__row {
+  grid-template-columns: minmax(170px, 1.2fr) minmax(110px, 0.75fr) minmax(160px, 1fr) minmax(180px, 1.25fr) minmax(100px, 0.72fr) minmax(165px, 1.05fr) minmax(110px, 0.75fr);
+  gap: 0.75rem;
+}
+
+.staff-tracking-page .table--staff-borrow-requests {
+  min-width: 1040px;
+}
+
+.staff-tracking-page .table--staff-borrow-requests .table__row:not(.table__head) > span:nth-child(6) {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.staff-tracking-page .table--staff-borrow-history .table__row {
+  grid-template-columns: minmax(170px, 1.2fr) minmax(110px, 0.75fr) minmax(170px, 1.2fr) minmax(120px, 0.9fr) minmax(150px, 1fr);
+  gap: 0.75rem;
+}
+
+.staff-dashboard-page .table--staff-dashboard-activity {
+  min-width: 920px;
+}
+
+.staff-dashboard-page .table--staff-dashboard-activity .table__row {
+  grid-template-columns: minmax(150px, 1fr) minmax(170px, 1.2fr) minmax(90px, 0.7fr) minmax(230px, 1.25fr);
+}
+
+.staff-tracking-page .table--staff-borrow-history {
+  min-width: 980px;
+}
+
+.staff-tracking-page .table--staff-borrow-history .table__row {
+  grid-template-columns: minmax(170px, 1.2fr) minmax(110px, 0.75fr) minmax(170px, 1.1fr) minmax(120px, 0.9fr) minmax(230px, 1.2fr);
+}
+
+.staff-dashboard-page .table--staff-dashboard-activity .table__row:not(.table__head) > span:nth-child(4),
+.staff-tracking-page .table--staff-borrow-history .table__row:not(.table__head) > span:nth-child(5) {
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.staff-tracking-page .table--staff-current-borrowers {
+  min-width: 980px;
+}
+
+.staff-approvals-page .table--staff-pending .table__row {
+  grid-template-columns: minmax(10ch, 12ch) minmax(20ch, 22ch) minmax(18ch, 1.2fr) minmax(10ch, 12ch) minmax(22ch, 24ch) minmax(8ch, 9ch) minmax(8ch, 9ch);
+  gap: 0.75rem;
+}
+
+.staff-approvals-page .table--staff-current .table__row {
+  grid-template-columns: minmax(10ch, 12ch) minmax(20ch, 22ch) minmax(18ch, 1.2fr) minmax(16ch, 1.2fr) minmax(16ch, 1fr) minmax(8ch, 9ch);
+  gap: 0.75rem;
+}
+
+.staff-approvals-page .table--staff-current-reservations {
+  min-width: 1040px;
+}
+
+.staff-approvals-page .table--staff-current-reservations .table__row {
+  grid-template-columns: minmax(10ch, 12ch) minmax(20ch, 22ch) minmax(10ch, 12ch) minmax(22ch, 24ch) minmax(14ch, 1fr) minmax(11ch, 12ch) minmax(11ch, 12ch);
+  gap: 0.75rem;
+}
+
+.staff-approvals-page .table--staff-current-reservations .table__row > * {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.staff-approvals-page .table--staff-current-reservations .table__row.table__head > span {
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.staff-approvals-page .table--staff-history .table__row {
+  grid-template-columns: minmax(10ch, 12ch) minmax(20ch, 22ch) minmax(18ch, 1.2fr) minmax(12ch, 1fr) minmax(12ch, 1fr) minmax(22ch, 24ch);
+  gap: 0.75rem;
+}
+
+.staff-approvals-page .table--staff-pending .table__row:not(.table__head) > span:nth-child(2),
+.staff-approvals-page .table--staff-pending .table__row:not(.table__head) > span:nth-child(5),
+.staff-approvals-page .table--staff-current .table__row:not(.table__head) > span:nth-child(2),
+.staff-approvals-page .table--staff-history .table__row:not(.table__head) > span:nth-child(2),
+.staff-approvals-page .table--staff-history .table__row:not(.table__head) > span:nth-child(6) {
+  text-overflow: clip;
+}
+
+.staff-tracking-page .table--staff-current-borrowers .table__row {
+  grid-template-columns: minmax(145px, 0.95fr) minmax(80px, 0.5fr) minmax(170px, 1.1fr) minmax(175px, 1.15fr) minmax(115px, 0.8fr) minmax(90px, 0.6fr);
+  gap: 0.42rem;
+  padding: 0.62rem 0.65rem;
+}
+
+.staff-tracking-page .table--staff-current-borrowers .table__row:not(.table__head) > span:nth-child(4) {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.staff-dashboard-page .table--dashboard-most-borrowed .table__row {
+  grid-template-columns: minmax(180px, 1.2fr) minmax(120px, 0.8fr);
+  gap: 0.75rem;
+}
+
+.staff-dashboard-page .table--dashboard-top-activity .table__row {
+  grid-template-columns: minmax(190px, 1.2fr) minmax(120px, 0.8fr) minmax(110px, 0.75fr);
+  gap: 0.75rem;
+}
+
+.staff-dashboard-page .table--staff-dashboard-activity .table__row {
+  grid-template-columns: minmax(150px, 1fr) minmax(170px, 1.2fr) minmax(90px, 0.7fr) minmax(140px, 1fr);
+  gap: 0.75rem;
+}
+
+.staff-dashboard-page .dashboard-activity-table-card {
+  padding: 1rem;
+}
+
+.staff-dashboard-page .table {
+  gap: 0.55rem;
+}
+
+.staff-dashboard-page .table__row {
+  border: 1px solid rgba(15, 106, 61, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.72rem 0.75rem;
+}
+
+.staff-dashboard-page .table__row.table__head {
+  border: none;
+  background: transparent;
+  border-radius: 0;
+  padding: 0 0.75rem 0.2rem;
+}
+
+.staff-approvals-page .staff-data-table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: separate;
+  border-spacing: 0 0.55rem;
+}
+
+.staff-approvals-page .staff-data-table th {
+  text-align: left;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  padding: 0 0.72rem 0.2rem;
+}
+
+.staff-approvals-page .staff-data-table td {
+  border-top: 1px solid rgba(15, 106, 61, 0.14);
+  border-bottom: 1px solid rgba(15, 106, 61, 0.14);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.7rem 0.72rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  line-height: 1.35;
+}
+
+.staff-approvals-page .staff-data-table td:first-child {
+  border-left: 1px solid rgba(15, 106, 61, 0.14);
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+}
+
+.staff-approvals-page .staff-data-table td:last-child {
+  border-right: 1px solid rgba(15, 106, 61, 0.14);
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+.staff-approvals-page .staff-data-table td .btn {
+  width: auto;
+  justify-self: start;
+}
+
+.reservation-page .reservation-table-wrap {
+  width: 100%;
+  max-height: 24rem;
+  overflow-y: auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.reservation-page .reservation-table-wrap .staff-data-table {
+  width: max(100%, 1100px);
+  min-width: 1100px;
+}
+
+.reservation-page .reservation-table-wrap .staff-data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  font-weight: 800;
+}
+
+.reservation-page .reservation-actions-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.reservation-page .reservation-actions-cell .btn {
+  min-width: 5.2rem;
+}
+
+.reservation-page .reservation-reason-cell {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.staff-approvals-page .staff-data-table td[data-label="Time Slot"],
+.staff-approvals-page .staff-data-table td[data-label="Requested"],
+.staff-approvals-page .staff-data-table td[data-label="Time"] {
+  text-overflow: clip;
+}
+
+@media (max-width: 1023px) {
+  .reservation-page .reservation-table-wrap {
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: visible;
+  }
+
+  .reservation-page .reservation-table-wrap .staff-data-table {
+    min-width: 1100px;
+  }
+}
+
+.staff-signups-page .staff-signups-data-table {
+  width: 100%;
+  min-width: 820px;
+  border-collapse: separate;
+  border-spacing: 0 0.55rem;
+}
+
+.staff-signups-page .staff-signups-data-table th {
+  text-align: left;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  padding: 0 0.72rem 0.2rem;
+  white-space: nowrap;
+}
+
+.staff-signups-page .staff-signups-data-table td {
+  border-top: 1px solid rgba(15, 106, 61, 0.14);
+  border-bottom: 1px solid rgba(15, 106, 61, 0.14);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.7rem 0.72rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  line-height: 1.35;
+}
+
+.staff-signups-page .staff-signups-data-table td:first-child {
+  border-left: 1px solid rgba(15, 106, 61, 0.14);
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+}
+
+.staff-signups-page .staff-signups-data-table td:last-child {
+  border-right: 1px solid rgba(15, 106, 61, 0.14);
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+.staff-signups-page .staff-signups-data-table td .btn {
+  width: auto;
+  justify-self: start;
+}
+
+.staff-signups-page .staff-signups-search-card {
+  padding: 1rem 1.2rem;
+}
+
+.list {
+  padding-left: 1.2rem;
+  color: var(--muted);
+  display: grid;
+  gap: 0.4rem;
+}
+
+.toast-host {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1000;
+  display: grid;
+  gap: 0.6rem;
+  width: min(320px, calc(100vw - 2rem));
+}
+
+.toast {
+  border-radius: 12px;
+  padding: 0.7rem 0.85rem;
+  color: #fff;
+  box-shadow: var(--shadow);
+  font-weight: 600;
+  animation: fadeIn 0.25s ease;
+}
+
+.toast--success {
+  background: var(--accent-2);
+}
+
+.toast--error {
+  background: var(--accent);
+}
+
+.toast--info {
+  background: var(--ink);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 18, 14, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  z-index: 1200;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+body:has(.modal-overlay) {
+  overflow: hidden;
+}
+
+.modal-card {
+  width: min(460px, 100%);
+  display: grid;
+  gap: 0.9rem;
+}
+
+.modal-card--book-details {
+  width: min(620px, 100%);
+  max-height: min(88vh, 760px);
+  overflow-y: auto;
+}
+
+.book-details__title {
+  font-size: 1.35rem !important;
+  font-weight: 900 !important;
+  color: #0d2438 !important;
+  margin-bottom: 0.75rem;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+}
+
+.book-details__author {
+  font-weight: 700;
+  color: #1a3a52;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+
+.modal-card--signup-details {
+  width: min(560px, 100%);
+}
+
+.modal-card--reason-details {
+  width: min(520px, 100%);
+}
+
+.modal-card--book-management {
+  width: min(620px, 100%);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.7rem;
+}
+
+.staff-signups-view-btn {
+  width: auto;
+  background: #fdd835;
+  border: 1px solid #f9a825;
+  color: #4e342e;
+}
+
+.book-management-delete-btn {
+  border: 1px solid rgba(198, 40, 40, 0.46);
+  background: rgba(198, 40, 40, 0.12);
+  color: #8e1f1f;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+@media (max-width: 1200px) {
+  .book-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes loaderPulse {
+  0%,
+  100% {
+    opacity: 0.62;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-1px);
+  }
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    flex-direction: column;
+  }
+
+  .header {
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    padding: 1rem 1rem 0.9rem;
+    position: static;
+    top: auto;
+  }
+
+  .header__meta,
+  .header__actions {
+    width: auto;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: 0.4rem;
+  }
+
+  .header .brand {
+    font-size: 1.1rem;
+    gap: 0.4rem;
+  }
+
+  .header .brand__logo {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  .header__role-pill,
+  .header__email {
+    display: none;
+  }
+
+  .header__email-mobile {
+    display: inline-block;
+    text-align: right;
+    line-height: 1.2;
+    font-size: 0.72rem;
+    max-width: 45vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .header__meta .btn--ghost {
+    font-size: 0.76rem;
+    padding: 0.38rem 0.62rem;
+    line-height: 1.2;
+  }
+
+  .mobile-menu-fab {
+    position: fixed;
+    left: 0.75rem;
+    top: calc(0.85rem + env(safe-area-inset-top));
+    z-index: 1300;
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    border: none;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff;
+    padding: 0.68rem;
+    font-weight: 700;
+    box-shadow: 0 12px 22px rgba(27, 94, 32, 0.3);
+    transition: opacity 0.25s ease, transform 0.2s ease;
+  }
+
+  .mobile-menu-fab:active {
+    transform: translateY(1px);
+  }
+
+  .sidebar {
+    position: fixed;
+    left: 0.75rem;
+    top: calc(4.35rem + env(safe-area-inset-top));
+    bottom: auto;
+    width: min(260px, calc(100vw - 1.5rem));
+    max-height: calc(100dvh - 5.1rem - env(safe-area-inset-top));
+    overflow-y: auto;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    background: rgba(226, 243, 229, 0.98);
+    padding: 0.7rem;
+    z-index: 35;
+    transform: translateY(14px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+
+  .sidebar.sidebar--mobile-open {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .sidebar-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 34;
+    animation: fadeIn 0.2s ease;
+  }
+
+  /* Prevent scrollable content from appearing above fixed sidebar at tablet sizes */
+  .table-scroll,
+  .table-scroll--five {
+    z-index: 0;
+    position: relative;
+  }
+
+  .page {
+    z-index: 0;
+  }
+
+  .card {
+    z-index: 0;
+    position: relative;
+  }
+
+  .staff-page,
+  .activity-log-page {
+    z-index: 0;
+  }
+
+  .sidebar,
+  .sidebar--collapsed {
+    width: min(260px, calc(100vw - 1.9rem));
+    padding: 0.7rem;
+  }
+
+  .sidebar__head,
+  .sidebar__toggle {
+    display: none;
+  }
+
+  .sidebar__section {
+    gap: 0.4rem;
+  }
+
+  .sidebar__footer {
+    margin-top: 0.45rem;
+    padding-top: 0.45rem;
+  }
+
+  .sidebar__link {
+    border: 1px solid var(--line);
+    background: #ffffff;
+    padding: 0.56rem 0.7rem;
+    border-radius: 10px;
+    white-space: normal;
+    font-size: 0.85rem;
+  }
+
+  .sidebar__logout {
+    padding: 0.5rem 0.7rem;
+    font-size: 0.8rem;
+  }
+
+  .sidebar--collapsed .sidebar__title,
+  .sidebar--collapsed .sidebar__link-label {
+    display: inline;
+  }
+
+  .page {
+    padding: 1.25rem 0.9rem 1.7rem;
+    margin-left: 280px;
+    width: auto;
+    box-sizing: border-box;
+  }
+
+  main.page {
+    width: 100%;
+  }
+
+  .table {
+    font-size: 0.87rem;
+  }
+
+  .table__row:not(.table__head) > span {
+    font-size: 0.87rem;
+    line-height: 1.32;
+  }
+
+  .table__row.table__head > span {
+    font-size: 0.85rem;
+  }
+
+  .staff-page .table,
+  .activity-log-page .table {
+    font-size: 0.87rem;
+  }
+
+  .staff-page .table__row:not(.table__head) > span,
+  .activity-log-page .table__row:not(.table__head) > span {
+    font-size: 0.87rem;
+  }
+
+  .page section {
+    width: 100%;
+  }
+
+  .book-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+  }
+
+  .card {
+    padding: 1.05rem;
+  }
+
+  .book-card {
+    min-height: 330px;
+  }
+
+  .book-card h3 {
+    font-size: 0.96rem;
+    line-height: 1.3;
+  }
+
+  .status--desktop {
+    display: none;
+  }
+
+  .status--mobile {
+    display: inline-flex;
+    align-self: flex-start;
+    margin-top: auto;
+    margin-bottom: 0.55rem;
+    font-size: 0.68rem;
+    padding: 0.15rem 0.55rem;
+  }
+
+  .book-card .muted {
+    font-size: 0.85rem;
+    line-height: 1.35;
+  }
+
+  .book-card__desc {
+    margin: 0.6rem 0 0.9rem;
+    font-size: 0.82rem;
+    line-height: 1.3;
+  }
+
+  .book-card .btn {
+    width: 100%;
+    padding: 0.48rem 0.72rem;
+    font-size: 0.78rem;
+    line-height: 1.2;
+  }
+
+  .detail-card {
+    grid-template-columns: 1fr;
+    padding: 1.15rem;
+    gap: 1.15rem;
+  }
+
+  .table__row {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .table--reservation-updates .table__row {
+    grid-template-columns: 1fr;
+  }
+
+  .table--reservation-actions .table__row {
+    grid-template-columns: 1fr;
+  }
+
+  .staff-page .table__row.table__head {
+    display: none;
+  }
+
+  .staff-approvals-page .staff-table-card {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: auto;
+  }
+
+  .staff-approvals-page .staff-data-table {
+    min-width: 980px;
+    border-spacing: 0 0.55rem;
+  }
+
+  .staff-approvals-page .staff-data-table th {
+    font-size: 0.74rem;
+    padding: 0 0.58rem 0.18rem;
+  }
+
+  .staff-approvals-page .staff-data-table td {
+    font-size: 0.8rem;
+    padding: 0.58rem 0.58rem;
+    line-height: 1.28;
+  }
+
+  .staff-approvals-page .staff-data-table td .btn {
+    font-size: 0.72rem;
+    padding: 0.36rem 0.64rem;
+  }
+
+  .staff-approvals-page .staff-data-table thead {
+    display: table-header-group;
+  }
+
+  .staff-approvals-page .staff-data-table tbody tr {
+    display: table-row;
+  }
+
+  .staff-page .table__row {
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
+    padding: 0.72rem;
+  }
+
+  .staff-tracking-page .table--staff-borrow-requests {
+    min-width: 1040px;
+  }
+
+  .staff-tracking-page .table--staff-borrow-requests .table__row {
+    grid-template-columns: minmax(170px, 1.2fr) minmax(110px, 0.75fr) minmax(160px, 1fr) minmax(180px, 1.25fr) minmax(100px, 0.72fr) minmax(165px, 1.05fr) minmax(110px, 0.75fr);
+    gap: 0.65rem;
+  }
+
+  .staff-tracking-page .table--staff-current-borrowers {
+    min-width: 980px;
+  }
+
+  .staff-tracking-page .table--staff-current-borrowers .table__row {
+    grid-template-columns: minmax(145px, 0.95fr) minmax(80px, 0.5fr) minmax(170px, 1.1fr) minmax(175px, 1.15fr) minmax(115px, 0.8fr) minmax(90px, 0.6fr);
+  }
+
+  .staff-tracking-page .table--staff-borrow-history {
+    min-width: 860px;
+  }
+
+  .staff-tracking-page .table--staff-borrow-requests .table__row.table__head,
+  .staff-tracking-page .table--staff-current-borrowers .table__row.table__head,
+  .staff-tracking-page .table--staff-borrow-history .table__row.table__head {
+    display: grid;
+  }
+
+  .staff-tracking-page .table--staff-borrow-requests .table__row > span::before,
+  .staff-tracking-page .table--staff-current-borrowers .table__row > span::before,
+  .staff-tracking-page .table--staff-borrow-history .table__row > span::before,
+  .staff-tracking-page .table--staff-borrow-requests .table__row .btn::before {
+    content: none;
+  }
+
+  .staff-approvals-page .table--staff-pending .table__row .btn,
+  .staff-approvals-page .table--staff-current .table__row .btn,
+  .staff-tracking-page .table--staff-borrow-requests .table__row .btn,
+  .staff-tracking-page .table--staff-current-borrowers .table__row .btn {
+    width: auto;
+    justify-self: start;
+    margin-top: 0;
+  }
+
+  .staff-signups-page .staff-signups-data-table .staff-signups-view-btn {
+    width: auto;
+    justify-self: start;
+    padding: 0.35rem 0.75rem;
+    margin-top: 0;
+  }
+
+  .staff-signups-page .staff-signups-data-table th {
+    font-size: 0.72rem;
+    padding: 0 0.55rem 0.16rem;
+  }
+
+  .staff-signups-page .staff-signups-data-table td {
+    font-size: 0.78rem;
+    padding: 0.54rem 0.55rem;
+    line-height: 1.25;
+  }
+
+  .staff-signups-page .staff-signups-data-table td .btn {
+    font-size: 0.7rem;
+    padding: 0.32rem 0.62rem;
+  }
+
+  .staff-approvals-page .table--staff-current .table__row:not(.table__head) > span:nth-child(1)::before,
+  .staff-approvals-page .table--staff-history .table__row:not(.table__head) > span:nth-child(1)::before {
+    content: "Room: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-approvals-page .table--staff-pending .table__row:not(.table__head) > span:nth-child(2)::before,
+  .staff-approvals-page .table--staff-current .table__row:not(.table__head) > span:nth-child(2)::before,
+  .staff-approvals-page .table--staff-history .table__row:not(.table__head) > span:nth-child(2)::before {
+    content: "Time Slot: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-approvals-page .table--staff-pending .table__row:not(.table__head) > span:nth-child(3)::before {
+    content: "Email: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-approvals-page .table--staff-current .table__row:not(.table__head) > span:nth-child(3)::before,
+  .staff-approvals-page .table--staff-history .table__row:not(.table__head) > span:nth-child(3)::before {
+    content: "Requester: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-approvals-page .table--staff-pending .table__row:not(.table__head) > span:nth-child(4)::before {
+    content: "ID: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-approvals-page .table--staff-current .table__row:not(.table__head) > span:nth-child(4)::before {
+    content: "Notes: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-approvals-page .table--staff-history .table__row:not(.table__head) > span:nth-child(4)::before {
+    content: "Action: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-approvals-page .table--staff-pending .table__row:not(.table__head) > span:nth-child(5)::before {
+    content: "Requested: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-approvals-page .table--staff-pending .table__row:not(.table__head) > button:nth-child(6)::before {
+    content: "Reason: ";
+    font-weight: 700;
+    color: var(--ink);
+    margin-right: 0.3rem;
+  }
+
+  .staff-approvals-page .table--staff-pending .table__row:not(.table__head) > button:nth-child(7)::before {
+    content: "Action: ";
+    font-weight: 700;
+    color: var(--ink);
+    margin-right: 0.3rem;
+  }
+
+  .staff-approvals-page .table--staff-history .table__row:not(.table__head) > span:nth-child(6)::before {
+    content: "Time: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-approvals-page .table--staff-current .table__row:not(.table__head) > span:nth-child(5)::before,
+  .staff-approvals-page .table--staff-history .table__row:not(.table__head) > span:nth-child(5)::before {
+    content: "Status: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-tracking-page .table--staff-borrow-history .table__row:not(.table__head) > span:nth-child(1)::before {
+    content: "User: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-tracking-page .table--staff-borrow-history .table__row:not(.table__head) > span:nth-child(2)::before {
+    content: "Student ID: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-tracking-page .table--staff-borrow-history .table__row:not(.table__head) > span:nth-child(3)::before {
+    content: "Book: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-tracking-page .table--staff-borrow-history .table__row:not(.table__head) > span:nth-child(4)::before {
+    content: "Time: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-tracking-page .table--staff-borrow-history {
+    min-width: 820px;
+  }
+
+  .staff-tracking-page .table--staff-borrow-history .table__row {
+    grid-template-columns: minmax(170px, 1.2fr) minmax(110px, 0.8fr) minmax(170px, 1.2fr) minmax(120px, 0.9fr) minmax(145px, 1fr);
+    gap: 0.75rem;
+  }
+
+  .staff-tracking-page .table--staff-borrow-history .table__row.table__head {
+    display: grid;
+  }
+
+  .staff-tracking-page .table--staff-borrow-history .table__row > span::before {
+    content: none;
+  }
+
+  .staff-tracking-page .table--staff-borrow-requests .table__row:not(.table__head) > span:nth-child(1)::before {
+    content: "User: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-tracking-page .table--staff-borrow-requests .table__row:not(.table__head) > span:nth-child(2)::before {
+    content: "Student ID: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-tracking-page .table--staff-borrow-requests .table__row:not(.table__head) > span:nth-child(3)::before {
+    content: "Book: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-tracking-page .table--staff-borrow-requests .table__row:not(.table__head) > span:nth-child(4)::before {
+    content: "Requested: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-tracking-page .table--staff-borrow-requests .table__row:not(.table__head) .btn {
+    width: auto;
+    justify-self: start;
+    margin-top: 0;
+  }
+
+  .staff-tracking-page .table--staff-borrow-requests .table__row:not(.table__head) .btn::before {
+    content: "Action: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-tracking-page .table--staff-current-borrowers .table__row:not(.table__head) > span:nth-child(1)::before {
+    content: "User: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-tracking-page .table--staff-current-borrowers .table__row:not(.table__head) > span:nth-child(2)::before {
+    content: "Student ID: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-tracking-page .table--staff-current-borrowers .table__row:not(.table__head) > span:nth-child(3)::before {
+    content: "Book: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-tracking-page .table--staff-current-borrowers .table__row:not(.table__head) > span:nth-child(4)::before {
+    content: "Time: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-tracking-page .table--staff-current-borrowers .table__row:not(.table__head) > span:nth-child(5)::before {
+    content: "Status: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-tracking-page .table--staff-borrow-requests .table__row:not(.table__head) > span:nth-child(1)::before,
+  .staff-tracking-page .table--staff-borrow-requests .table__row:not(.table__head) > span:nth-child(2)::before,
+  .staff-tracking-page .table--staff-borrow-requests .table__row:not(.table__head) > span:nth-child(3)::before,
+  .staff-tracking-page .table--staff-borrow-requests .table__row:not(.table__head) > span:nth-child(4)::before,
+  .staff-tracking-page .table--staff-current-borrowers .table__row:not(.table__head) > span:nth-child(1)::before,
+  .staff-tracking-page .table--staff-current-borrowers .table__row:not(.table__head) > span:nth-child(2)::before,
+  .staff-tracking-page .table--staff-current-borrowers .table__row:not(.table__head) > span:nth-child(3)::before,
+  .staff-tracking-page .table--staff-current-borrowers .table__row:not(.table__head) > span:nth-child(4)::before,
+  .staff-tracking-page .table--staff-current-borrowers .table__row:not(.table__head) > span:nth-child(5)::before,
+  .staff-tracking-page .table--staff-borrow-history .table__row:not(.table__head) > span:nth-child(1)::before,
+  .staff-tracking-page .table--staff-borrow-history .table__row:not(.table__head) > span:nth-child(2)::before,
+  .staff-tracking-page .table--staff-borrow-history .table__row:not(.table__head) > span:nth-child(3)::before,
+  .staff-tracking-page .table--staff-borrow-history .table__row:not(.table__head) > span:nth-child(4)::before,
+  .staff-tracking-page .table--staff-borrow-requests .table__row:not(.table__head) .btn::before,
+  .staff-tracking-page .table--staff-current-borrowers .table__row:not(.table__head) .btn::before {
+    content: none;
+  }
+
+  .staff-dashboard-page .table--staff-dashboard-activity .table__row:not(.table__head) > span:nth-child(1)::before {
+    content: "Action: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-dashboard-page .table--staff-dashboard-activity .table__row:not(.table__head) > span:nth-child(2)::before {
+    content: "User: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-dashboard-page .table--staff-dashboard-activity .table__row:not(.table__head) > span:nth-child(3)::before {
+    content: "Student ID: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-dashboard-page .table--staff-dashboard-activity .table__row:not(.table__head) > span:nth-child(4)::before {
+    content: "Time: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-signups-page .table--staff-signups .table__row:not(.table__head) > span:nth-child(1)::before {
+    content: "Name: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-signups-page .table--staff-signups .table__row:not(.table__head) > span:nth-child(2)::before {
+    content: "Course - Year Level: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-signups-page .table--staff-signups .table__row:not(.table__head) > span:nth-child(3)::before {
+    content: "Student ID: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-signups-page .table--staff-signups .table__row:not(.table__head) > span:nth-child(4)::before {
+    content: "Email: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .staff-signups-page .table--staff-signups .table__row:not(.table__head) > span:nth-child(5)::before {
+    content: "Address: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .activity-log-page .table__row.table__head {
+    display: none;
+  }
+
+  .activity-log-page .table__row {
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
+    padding: 0.72rem;
+  }
+
+  .activity-log-page .table__row > span {
+    font-size: 0.82rem;
+    line-height: 1.3;
+  }
+
+  .activity-log-page .table__row > span::before {
+    font-size: 0.74rem;
+    letter-spacing: 0.01em;
+  }
+
+  .activity-log-page .table--reservation-actions .table__row,
+  .activity-log-page .table--reservation-updates .table__row {
+    gap: 0.4rem;
+  }
+
+  .page h2,
+  .auth-card h2 {
+    font-size: 1.35rem;
+    line-height: 1.25;
+  }
+
+  .page .page-header .muted,
+  .auth-card .muted {
+    font-size: 0.86rem;
+    line-height: 1.35;
+  }
+
+  .page .table__row > span {
+    font-size: 0.84rem;
+    line-height: 1.3;
+  }
+
+  .page .table__row .btn,
+  .auth-card .btn {
+    font-size: 0.78rem;
+  }
+
+  .activity-log-page .table--reservation-actions .table__row .btn {
+    width: 100%;
+    justify-self: stretch;
+    margin-top: 0.25rem;
+    font-size: 0.76rem;
+    padding: 0.44rem 0.66rem;
+  }
+
+  .activity-log-page .table--reservation-actions .table__row:not(.table__head) > span:nth-child(1)::before {
+    content: "Room: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .activity-log-page .table--reservation-actions .table__row:not(.table__head) > span:nth-child(2)::before {
+    content: "Time Slot: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .activity-log-page .table--reservation-actions .table__row:not(.table__head) > span:nth-child(3)::before {
+    content: "Status: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .activity-log-page .table--reservation-updates .table__row:not(.table__head) > span:nth-child(1)::before {
+    content: "Room: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .activity-log-page .table--reservation-updates .table__row:not(.table__head) > span:nth-child(2)::before {
+    content: "Time Slot: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .activity-log-page .table--reservation-updates .table__row:not(.table__head) > span:nth-child(3)::before {
+    content: "Action: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .activity-log-page .table--reservation-updates .table__row:not(.table__head) > span:nth-child(4)::before {
+    content: "Status: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .activity-log-page .table--reservation-updates .table__row:not(.table__head) > span:nth-child(5)::before {
+    content: "Updated: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .activity-log-page .table--borrow-history .table__row:not(.table__head) > span:nth-child(1)::before {
+    content: "Book: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .activity-log-page .table--borrow-history .table__row:not(.table__head) > span:nth-child(2)::before {
+    content: "Action: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .activity-log-page .table--borrow-history .table__row:not(.table__head) > span:nth-child(3)::before {
+    content: "Time: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .activity-log-page .table--borrow-updates .table__row:not(.table__head) > span:nth-child(1)::before {
+    content: "Book: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .activity-log-page .table--borrow-updates .table__row:not(.table__head) > span:nth-child(2)::before {
+    content: "Status: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .activity-log-page .table--borrow-updates .table__row:not(.table__head) > span:nth-child(3)::before {
+    content: "Requested: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .activity-log-page .table--borrow-updates .table__row:not(.table__head) > span:nth-child(4)::before {
+    content: "Updated: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-card {
+    max-width: 100%;
+    margin: 5vh auto;
+    padding: 1.25rem 1rem;
+  }
+
+  .auth-card--signup {
+    max-width: 100%;
+    width: 100%;
+    height: auto;
+    margin: 4vh auto;
+    padding: 1rem 0.9rem;
+    display: block;
+    overflow: visible;
+  }
+
+  .auth-card--signup .auth-card__form {
+    overflow-y: visible;
+    padding-right: 0;
+  }
+
+  .signup-form {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .signup-name-row {
+    grid-template-columns: 1fr;
+    gap: 0.9rem;
+  }
+
+  .signup-row-triple {
+    grid-template-columns: 1fr;
+    gap: 0.9rem;
+  }
+
+  .modal-card {
+    width: 100%;
+  }
+
+  .modal-actions {
+    justify-content: stretch;
+  }
+
+  .modal-actions .btn {
+    width: 100%;
+  }
+
+  /* Enhanced staff page tablet/mobile responsiveness */
+  .staff-page .staff-table-card {
+    padding: 0.75rem;
+    overflow-x: auto;
+  }
+
+  .staff-tracking-page .table--staff-borrow-requests,
+  .staff-tracking-page .table--staff-current-borrowers,
+  .staff-tracking-page .table--staff-borrow-history {
+    min-width: auto;
+    overflow-x: visible;
+  }
+
+  .staff-dashboard-page .dashboard-activity-table-card {
+    padding: 0.75rem;
+  }
+
+  .staff-dashboard-page .table {
+    min-width: auto;
+  }
+}
+
+@media (min-width: 561px) and (max-width: 900px) {
+  .mobile-menu-fab {
+    display: none;
+  }
+
+  .sidebar-backdrop {
+    display: none;
+  }
+
+  .sidebar,
+  .sidebar--collapsed {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 260px;
+    min-width: 260px;
+    max-width: 260px;
+    height: 100vh;
+    max-height: 100vh;
+    border-right: 1px solid var(--line);
+    border-radius: 0;
+    padding: 0.95rem 0.75rem;
+    transform: none;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .app-shell__main {
+    margin-left: 260px;
+    width: calc(100% - 260px);
+  }
+
+  .page {
+    margin-left: 0;
+    width: 100%;
+    padding: 1.2rem 0.95rem 1.7rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .search-input-icon {
+    display: none;
+  }
+
+  .search-input {
+    padding-left: 0.75rem;
+    font-size: 0.84rem;
+    line-height: 1.25;
+  }
+
+  .search-input::placeholder {
+    font-size: 0.78rem;
+  }
+
+  .table-scroll,
+  .table-scroll--five,
+  .staff-page .staff-table-card,
+  .activity-log-page .activity-log-table-card,
+  .staff-approvals-page .staff-table-card,
+  .staff-signups-page .staff-table-card {
+    overflow-x: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table {
+    min-width: 760px;
+    width: max-content;
+  }
+
+  .staff-page .table,
+  .activity-log-page .table {
+    min-width: 900px;
+  }
+
+  .table__row {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .table--reservation-updates .table__row {
+    grid-template-columns: minmax(120px, 1fr) minmax(160px, 1.1fr) minmax(120px, 0.95fr) minmax(110px, 0.9fr) minmax(150px, 1.1fr);
+  }
+
+  .table--reservation-actions .table__row {
+    grid-template-columns: minmax(120px, 1fr) minmax(160px, 1.1fr) minmax(120px, 0.95fr) minmax(150px, 1fr);
+  }
+
+  .staff-page .table__row.table__head,
+  .activity-log-page .table__row.table__head {
+    display: grid;
+  }
+
+  .table__row > span::before,
+  .table__row > button::before {
+    content: none !important;
+  }
+
+  .table__row:not(.table__head) > span {
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  .book-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.7rem;
+  }
+
+  .browse-books-page .book-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  .browse-books-page .book-card {
+    min-height: 255px;
+  }
+
+  .browse-books-page .book-card__desc {
+    margin: 0.55rem 0 0.75rem;
+  }
+
+  .browse-books-page .book-card .btn {
+    padding: 0.4rem 0.55rem;
+    font-size: 0.7rem;
+  }
+
+  .staff-signups-page .staff-signups-data-table th {
+    font-size: 0.68rem;
+  }
+
+  .staff-signups-page .staff-signups-data-table td {
+    font-size: 0.74rem;
+    padding: 0.48rem 0.5rem;
+  }
+
+  .book-card {
+    min-height: 300px;
+  }
+
+  .status--mobile {
+    font-size: 0.64rem;
+    padding: 0.12rem 0.5rem;
+  }
+
+  .book-card .btn {
+    padding: 0.44rem 0.62rem;
+    font-size: 0.74rem;
+  }
+
+  .book-card__desc {
+    font-size: 0.78rem;
+    line-height: 1.25;
+  }
+
+  .page h2,
+  .auth-card h2 {
+    font-size: 1.2rem;
+  }
+
+  .table {
+    font-size: 0.78rem;
+  }
+
+  .table__row:not(.table__head) > span {
+    font-size: 0.78rem;
+    line-height: 1.28;
+  }
+
+  .table__row.table__head > span {
+    font-size: 0.76rem;
+  }
+
+  .staff-page .table,
+  .activity-log-page .table {
+    font-size: 0.78rem;
+  }
+
+  .staff-page .table__row:not(.table__head) > span,
+  .activity-log-page .table__row:not(.table__head) > span {
+    font-size: 0.78rem;
+  }
+
+  .page .page-header .muted,
+  .auth-card .muted {
+    font-size: 0.8rem;
+  }
+
+  .page .table__row > span {
+    font-size: 0.78rem;
+  }
+
+  .page .table__row .btn,
+  .auth-card .btn {
+    font-size: 0.72rem;
+    padding: 0.4rem 0.6rem;
+  }
+
+  .staff-tracking-page .table--staff-borrow-requests .table__row > span,
+  .staff-tracking-page .table--staff-current-borrowers .table__row > span {
+    font-size: 0.78rem;
+  }
+
+  .header__meta .btn--ghost {
+    font-size: 0.7rem;
+    padding: 0.34rem 0.54rem;
+  }
+
+  .staff-approvals-page .staff-data-table th {
+    font-size: 0.68rem;
+    padding: 0 0.5rem 0.16rem;
+  }
+
+  .staff-approvals-page .staff-data-table td {
+    font-size: 0.74rem;
+    padding: 0.5rem 0.5rem;
+    line-height: 1.24;
+  }
+
+  .staff-approvals-page .staff-data-table td .btn {
+    font-size: 0.66rem;
+    padding: 0.3rem 0.52rem;
+  }
+
+  .activity-log-page .table__row {
+    padding: 0.64rem;
+    gap: 0.38rem;
+  }
+
+  .activity-log-page .table__row > span {
+    font-size: 0.74rem;
+    line-height: 1.25;
+  }
+
+  .activity-log-page .table__row > span::before {
+    font-size: 0.68rem;
+  }
+
+  .activity-log-page .table--reservation-actions .table__row .btn {
+    font-size: 0.68rem;
+    padding: 0.34rem 0.52rem;
+  }
+
+  /* Staff pages further tablet/mobile responsiveness at 560px */
+  .staff-page .table__row {
+    padding: 0.55rem;
+    gap: 0.35rem;
+    font-size: 0.76rem;
+  }
+
+  .staff-page .table__row > span::before {
+    font-size: 0.68rem;
+    margin-bottom: 0.15rem;
+  }
+
+  .staff-tracking-page .table--staff-borrow-requests .table__row > span,
+  .staff-tracking-page .table--staff-current-borrowers .table__row > span,
+  .staff-tracking-page .table--staff-borrow-history .table__row > span {
+    font-size: 0.76rem;
+  }
+
+  .staff-dashboard-page .table__row {
+    padding: 0.55rem;
+    gap: 0.35rem;
+    font-size: 0.76rem;
+  }
+
+  .staff-dashboard-page .table__row > span {
+    font-size: 0.76rem;
+  }
+
+  .staff-dashboard-page .table__row > span::before {
+    font-size: 0.68rem;
+    margin-bottom: 0.15rem;
+  }
+
+  .staff-page .table__row .btn {
+    padding: 0.32rem 0.56rem;
+    font-size: 0.68rem;
+  }
+
+  .card {
+    padding: 0.85rem;
+  }
+
+  .page h2 {
+    font-size: 1.15rem;
+  }
+}
+
+@media (max-width: 430px) {
+  .search-input-icon {
+    display: none;
+  }
+
+  .search-input {
+    padding-left: 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .search-input::placeholder {
+    font-size: 0.72rem;
+  }
+
+  .table {
+    min-width: 720px;
+  }
+
+  .staff-page .table,
+  .activity-log-page .table {
+    min-width: 860px;
+  }
+
+  .page {
+    margin-left: 0;
+  }
+
+  .book-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .browse-books-page .book-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+
+  .browse-books-page .book-card {
+    min-height: 235px;
+  }
+
+  .browse-books-page .book-card h3 {
+    font-size: 0.84rem;
+  }
+
+  .browse-books-page .book-card__desc {
+    min-height: 2.6em;
+    margin: 0.5rem 0 0.65rem;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+
+  .browse-books-page .book-card .micro {
+    font-size: 0.66rem;
+  }
+
+  .browse-books-page .book-card .btn {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.66rem;
+  }
+
+  .book-card {
+    min-height: 285px;
+  }
+
+  .book-card h3 {
+    font-size: 0.9rem;
+  }
+
+  .status--mobile {
+    font-size: 0.62rem;
+    padding: 0.1rem 0.45rem;
+  }
+
+  .book-card .btn {
+    padding: 0.4rem 0.55rem;
+    font-size: 0.7rem;
+  }
+
+  .book-card__desc {
+    font-size: 0.74rem;
+    line-height: 1.2;
+  }
+
+  .page h2,
+  .auth-card h2 {
+    font-size: 1.08rem;
+  }
+
+  .page .page-header .muted,
+  .auth-card .muted,
+  .page .table__row > span {
+    font-size: 0.72rem;
+  }
+
+  .page .table__row .btn,
+  .auth-card .btn {
+    font-size: 0.68rem;
+    padding: 0.36rem 0.5rem;
+  }
+
+  .staff-tracking-page .table--staff-borrow-requests .table__row > span,
+  .staff-tracking-page .table--staff-current-borrowers .table__row > span {
+    font-size: 0.72rem;
+  }
+
+  .header__meta .btn--ghost {
+    font-size: 0.66rem;
+    padding: 0.3rem 0.48rem;
+  }
+
+  .staff-approvals-page .staff-data-table th {
+    font-size: 0.64rem;
+    padding: 0 0.44rem 0.14rem;
+  }
+
+  .staff-approvals-page .staff-data-table td {
+    font-size: 0.69rem;
+    padding: 0.44rem 0.44rem;
+    line-height: 1.2;
+  }
+
+  .staff-approvals-page .staff-data-table td .btn {
+    font-size: 0.62rem;
+    padding: 0.28rem 0.46rem;
+  }
+
+  .activity-log-page .table__row {
+    padding: 0.48rem;
+    gap: 0.3rem;
+    font-size: 0.72rem;
+  }
+
+  .activity-log-page .table__row > span {
+    font-size: 0.69rem;
+    line-height: 1.2;
+  }
+
+  .activity-log-page .table__row > span::before {
+    font-size: 0.62rem;
+    margin-bottom: 0.08rem;
+  }
+
+  .activity-log-page .table--reservation-actions .table__row .btn {
+    font-size: 0.64rem;
+    padding: 0.32rem 0.48rem;
+    width: 100%;
+  }
+
+  /* Staff pages maximum responsiveness at 430px mobile */
+  .staff-page .table__row {
+    padding: 0.48rem;
+    gap: 0.3rem;
+    font-size: 0.72rem;
+  }
+
+  .staff-page .table__row > span {
+    font-size: 0.72rem;
+    line-height: 1.3;
+  }
+
+  .staff-page .table__row > span::before {
+    font-size: 0.64rem;
+    margin-bottom: 0.1rem;
+  }
+
+  .staff-page .table__row .btn {
+    padding: 0.28rem 0.48rem;
+    font-size: 0.64rem;
+    width: 100%;
+  }
+
+  .staff-tracking-page .table--staff-borrow-requests .table__row > span,
+  .staff-tracking-page .table--staff-current-borrowers .table__row > span,
+  .staff-tracking-page .table--staff-borrow-history .table__row > span {
+    font-size: 0.72rem;
+  }
+
+  .staff-dashboard-page .table__row {
+    padding: 0.48rem;
+    gap: 0.3rem;
+    font-size: 0.72rem;
+  }
+
+  .staff-dashboard-page .table__row > span {
+    font-size: 0.72rem;
+    line-height: 1.3;
+  }
+
+  .staff-dashboard-page .table__row > span::before {
+    font-size: 0.64rem;
+    margin-bottom: 0.1rem;
+  }
+
+  .staff-page .staff-table-card {
+    padding: 0.6rem;
+  }
+
+  .page {
+    padding: 1rem 0.75rem 1.5rem;
+  }
+
+  .card {
+    padding: 0.75rem;
+  }
+
+
+/* Final responsive guardrails for SmartLib staff pages */
+@media (min-width: 769px) and (max-width: 900px) {
+  .app-shell {
+    flex-direction: row;
+  }
+
+  .mobile-menu-fab,
+  .sidebar-backdrop {
+    display: none;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 0;
+    left: auto;
+    width: 240px;
+    min-width: 240px;
+    max-height: none;
+    height: 100vh;
+    transform: none;
+    opacity: 1;
+    pointer-events: auto;
+    border-radius: 0;
+    box-shadow: none;
+    border: 0;
+    border-right: 1px solid var(--line);
+    padding: 2rem 1.5rem;
+  }
+
+  .sidebar--collapsed {
+    width: 84px;
+    min-width: 84px;
+    padding: 2rem 0.75rem;
+  }
+
+  .sidebar__head,
+  .sidebar__toggle {
+    display: flex;
+  }
+
+  .page {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .staff-dashboard-page .table__row.table__head,
+  .staff-tracking-page .table__row.table__head {
+    display: grid;
+  }
+
+  .staff-dashboard-page .table--staff-dashboard-activity .table__row {
+    grid-template-columns: minmax(150px, 1fr) minmax(170px, 1.2fr) minmax(90px, 0.7fr) minmax(140px, 1fr);
+    gap: 0.75rem;
+  }
+
+  .staff-tracking-page .table--staff-borrow-requests .table__row {
+    grid-template-columns: minmax(170px, 1.2fr) minmax(110px, 0.75fr) minmax(170px, 1.2fr) minmax(150px, 1fr) minmax(110px, 0.8fr) minmax(150px, 1fr) minmax(110px, 0.8fr);
+    gap: 0.75rem;
+  }
+
+  .staff-tracking-page .table--staff-current-borrowers .table__row {
+    grid-template-columns: minmax(145px, 0.95fr) minmax(80px, 0.5fr) minmax(170px, 1.1fr) minmax(175px, 1.15fr) minmax(115px, 0.8fr) minmax(90px, 0.6fr);
+    gap: 0.42rem;
+  }
+
+  .staff-tracking-page .table--staff-borrow-history .table__row {
+    grid-template-columns: minmax(170px, 1.2fr) minmax(110px, 0.75fr) minmax(170px, 1.2fr) minmax(120px, 0.9fr) minmax(150px, 1fr);
+    gap: 0.75rem;
+  }
+
+  .staff-dashboard-page .table--staff-dashboard-activity .table__row > span::before,
+  .staff-tracking-page .table--staff-borrow-requests .table__row > span::before,
+  .staff-tracking-page .table--staff-current-borrowers .table__row > span::before,
+  .staff-tracking-page .table--staff-borrow-history .table__row > span::before,
+  .staff-tracking-page .table--staff-borrow-requests .table__row .btn::before,
+  .staff-tracking-page .table--staff-current-borrowers .table__row .btn::before,
+  .staff-tracking-page .table--staff-borrow-history .table__row .btn::before {
+    content: none;
+  }
+
+  .staff-dashboard-page .table-scroll,
+  .staff-tracking-page .table-scroll,
+  .staff-approvals-page .table-scroll,
+  .staff-signups-page .table-scroll {
+    overflow-x: auto;
+    overflow-y: auto;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+  .page h2 {
+    font-size: 1.02rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .page-header {
+    margin-bottom: 1rem;
+  }
+
+  .form-row {
+    gap: 0.6rem;
+  }
+
+  .form-field,
+  .form-field label {
+    gap: 0.3rem;
+  }
+
+  .label {
+    font-size: 0.82rem;
+  }
+
+  .input,
+  .select,
+  .input--area {
+    padding: 0.5rem 0.55rem;
+    font-size: 0.82rem;
+  }
+
+  .btn {
+    padding: 0.42rem 0.68rem;
+    font-size: 0.74rem;
+  }
+}
+

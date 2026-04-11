@@ -24,6 +24,17 @@ const Sidebar = () => {
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 	const [isMobileMoving, setIsMobileMoving] = useState(false);
 	const movementTimeoutRef = useRef(null); 
+
+	const handleMobileFabClick = () => {
+		setIsMobileMenuOpen((prev) => {
+			const nextState = !prev;
+			if (nextState) {
+				// Always expand labels in mobile drawer when opening from the floating toggle.
+				setIsCollapsed(false);
+			}
+			return nextState;
+		});
+	};
     
 	const handleLogout = async () => {
         
@@ -93,10 +104,11 @@ const Sidebar = () => {
 		<>
 			<button
 				type="button"
-				className={`mobile-menu-fab${!isMobileMoving ? " mobile-menu-fab--idle" : ""}`}
+				className={`mobile-menu-fab${isMobileMenuOpen ? " mobile-menu-fab--open" : ""}${!isMobileMoving ? " mobile-menu-fab--idle" : ""}`}
 				// Mobile quick-action button toggles sidebar visibility.
-				onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+				onClick={handleMobileFabClick}
 				aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+				aria-expanded={isMobileMenuOpen}
 			>
 				<Menu size={18} strokeWidth={2.35} />
 			</button>
@@ -118,7 +130,7 @@ const Sidebar = () => {
 				<div className="sidebar__head">
 					<button
 						type="button"
-						className="sidebar__toggle"
+						className="sidebar__toggle sidebar__toggle--desktop"
 						onClick={() => setIsCollapsed((prev) => !prev)}
 						aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
 					>

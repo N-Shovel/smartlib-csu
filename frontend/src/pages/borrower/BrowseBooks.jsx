@@ -359,14 +359,14 @@ const BrowseBooks = () => {
                 </div>
             </div>
 
-            <div className="card" style={{ marginBottom: "1rem" }}>
+            <div className="card browse-recommend-card">
                 <p>
                     <strong>Recommended Books:</strong>{" "}
                     {recommendedBooksLine || "No recommendations available yet."}
                 </p>
             </div>
 
-            <div className="card" style={{ marginBottom: "1rem" }}>
+            <div className="card browse-tools-card">
                 <div className="search-input-wrapper">
                     <Search className="search-input-icon" size={18} aria-hidden="true" />
                     <input
@@ -410,7 +410,16 @@ selectedCategory === "thesis" ? " book-category-filter__btn--active" : ""
                 <div className="empty-state">No books found for your search.</div>
             ) : null}
 
-            {selectedCategory === null || selectedCategory === "general" ? renderBookGrid(regularBooks) : null}
+            {selectedCategory === null || selectedCategory === "general" ? (
+                <>
+                    <div className="page-header page-header--thesis-scroller">
+                        <div>
+                            <h2>General Book Collection</h2>
+                        </div>
+                    </div>
+                    {renderBookGrid(regularBooks)}
+                </>
+            ) : null}
 
             {(selectedCategory === null || selectedCategory === "thesis") && thesisBooks.length > 0 ? (
                 <>
@@ -418,7 +427,6 @@ selectedCategory === "thesis" ? " book-category-filter__btn--active" : ""
                     <div className="page-header page-header--thesis-scroller">
                         <div>
                             <h2>Thesis Collection</h2>
-                            <p className="muted">Swipe sideways to browse thesis titles.</p>
                         </div>
                     </div>
                     {renderThesisScroller(thesisBooks)}
@@ -457,7 +465,7 @@ selectedCategory === "thesis" ? " book-category-filter__btn--active" : ""
                                 Keep Pending
                             </button>
                             <button
-                                className="btn btn--danger"
+                                className="btn btn--danger btn--cancel"
                                 onClick={handleCancelPendingRequest}
                                 disabled={isProcessing(requestToCancel.bookId)}
                             >
