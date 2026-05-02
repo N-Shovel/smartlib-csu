@@ -10,12 +10,18 @@ const setupAxiosInterceptors = (store) => {
     res => res,
     async error => {
             const originalRequest = error.config;
+                        const requestUrl = String(originalRequest?.url || "");
+                        const isAuthEndpoint =
+                                requestUrl.includes("/auth/login") ||
+                                requestUrl.includes("/auth/signup") ||
+                                requestUrl.includes("/auth/logout") ||
+                                requestUrl.includes("/auth/refresh-token");
 
       if (
         error.response?.status === 401 &&
                 originalRequest &&
         !originalRequest._retry &&
-                !String(originalRequest.url || "").includes("/auth/refresh-token")
+                                !isAuthEndpoint
       ) {
         originalRequest._retry = true;
 

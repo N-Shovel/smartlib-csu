@@ -3740,3 +3740,33 @@ body:has(.modal-overlay) {
   }
 }
 
+/* Final mobile auth safeguard: keep signup card and form scrollable. */
+@media (max-width: 767px) {
+  .auth-page {
+    min-height: 100dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .auth-card,
+  .auth-card--signup {
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
+  }
+
+  .auth-card--signup {
+    max-height: calc(100dvh - 1.5rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .auth-card--signup .auth-card__form {
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
