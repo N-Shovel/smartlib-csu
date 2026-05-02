@@ -1,0 +1,140 @@
+/* Responsive Tables - Staff and Activity Pages */
+
+/* Desktop/tablet column templates */
+.table--borrow-updates .table__row {
+  grid-template-columns: minmax(190px, 1.35fr) minmax(110px, 0.85fr) minmax(170px, 1fr) minmax(170px, 1fr);
+}
+
+.table--borrow-history .table__row {
+  grid-template-columns: minmax(200px, 1.4fr) minmax(140px, 1fr) minmax(190px, 1.1fr);
+}
+
+.table--reservation-actions .table__row {
+  grid-template-columns: minmax(110px, 0.8fr) minmax(170px, 1.1fr) minmax(150px, 1fr) minmax(140px, 0.9fr);
+}
+
+.table--reservation-updates .table__row {
+  grid-template-columns: minmax(110px, 0.8fr) minmax(170px, 1.1fr) minmax(140px, 0.95fr) minmax(130px, 0.9fr) minmax(190px, 1.2fr);
+}
+
+.table--staff-dashboard-activity .table__row {
+  grid-template-columns: minmax(170px, 1.2fr) minmax(100px, 0.75fr) minmax(170px, 1.1fr) minmax(120px, 0.8fr) minmax(190px, 1.2fr);
+}
+
+.table--staff-borrow-requests .table__row {
+  grid-template-columns: minmax(180px, 1.25fr) minmax(110px, 0.8fr) minmax(170px, 1fr) minmax(190px, 1.25fr) minmax(100px, 0.75fr) minmax(180px, 1.1fr) minmax(120px, 0.85fr);
+}
+
+.table--staff-current-borrowers .table__row {
+  grid-template-columns: minmax(180px, 1.2fr) minmax(110px, 0.75fr) minmax(190px, 1.2fr) minmax(190px, 1.2fr) minmax(100px, 0.7fr) minmax(120px, 0.85fr);
+}
+
+.table--staff-borrow-history .table__row {
+  grid-template-columns: minmax(180px, 1.2fr) minmax(110px, 0.75fr) minmax(190px, 1.2fr) minmax(130px, 0.9fr) minmax(190px, 1.2fr);
+}
+
+.table--staff-current-reservations .table__row {
+  grid-template-columns: minmax(100px, 0.75fr) minmax(170px, 1.1fr) minmax(190px, 1.2fr) minmax(120px, 0.8fr) minmax(190px, 1.2fr) minmax(170px, 1.1fr) minmax(100px, 0.7fr) minmax(100px, 0.7fr);
+}
+
+.table__head {
+  font-weight: 700;
+}
+
+.staff-signups-page .staff-signups-data-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.staff-signups-page .staff-signups-data-table th,
+.staff-signups-page .staff-signups-data-table td {
+  white-space: nowrap;
+  padding: 0.75rem 0.9rem;
+  text-align: left;
+}
+
+.staff-signups-page .staff-signups-data-table th:last-child,
+.staff-signups-page .staff-signups-data-table td:last-child {
+  text-align: center;
+}
+
+.staff-signups-page .staff-signups-data-table th:nth-child(5),
+.staff-signups-page .staff-signups-data-table td:nth-child(5) {
+  white-space: normal;
+  min-width: 18rem;
+}
+
+.staff-signups-page .staff-signups-view-btn {
+  min-width: 5.5rem;
+}
+
+/* Keep all table wrappers horizontally scrollable on smaller viewports */
+@media (max-width: 1023px) {
+  .staff-page .table-scroll,
+  .activity-log-page .table-scroll,
+  .staff-page .staff-table-card,
+  .activity-log-page .activity-log-table-card {
+    overflow-x: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .staff-page .table,
+  .activity-log-page .table {
+    width: max-content;
+    min-width: 900px;
+  }
+
+  .staff-approvals-page .staff-data-table {
+    min-width: 980px;
+  }
+
+  .staff-signups-page .staff-signups-data-table {
+    min-width: 900px;
+  }
+}
+
+@media (max-width: 767px) {
+  .staff-dashboard-page .table--staff-dashboard-activity {
+    min-width: 760px;
+  }
+
+  .staff-approvals-page .table--staff-current-reservations {
+    min-width: 1180px;
+  }
+
+  .staff-tracking-page .table--staff-borrow-requests {
+    min-width: 1060px;
+  }
+
+  .staff-tracking-page .table--staff-current-borrowers {
+    min-width: 980px;
+  }
+
+  .staff-tracking-page .table-scroll--current-borrowers {
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+  }
+
+  .staff-tracking-page .table--staff-borrow-history {
+    min-width: 900px;
+  }
+
+  .activity-log-page .table--borrow-updates {
+    min-width: 820px;
+  }
+
+  .activity-log-page .table--borrow-history {
+    min-width: 760px;
+  }
+
+  .activity-log-page .table--reservation-actions {
+    min-width: 760px;
+  }
+
+  .activity-log-page .table--reservation-updates {
+    min-width: 900px;
+  }
+}

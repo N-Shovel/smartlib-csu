@@ -1,14 +1,26 @@
 // Purpose: Login page handling borrower/staff authentication flow.
 // Parts: form state, submit handler, validation/errors, render.
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useStore } from "../../store/useAuthStore";
 import AuthCard from "../../components/AuthCard";
 import EmailConfirmationPopup from "../../confirmation/EmailConfirmationPopup";
 
+const isEmailVerified = (authUser) => {
+  const confirmedAt = authUser?.email_confirmed_at;
+  const metadataVerified = authUser?.user_metadata?.email_verified;
+  const appMetadataVerified = authUser?.app_metadata?.email_verified;
+
+  return Boolean(confirmedAt || metadataVerified || appMetadataVerified);
+};
+
+const isStaffRole = (role) => ["staff", "admin"].includes(String(role || "").toLowerCase());
+
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isEmailPopupOpen, setIsEmailPopupOpen] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
@@ -39,13 +51,13 @@ const Login = () => {
 
     const {user} = useStore.getState();
 
-    if(!user?.user?.user_metadata?.email_verified){
+    if (!isEmailVerified(user?.user)) {
         setPendingEmail(email);
         setIsEmailPopupOpen(true);
         return;
     }
     
-    if (user?.profile?.role === "staff") {
+    if (isStaffRole(user?.profile?.role)) {
       navigate("/staff/dashboard");
     } else {
       navigate("/borrower/browse");
@@ -54,7 +66,7 @@ const Login = () => {
   };
 
   return (
-    <>
+    <div className="auth-page auth-page--login">
     <AuthCard
       title="Welcome back"
       subtitle="Sign in with your CSU account to manage books and reservations."
@@ -71,16 +83,28 @@ const Login = () => {
           disabled={isLoading}
         />
         <label className="label" htmlFor="login-password">Password</label>
-        <input
-          className="input"
-          type="password"
-          id="login-password"
-          autoComplete="current-password"
-          placeholder="Enter your password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          disabled={isLoading}
-        />
+        <div className="password-input-wrapper">
+          <input
+            className="input"
+            type={showPassword ? "text" : "password"}
+            id="login-password"
+            autoComplete="current-password"
+            placeholder="Enter your password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={isLoading}
+          />
+          <button
+            type="button"
+            className="password-toggle"
+            onClick={() => setShowPassword(!showPassword)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            title={showPassword ? "Hide password" : "Show password"}
+            disabled={isLoading}
+          >
+            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        </div>
         {error ? <div className="alert">{error}</div> : null}
         <button 
           className={`btn ${isLoading? "bg-gray-500 cursor-not-allowed": "btn--primary"}`} 
@@ -100,11 +124,12 @@ const Login = () => {
     <EmailConfirmationPopup
       isOpen={isEmailPopupOpen}
       email={pendingEmail}
+      onClose={() => setIsEmailPopupOpen(false)}
       onResend={() => {
         // TODO(BACKEND): Call resend verification endpoint for `pendingEmail`.
       }}
     />
-    </>
+    </div>
   );
 };
 

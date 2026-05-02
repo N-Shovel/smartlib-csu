@@ -1,6 +1,7 @@
 const EmailConfirmationPopup = ({
   isOpen,
   email = "",
+  onClose,
   onResend,
 }) => {
   if (!isOpen) return null;
@@ -30,6 +31,16 @@ const EmailConfirmationPopup = ({
             Resend
           </button>
         </p>
+
+        <div style={{ marginTop: "1rem" }}>
+          <button
+            type="button"
+            className="btn btn--ghost"
+            onClick={onClose}
+          >
+            Back to Login
+          </button>
+        </div>
       </div>
     </div>
   );

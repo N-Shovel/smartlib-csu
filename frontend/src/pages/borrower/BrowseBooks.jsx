@@ -4,21 +4,46 @@ import { Search } from "lucide-react";
 import BookCard from "../../components/BookCard";
 import BookDetailsModal from "../../components/BookDetailsModal";
 import ThesisPermissionModal from "../../components/ThesisPermissionModal";
-import {
-    requestBookReturn,
-    getBorrowHistory,
-    getBorrowRequestsByBorrower,
-    cancelBorrowRequest,
-} from "../../services/bookService";
 import { showError, showInfo, showSuccess } from "../../utils/notification";
 import { useStore } from "../../store/useAuthStore";
 import useItems from "../../store/useItemsStore";
 import { useRequest } from "../../store/useRequestsStore";
 
+const normalizeKeywordTokens = (keywords) => {
+    if (Array.isArray(keywords)) {
+        return keywords
+            .map((keyword) => String(keyword || "").trim())
+            .filter(Boolean);
+    }
+
+    if (typeof keywords === "string") {
+        return keywords
+            .split(",")
+            .map((keyword) => keyword.trim())
+            .filter(Boolean);
+    }
+
+    return [];
+};
+
+const isBookAvailable = (book) => {
+    const totalFromDb = Number(book?.total_copies);
+    const totalCopies = Number.isInteger(totalFromDb) && totalFromDb > 0
+        ? totalFromDb
+        : (String(book?.item_type || "").toLowerCase() === "thesis" ? 1 : 3);
+
+    const availableFromDb = Number(book?.available_copies);
+    if (Number.isInteger(availableFromDb)) {
+        return availableFromDb > 0;
+    }
+
+    return Boolean(book?.is_available) && totalCopies > 0;
+};
+
 const BrowseBooks = () => {
     const { user } = useStore();
     const { books, fetchBooks } = useItems();
-    const { sendRequest, loading } = useRequest();
+    const { sendRequest, cancelBorrowRequest, itemRequests, fetchHistory } = useRequest();
 
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState(null); // null | "general" | "thesis"
@@ -34,7 +59,6 @@ const BrowseBooks = () => {
     const [borrowHistory, setBorrowHistory] = useState([]);
 
     const [processingById, setProcessingById] = useState({});
-    const [borrowHistoryVersion, setBorrowHistoryVersion] = useState(0);
 
     const isProcessing = (id) => Boolean(processingById[id]);
 
@@ -46,56 +70,39 @@ const BrowseBooks = () => {
         });
     };
 
+    const currentUserId = user?.profile?.user_id || user?.user?.id || null;
+
     const loadBorrowRequests = useCallback(async () => {
-        if (!user?.email) {
+        if (!currentUserId) {
             setBorrowRequests([]);
             return;
         }
 
         try {
-            const result = await getBorrowRequestsByBorrower(user.email);
-
-            // Some services return array directly, some wrap in { ok, data }.
-            if (Array.isArray(result)) {
-                setBorrowRequests(result);
-                return;
-            }
-            if (result?.ok && Array.isArray(result.data)) {
-                setBorrowRequests(result.data);
-                return;
-            }
-
-            setBorrowRequests([]);
+            await fetchHistory();
+            const currentRequests = useRequest.getState().itemRequests || [];
+            const myRequests = currentRequests.filter((request) => request.student_user_id === currentUserId);
+            setBorrowRequests(myRequests);
         } catch (e) {
             setBorrowRequests([]);
             showError(e?.message || "Unable to load borrow requests.");
         }
-    }, [user?.email]);
+    }, [currentUserId, fetchHistory]);
 
     const loadBorrowHistory = useCallback(async () => {
         try {
-            const result = await getBorrowHistory();
-
-            if (Array.isArray(result)) {
-                setBorrowHistory(result);
-                return;
-            }
-            if (result?.data && Array.isArray(result.data)) {
-                setBorrowHistory(result.data);
-                return;
-            }
-
-            setBorrowHistory([]);
+            await fetchHistory();
+            const currentRequests = useRequest.getState().itemRequests || [];
+            setBorrowHistory(currentRequests);
         } catch (e) {
             console.error("Error loading borrow history:", e);
             setBorrowHistory([]);
         }
-    }, []);
+    }, [fetchHistory]);
 
     const refresh = useCallback(async () => {
         await loadBorrowRequests();
         await loadBorrowHistory();
-        setBorrowHistoryVersion((current) => current + 1);
     }, [loadBorrowRequests, loadBorrowHistory]);
 
     useEffect(() => {
@@ -110,56 +117,40 @@ const BrowseBooks = () => {
         const query = searchQuery.trim().toLowerCase();
         if (!query) return books;
 
-        return books.filter((book) =>
-            [book.title, book.author, book.category, ...(book.keywords || [])]
+        return books.filter((book) => {
+            const searchTerms = [
+                book.title,
+                book.author,
+                book.description,
+                book.category,
+                book.item_type,
+                ...normalizeKeywordTokens(book.keywords),
+            ];
+
+            return searchTerms
             .filter(Boolean)
-            .some((value) => String(value).toLowerCase().includes(query))
-        );
+            .some((value) => String(value).toLowerCase().includes(query));
+        });
     }, [books, searchQuery]);
 
     const regularBooks = useMemo(() => {
-        return filteredBooks.filter((book) => String(book.item_type || "").toLowerCase() !== "thesis");
+        const regular = filteredBooks.filter((book) => String(book.item_type || "").toLowerCase() !== "thesis");
+        return regular.sort((a, b) => String(a.title || "").localeCompare(String(b.title || "")));
     }, [filteredBooks]);
 
     const thesisBooks = useMemo(() => {
-        return filteredBooks.filter((book) => String(book.item_type || "").toLowerCase() === "thesis");
+        const thesis = filteredBooks.filter((book) => String(book.item_type || "").toLowerCase() === "thesis");
+        return thesis.sort((a, b) => String(a.title || "").localeCompare(String(b.title || "")));
     }, [filteredBooks]);
 
     const pendingRequestByBookId = useMemo(() => {
         const pendingMap = new Map();
         borrowRequests.forEach((request) => {
-            if (request.status === "pending") pendingMap.set(request.bookId, request);
+            const itemId = request.library_item_id || request.bookId;
+            if (request.status === "pending" && itemId) pendingMap.set(itemId, request);
         });
         return pendingMap;
     }, [borrowRequests]);
-
-    const pendingReturnRequestByBookId = useMemo(() => {
-        const pendingMap = new Map();
-        borrowRequests.forEach((request) => {
-            if (request.status === "pending_return") pendingMap.set(request.bookId, request);
-        });
-        return pendingMap;
-    }, [borrowRequests]);
-
-    // NOTE:
-    // Your book objects (from the array you posted) do NOT include `borrowedBy`,
-    // so we compute “what the current user borrowed” from borrow history.
-    const borrowedByUserBookIds = useMemo(() => {
-        if (!user?.email) return new Set();
-
-        const set = new Set();
-
-        borrowHistory.forEach((entry) => {
-            const action = String(entry.action || "").toUpperCase();
-            const borrower = String(entry.borrowerEmail || entry.email || "").toLowerCase();
-
-            if (action === "BORROW_BOOK" && borrower === user.email.toLowerCase() && entry.bookId) {
-                set.add(entry.bookId);
-            }
-        });
-
-        return set;
-    }, [user?.email, borrowHistory]);
 
     const recommendedBooksLine = useMemo(() => {
         const borrowCountByTitle = borrowHistory.reduce((summary, entry) => {
@@ -180,14 +171,14 @@ const BrowseBooks = () => {
         if (topTitles.length > 0) return topTitles.join(", ");
 
         return books
-            .filter((book) => book.is_available)
+            .filter((book) => isBookAvailable(book))
             .slice(0, 3)
             .map((book) => book.title)
             .join(", ");
     }, [books, borrowHistory]);
 
-    const submitBorrow = async (id, code = "", handlers = {}) => {
-        const { onError, onSuccess } = handlers;
+    const submitBorrow = async (id, handlers = {}) => {
+        const { onError } = handlers;
 
         if (!user?.user?.email) return;
         if (isProcessing(id)) return;
@@ -222,7 +213,6 @@ const BrowseBooks = () => {
         const pendingRequest = pendingRequestByBookId.get(book.id);
 
         if (pendingRequest) {
-            setRequestToCancel(pendingRequest);
             return;
         }
 
@@ -242,7 +232,7 @@ const BrowseBooks = () => {
     const handleThesisApply = () => {
         if (!pendingThesisBookId) return;
 
-        submitBorrow(pendingThesisBookId, permissionCode, {
+        submitBorrow(pendingThesisBookId, {
             onError: (result) => {
                 setPermissionError(result?.error || "Unable to apply for this thesis.");
             },
@@ -252,35 +242,6 @@ const BrowseBooks = () => {
                 setPermissionError("");
             },
         });
-    };
-
-    const handleReturn = async (bookId) => {
-        if (!user?.email) return;
-        if (isProcessing(bookId)) return;
-
-        //  Prevent returning books you didn’t borrow
-        if (!borrowedByUserBookIds.has(bookId)) {
-            showError("You can only return books you borrowed.");
-            return;
-        }
-
-        if (pendingReturnRequestByBookId.has(bookId)) {
-            showInfo("Return request is already pending.");
-            return;
-        }
-
-        markProcessing(bookId, true);
-        showInfo("Submitting return request, please wait...");
-
-        try {
-            showSuccess("Return request submitted. Please wait for staff confirmation.");
-            await refresh();
-        } catch (e) {
-            const errorMsg = e?.response?.data?.message || e?.message || "Unable to request return.";
-            showError(errorMsg);
-        } finally {
-            markProcessing(bookId, false);
-        }
     };
 
     const handleCancelPendingRequest = async () => {
@@ -293,7 +254,7 @@ const BrowseBooks = () => {
         showInfo("Cancelling borrow request, please wait...");
 
         try {
-            await cancelBorrowRequest(requestToCancel.id, user.email);
+            await cancelBorrowRequest(requestToCancel.id);
 
             showSuccess("Borrow request cancelled.");
             setRequestToCancel(null);
@@ -310,27 +271,67 @@ const BrowseBooks = () => {
         setSelectedCategory((current) => (current === category ? null : category));
     };
 
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            fetchHistory();
+            fetchBooks();
+        }, 3000);
+
+        return () => clearInterval(intervalId);
+    }, [fetchBooks, fetchHistory]);
+
+    useEffect(() => {
+        if (!currentUserId) {
+            setBorrowRequests([]);
+            return;
+        }
+
+        const requests = Array.isArray(itemRequests)
+            ? itemRequests.filter((request) => request.student_user_id === currentUserId)
+            : [];
+
+        setBorrowRequests(requests);
+    }, [currentUserId, itemRequests]);
+
     const renderBookGrid = (list) => (
         <div className="book-grid">
             {list.map((book) => {
                 const bookId = book.id;
                 const hasPendingBorrow = pendingRequestByBookId.has(bookId);
-                const hasPendingReturn = pendingReturnRequestByBookId.has(bookId);
 
                 return (
                     <BookCard
                         key={bookId}
                         book={book}
                         isProcessing={isProcessing(bookId)}
-                        canBorrow={Boolean(book.is_available)}
+                        canBorrow={isBookAvailable(book)}
                         isPending={hasPendingBorrow}
                         borrowLabel={hasPendingBorrow ? "Pending" : undefined}
                         pendingMessage={hasPendingBorrow ? "Please pick it up at the library." : undefined}
-                        returnLabel={hasPendingReturn ? "Pending Return" : "Return"}
-                        returnMessage={hasPendingReturn ? "Waiting for staff confirmation." : undefined}
-                        canReturn={!book.is_available && borrowedByUserBookIds.has(bookId) && !hasPendingReturn}
                         onBorrow={handleBorrow}
-                        onReturn={handleReturn}
+                        onOpenDetails={setSelectedBook}
+                    />
+                );
+            })}
+        </div>
+    );
+
+    const renderThesisScroller = (list) => (
+        <div className="book-grid book-grid--thesis-scroller">
+            {list.map((book) => {
+                const bookId = book.id;
+                const hasPendingBorrow = pendingRequestByBookId.has(bookId);
+
+                return (
+                    <BookCard
+                        key={bookId}
+                        book={book}
+                        isProcessing={isProcessing(bookId)}
+                        canBorrow={isBookAvailable(book)}
+                        isPending={hasPendingBorrow}
+                        borrowLabel={hasPendingBorrow ? "Pending" : undefined}
+                        pendingMessage={hasPendingBorrow ? "Please pick it up at the library." : undefined}
+                        onBorrow={handleBorrow}
                         onOpenDetails={setSelectedBook}
                     />
                 );
@@ -347,48 +348,50 @@ const BrowseBooks = () => {
                 </div>
             </div>
 
-            <div className="card" style={{ marginBottom: "1rem" }}>
+            <div className="card browse-recommend-card">
                 <p>
                     <strong>Recommended Books:</strong>{" "}
                     {recommendedBooksLine || "No recommendations available yet."}
                 </p>
             </div>
 
-            <div className="card" style={{ marginBottom: "1rem" }}>
+            <div className="card browse-tools-card">
                 <div className="search-input-wrapper">
                     <Search className="search-input-icon" size={18} aria-hidden="true" />
                     <input
                         className="input search-input"
                         type="search"
-                        aria-label="Search books by title, author, or category"
-                        placeholder="Search by title, author, or category"
+                        aria-label="Search books by title, author, category, item type, or keywords"
+                        placeholder="Search by title, description subject, category, or keywords"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
 
                 <div className="book-category-filter" role="group" aria-label="Book category filter">
-                    <button
-                        type="button"
-                        aria-pressed={selectedCategory === "general"}
-                        className={`btn btn--ghost${
+                    <div className="book-category-filter__tabs">
+                        <button
+                            type="button"
+                            aria-pressed={selectedCategory === "general"}
+                            className={`btn btn--ghost${
 selectedCategory === "general" ? " book-category-filter__btn--active" : ""
 }`}
-                        onClick={() => handleCategoryToggle("general")}
-                    >
-                        {selectedCategory === "general" ? "✓ General Books" : "General Books"}
-                    </button>
+                            onClick={() => handleCategoryToggle("general")}
+                        >
+                            {selectedCategory === "general" ? "✓ General Books" : "General Books"}
+                        </button>
 
-                    <button
-                        type="button"
-                        aria-pressed={selectedCategory === "thesis"}
-                        className={`btn btn--ghost${
+                        <button
+                            type="button"
+                            aria-pressed={selectedCategory === "thesis"}
+                            className={`btn btn--ghost${
 selectedCategory === "thesis" ? " book-category-filter__btn--active" : ""
 }`}
-                        onClick={() => handleCategoryToggle("thesis")}
-                    >
-                        {selectedCategory === "thesis" ? "✓ Thesis Books" : "Thesis Books"}
-                    </button>
+                            onClick={() => handleCategoryToggle("thesis")}
+                        >
+                            {selectedCategory === "thesis" ? "✓ Thesis Books" : "Thesis Books"}
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -396,13 +399,28 @@ selectedCategory === "thesis" ? " book-category-filter__btn--active" : ""
                 <div className="empty-state">No books found for your search.</div>
             ) : null}
 
-            {selectedCategory === null || selectedCategory === "general" ? renderBookGrid(regularBooks) : null}
-
-            {selectedCategory === null && regularBooks.length > 0 && thesisBooks.length > 0 ? (
-                <div className="book-section-separator" aria-hidden="true" />
+            {selectedCategory === null || selectedCategory === "general" ? (
+                <>
+                    <div className="page-header page-header--thesis-scroller">
+                        <div>
+                            <h2>General Book Collection</h2>
+                        </div>
+                    </div>
+                    {renderBookGrid(regularBooks)}
+                </>
             ) : null}
 
-            {selectedCategory === null || selectedCategory === "thesis" ? renderBookGrid(thesisBooks) : null}
+            {(selectedCategory === null || selectedCategory === "thesis") && thesisBooks.length > 0 ? (
+                <>
+                    <div className="book-section-separator" aria-hidden="true" />
+                    <div className="page-header page-header--thesis-scroller">
+                        <div>
+                            <h2>Thesis Collection</h2>
+                        </div>
+                    </div>
+                    {renderThesisScroller(thesisBooks)}
+                </>
+            ) : null}
 
             <BookDetailsModal
                 isOpen={Boolean(selectedBook)}
@@ -436,7 +454,7 @@ selectedCategory === "thesis" ? " book-category-filter__btn--active" : ""
                                 Keep Pending
                             </button>
                             <button
-                                className="btn btn--danger"
+                                className="btn btn--danger btn--cancel"
                                 onClick={handleCancelPendingRequest}
                                 disabled={isProcessing(requestToCancel.bookId)}
                             >

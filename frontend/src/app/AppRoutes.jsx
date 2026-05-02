@@ -23,21 +23,28 @@ import PageLoader from "../components/PageLoader";
 const AppRoutes = () => {
 
     const {user, checkAuth, isCheckingAuth} = useStore();
+	const isStaff = ["staff", "admin"].includes(String(user?.profile?.role || "").toLowerCase());
+	const currentPath = window.location.pathname;
+	const isPublicAuthPath = currentPath === "/login" || currentPath === "/signup";
     
     useEffect(() => {
-        checkAuth();
-    }, [checkAuth])
+		if (!isPublicAuthPath) {
+			checkAuth();
+		}
+	}, [checkAuth, isPublicAuthPath])
     
-    if(isCheckingAuth) return <PageLoader/>  
+	if (isCheckingAuth && !isPublicAuthPath) return <PageLoader/>;
 
 	return (
 <BrowserRouter>
-			<Routes>
+			<div className="app-root-shell">
+				<div className="app-root-content">
+					<Routes>
 				{/* Default entry redirects to login. */}
 				<Route path="/" element={<Navigate to="/login" replace />} />
 				{/* Public authentication routes. */}
 				<Route path="/login" element={!user? <Login /> : 
-                    user?.profile?.role === "borrower"? <Navigate to={"/borrower/browse"}/> : <Navigate to={"/staff/dashboard"}/>} />
+                    isStaff ? <Navigate to={"/staff/dashboard"}/> : <Navigate to={"/borrower/browse"}/>} />
 				<Route path="/signup" element={!user? <Signup /> : <Navigate to={"/borrower/browse"}/>}/>
 
 				{/* Borrower-only routes guarded by role check. */}
@@ -154,10 +161,12 @@ const AppRoutes = () => {
 
 				{/* Catch-all fallback for unknown URLs. */}
 				<Route path="*" element={<NotFound />} />
-			</Routes>
-			<footer className="app-copyright" aria-label="Copyright">
-				© {new Date().getFullYear()} SmartLib CSU. All rights reserved.
-			</footer>
+					</Routes>
+				</div>
+				<footer className="app-copyright" aria-label="Copyright">
+					© {new Date().getFullYear()} SmartLib CSU. All rights reserved.
+				</footer>
+			</div>
 		</BrowserRouter>
 	);
 };

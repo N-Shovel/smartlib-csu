@@ -1,9 +1,9 @@
 // Purpose: Shared borrower-name formatting helpers used by UI and export mappers.
 // Parts: normalized name-part extraction and full-name formatting.
 export const getBorrowerNameParts = (borrower = {}) => ({
-  firstName: String(borrower.firstName || "").trim(),
-  lastName: String(borrower.lastName || "").trim(),
-  nameSuffix: String(borrower.nameSuffix || "").trim()
+  firstName: String(borrower.firstName || borrower.first_name || "").trim(),
+  lastName: String(borrower.lastName || borrower.last_name || "").trim(),
+  nameSuffix: String(borrower.nameSuffix || borrower.suffix || "").trim()
 });
 
 export const formatBorrowerFullName = (

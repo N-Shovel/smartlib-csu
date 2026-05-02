@@ -1,0 +1,40 @@
+/* Mobile Book Scrollers */
+
+@media (max-width: 900px) {
+  .browse-books-page .book-grid,
+  .staff-book-management-page .book-grid {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 0.35rem;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .browse-books-page .book-grid .book-card,
+  .staff-book-management-page .book-grid .book-card,
+  .book-grid--thesis-scroller .book-card {
+    width: min(86vw, 360px);
+    min-width: min(86vw, 360px);
+    max-width: min(86vw, 360px);
+    flex: 0 0 min(86vw, 360px);
+    scroll-snap-align: start;
+  }
+
+  .browse-books-page .book-card,
+  .staff-book-management-page .book-card {
+    min-height: 350px;
+  }
+
+  .browse-books-page .book-card__actions,
+  .staff-book-management-page .book-card__actions {
+    gap: 0.6rem;
+  }
+
+  .browse-books-page .book-card__actions .btn,
+  .staff-book-management-page .book-card__actions .btn {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}

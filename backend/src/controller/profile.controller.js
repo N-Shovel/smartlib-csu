@@ -207,7 +207,7 @@ export const getStudentBorrowers = async (req, res) =>{
 
         const borrowers = (data ?? []).map((row) => ({
             ...row,
-            email: row.users_public?.email ?? null,
+            email: row.users_public?.email ?? row.email ?? null,
         }));
 
         return res.status(200).json({ borrowers });

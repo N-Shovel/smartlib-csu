@@ -39,7 +39,7 @@ const ThesisPermissionModal = ({
         />
         {error ? <div className="alert">{error}</div> : null}
         <div className="modal-actions">
-          <button type="button" className="btn btn--secondary" onClick={onCancel}>
+          <button type="button" className="btn btn--cancel" onClick={onCancel}>
             Cancel
           </button>
           <button type="button" className="btn btn--primary" onClick={onSubmit}>

@@ -1,10 +1,10 @@
 // Purpose: Staff page for viewing borrower signups and exporting lists.
 // Parts: data loading, helper formatting, export handler, table render.
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { exportToCSV } from "../../services/exportService";
 import { formatBorrowerFullName } from "../../utils/name";
 import { useStore } from "../../store/useAuthStore";
-import { Loader2Icon } from "lucide-react";
+import { Loader2Icon, Search } from "lucide-react";
 
 const truncateText = (value, maxLength) => {
 	// Keep table columns compact while preserving full value in title tooltip.
@@ -21,13 +21,14 @@ const StaffAndBorrowerList = () => {
 	}, [getStudentBorrowers]);
 
 	const [selectedBorrower, setSelectedBorrower] = useState(null);
+	const [searchQuery, setSearchQuery] = useState("");
 
 	const handleExport = () => {
 		if (borrowers.length === 0) return;
 		// Export all borrower signup rows in one CSV file.
 		const borrowerData = borrowers.map((borrower) => ({
 			ID: borrower.id_number || "-",
-			Name: `${borrower.first_name} ${borrower.last_name} ` || "-",
+			Name: formatBorrowerFullName(borrower),
 			Email: borrower.email || "-",
 			Phone: borrower.contact_number || "-",
 			Status: borrower.status || "-",
@@ -44,7 +45,34 @@ const StaffAndBorrowerList = () => {
 	};
 
 	//  Ensure borrowers is always an array to avoid length/map crashes
-	const safeBorrowers = Array.isArray(borrowers) ? borrowers : [];
+	const safeBorrowers = useMemo(
+		() => (Array.isArray(borrowers) ? borrowers : []),
+		[borrowers]
+	);
+
+	const filteredBorrowers = useMemo(() => {
+		const query = String(searchQuery || "").trim().toLowerCase();
+		if (!query) return safeBorrowers;
+
+		return safeBorrowers.filter((borrower) => {
+			const fullName = formatBorrowerFullName(borrower);
+			const credentials = [
+				fullName,
+				borrower.id_number,
+				borrower.program,
+				borrower.collegeCourse,
+				borrower.yearLevel,
+				borrower.email,
+				borrower.address,
+				borrower.currentAddress,
+				borrower.contact_number,
+			];
+
+			return credentials
+				.filter(Boolean)
+				.some((value) => String(value).toLowerCase().includes(query));
+		});
+	}, [safeBorrowers, searchQuery]);
 
 	return (
 		<section className="staff-page staff-signups-page">
@@ -54,12 +82,25 @@ const StaffAndBorrowerList = () => {
 					<p className="muted">Accounts registered as borrowers.</p>
 				</div>
 				<button
-					className="btn btn--ghost"
+					className="btn btn--ghost btn--export-soft"
 					onClick={handleExport}
 					disabled={safeBorrowers.length === 0 || isLoading}
 				>
 					Export CSV
 				</button>
+			</div>
+
+			<div className="card staff-signups-search-card" style={{ marginBottom: "1rem" }}>
+				<div className="search-input-wrapper">
+					<Search className="search-input-icon" size={18} aria-hidden="true" />
+					<input
+						className="input search-input"
+						type="search"
+						placeholder="Search by name, student ID, course, year, email, address, or contact"
+						value={searchQuery}
+						onChange={(event) => setSearchQuery(event.target.value)}
+					/>
+				</div>
 			</div>
 
 			{/*  Loading indicator while fetching borrowers */}
@@ -73,8 +114,10 @@ const StaffAndBorrowerList = () => {
 				</div>
 			) : safeBorrowers.length === 0 ? (
 				<div className="empty-state">No borrower signups yet.</div>
+			) : filteredBorrowers.length === 0 ? (
+				<div className="empty-state">No borrower matches that search.</div>
 			) : (
-				<div className="card table-scroll table-scroll--five staff-table-card">
+				<div className="card table-scroll table-scroll--signups staff-table-card">
 					<table className="staff-signups-data-table">
 						<colgroup>
 							<col style={{ width: "24ch" }} />
@@ -95,29 +138,29 @@ const StaffAndBorrowerList = () => {
 							</tr>
 						</thead>
 						<tbody>
-							{safeBorrowers.map((borrower) => (
+							{filteredBorrowers.map((borrower) => (
 								<tr key={borrower.email}>
 									<td data-label="Name" title={formatBorrowerFullName(borrower)}>
-										{`${borrower.first_name} ${borrower.last_name}` || "-"}
+										{formatBorrowerFullName(borrower)}
 									</td>
 									<td data-label="Student ID" title={borrower.id || "-"}>
-										{truncateText(borrower.id_number, 14)}
+										{truncateText(borrower.id_number, 24)}
 									</td>
 									<td
 										data-label="Course - Year Level"
 										title={`${borrower.collegeCourse || "-"} - ${borrower.yearLevel || "-"}`}
 									>
-										{truncateText(`${borrower.program}`, 26)}
+										{borrower.program || "-"}
 									</td>
 									<td data-label="Email" title={borrower.email || "-"}>
-										{truncateText(borrower.email, 16)}
+										{borrower.email || "-"}
 									</td>
 									<td data-label="Address" title={borrower.currentAddress || "-"}>
-										{truncateText(borrower.address, 24)}
+										{borrower.address || "-"}
 									</td>
 									<td data-label="Action">
 										<button
-											className="btn btn--ghost staff-signups-view-btn"
+											className="btn btn--view staff-signups-view-btn"
 											onClick={() => openBorrowerDetails(borrower)}
 										>
 											View
@@ -136,7 +179,7 @@ const StaffAndBorrowerList = () => {
 						<h3>Borrower Details</h3>
 						<p>
 							<strong>Name:</strong>{" "}
-							{`${selectedBorrower.first_name} ${selectedBorrower.last_name}` || "-"}
+							{formatBorrowerFullName(selectedBorrower)}
 						</p>
 						<p>
 							<strong>Course - Year Level:</strong> {selectedBorrower.program || "-"}
@@ -151,7 +194,7 @@ const StaffAndBorrowerList = () => {
 							<strong>Address:</strong> {selectedBorrower.address || "-"}
 						</p>
 						<div className="modal-actions">
-							<button className="btn btn--ghost" onClick={closeBorrowerDetails}>
+							<button className="btn btn--danger btn--cancel" onClick={closeBorrowerDetails}>
 								Close
 							</button>
 						</div>
