@@ -76,7 +76,7 @@ const Signup = () => {
   };
 
   return (
-    <>
+    <div className="auth-page">
     <AuthCard
       title="Create account"
       subtitle="Create your CSU library account and start borrowing."
@@ -260,7 +260,7 @@ const Signup = () => {
         // TODO(BACKEND): Call resend verification endpoint for `pendingEmail`.
       }}
     />
-    </>
+    </div>
   );
 };
 

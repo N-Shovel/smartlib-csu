@@ -4,10 +4,6 @@ import { Search } from "lucide-react";
 import BookCard from "../../components/BookCard";
 import BookDetailsModal from "../../components/BookDetailsModal";
 import ThesisPermissionModal from "../../components/ThesisPermissionModal";
-import {
-    getBorrowHistory,
-    cancelBorrowRequest,
-} from "../../services/bookService";
 import { showError, showInfo, showSuccess } from "../../utils/notification";
 import { useStore } from "../../store/useAuthStore";
 import useItems from "../../store/useItemsStore";
@@ -47,7 +43,7 @@ const isBookAvailable = (book) => {
 const BrowseBooks = () => {
     const { user } = useStore();
     const { books, fetchBooks } = useItems();
-    const { sendRequest, itemRequests, fetchHistory } = useRequest();
+    const { sendRequest, cancelBorrowRequest, itemRequests, fetchHistory } = useRequest();
 
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState(null); // null | "general" | "thesis"
@@ -95,23 +91,14 @@ const BrowseBooks = () => {
 
     const loadBorrowHistory = useCallback(async () => {
         try {
-            const result = await getBorrowHistory();
-
-            if (Array.isArray(result)) {
-                setBorrowHistory(result);
-                return;
-            }
-            if (result?.data && Array.isArray(result.data)) {
-                setBorrowHistory(result.data);
-                return;
-            }
-
-            setBorrowHistory([]);
+            await fetchHistory();
+            const currentRequests = useRequest.getState().itemRequests || [];
+            setBorrowHistory(currentRequests);
         } catch (e) {
             console.error("Error loading borrow history:", e);
             setBorrowHistory([]);
         }
-    }, []);
+    }, [fetchHistory]);
 
     const refresh = useCallback(async () => {
         await loadBorrowRequests();
@@ -147,11 +134,13 @@ const BrowseBooks = () => {
     }, [books, searchQuery]);
 
     const regularBooks = useMemo(() => {
-        return filteredBooks.filter((book) => String(book.item_type || "").toLowerCase() !== "thesis");
+        const regular = filteredBooks.filter((book) => String(book.item_type || "").toLowerCase() !== "thesis");
+        return regular.sort((a, b) => String(a.title || "").localeCompare(String(b.title || "")));
     }, [filteredBooks]);
 
     const thesisBooks = useMemo(() => {
-        return filteredBooks.filter((book) => String(book.item_type || "").toLowerCase() === "thesis");
+        const thesis = filteredBooks.filter((book) => String(book.item_type || "").toLowerCase() === "thesis");
+        return thesis.sort((a, b) => String(a.title || "").localeCompare(String(b.title || "")));
     }, [filteredBooks]);
 
     const pendingRequestByBookId = useMemo(() => {
@@ -265,7 +254,7 @@ const BrowseBooks = () => {
         showInfo("Cancelling borrow request, please wait...");
 
         try {
-            await cancelBorrowRequest(requestToCancel.id, user.email);
+            await cancelBorrowRequest(requestToCancel.id);
 
             showSuccess("Borrow request cancelled.");
             setRequestToCancel(null);

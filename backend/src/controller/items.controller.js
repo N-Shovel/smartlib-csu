@@ -1,4 +1,3 @@
-import { error } from "node:console";
 import { supabaseForRequest  } from "../lib/supabaseClient.js";
 
 // Treat admin/staff roles as privileged for item management endpoints.
@@ -86,6 +85,12 @@ export const createLibraryItemController = async (req, res) =>{
                 description: description ?? null,
                 keywords: Array.isArray(keywords) ? keywords : null,
                 item_number: itemNumber ?? null,
+                total_copies: itemType === "thesis"
+                    ? 1
+                    : Math.max(Number.parseInt(req.body.copies ?? req.body.totalCopies ?? req.body.availableCopies ?? 3, 10) || 3, 1),
+                available_copies: itemType === "thesis"
+                    ? 1
+                    : Math.max(Number.parseInt(req.body.copies ?? req.body.totalCopies ?? req.body.availableCopies ?? 3, 10) || 3, 1),
                 is_available: true,
                 created_by_staff_id: userId,
             })
@@ -124,9 +129,12 @@ export const softDeleteItemController = async (req, res) => {
             return res.status(staffAccess.code || 400).json({ message: staffAccess.error || "Staff access required" });
         }
 
-    const { error } = await supabase.rpc("soft_delete_library_item", {
-      p_item_id: itemId,
-    });
+        const nowIso = new Date().toISOString();
+        const { error } = await supabase
+            .from("library_items")
+            .update({ deleted_at: nowIso })
+            .eq("id", itemId)
+            .is("deleted_at", null);
 
     if (error) return res.status(403).json({ message: error.message });
 
@@ -198,9 +206,10 @@ export const restoreItemController = async (req, res) => {
             return res.status(staffAccess.code || 400).json({ message: staffAccess.error || "Staff access required" });
         }
 
-    const { error } = await supabase.rpc("restore_library_item", {
-      p_item_id: itemId,
-    });
+        const { error } = await supabase
+            .from("library_items")
+            .update({ deleted_at: null })
+            .eq("id", itemId);
 
     if (error) return res.status(403).json({ message: error.message });
 
@@ -219,10 +228,9 @@ export const getBooksController = async (req, res) => {
 
         const { data, error } = await supabaseUser
             .from("library_items")
-            .select("id, item_type, title, description, keywords, item_number, author, is_available, created_at")
+            .select("id, item_type, title, description, keywords, item_number, author, is_available, total_copies, available_copies, created_at")
             .is("deleted_at", null)
             .order("created_at", { ascending: false })
-            .limit(10);
 
         if (error) {
             console.error("getBooksController query error:", error);
@@ -266,7 +274,7 @@ export const requestItemController = async (req, res) =>{
             .select("id, status")
             .eq("student_user_id", userId)
             .eq("library_item_id", item_id)
-            .in("status", ["pending", "approved", "pending_return"])
+            .in("status", ["pending", "approved"])
             .limit(1);
 
         if (existingErr) return res.status(400).json({ message: existingErr.message });
@@ -284,6 +292,20 @@ export const requestItemController = async (req, res) =>{
 
         if (studentErr) return res.status(400).json({ message: studentErr.message });
         if (!studentProfile) return res.status(403).json({ message: "Student access required" });
+
+        const { data: itemRecord, error: itemErr } = await supabase
+            .from("library_items")
+            .select("id, available_copies, is_available")
+            .eq("id", item_id)
+            .maybeSingle();
+
+        if (itemErr) return res.status(400).json({ message: itemErr.message });
+        if (!itemRecord) return res.status(404).json({ message: "Library item not found" });
+
+        const availableCopies = Number(itemRecord.available_copies);
+        if (Number.isFinite(availableCopies) ? availableCopies <= 0 : itemRecord.is_available === false) {
+            return res.status(409).json({ message: "No available copies left for this book" });
+        }
         
         const {data: newReq, error: reqErr} = await supabase
             .from("student_borrow_requests")
@@ -306,6 +328,54 @@ export const requestItemController = async (req, res) =>{
         res.status(500).json({message: "Internal server error"});
     }     
 }
+
+export const cancelBorrowRequestController = async (req, res) => {
+    try {
+        const access_token = req?.cookies?.access_token;
+        if (!access_token) return res.status(401).json({ message: "Unauthorized" });
+
+        const userId = req.user?.id;
+        if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+        const { requestId } = req.body;
+        if (!requestId) return res.status(400).json({ message: "requestId is required" });
+
+        const supabase = supabaseForRequest(access_token);
+
+        const { data: requestRecord, error: requestErr } = await supabase
+            .from("student_borrow_requests")
+            .select("id, status, student_user_id")
+            .eq("id", requestId)
+            .maybeSingle();
+
+        if (requestErr) return res.status(400).json({ message: requestErr.message });
+        if (!requestRecord) return res.status(404).json({ message: "Borrow request not found" });
+        if (requestRecord.student_user_id !== userId) {
+            return res.status(403).json({ message: "You can only cancel your own borrow request" });
+        }
+
+        if (String(requestRecord.status || "").toLowerCase() !== "pending") {
+            return res.status(400).json({ message: "Only pending requests can be cancelled" });
+        }
+
+        const nowIso = new Date().toISOString();
+        const { error: updateErr } = await supabase
+            .from("student_borrow_requests")
+            .update({
+                status: "cancelled",
+                decision_at: nowIso,
+                decision_note: null,
+            })
+            .eq("id", requestId);
+
+        if (updateErr) return res.status(400).json({ message: updateErr.message });
+
+        return res.status(200).json({ message: "Borrow request cancelled" });
+    } catch (error) {
+        console.log("Error in cancelBorrowRequestController: ", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
 
 export const approveBorrowRequestController = async (req, res) => {
     try {
@@ -338,31 +408,15 @@ export const approveBorrowRequestController = async (req, res) => {
             return res.status(400).json({ message: "Only pending requests can be approved" });
         }
 
-        // Keep request status and item availability synchronized.
-        if (borrowRequest.library_item_id) {
-            const { data: item, error: itemErr } = await supabase
-                .from("library_items")
-                .select("id, is_available")
-                .eq("id", borrowRequest.library_item_id)
-                .maybeSingle();
-
-            if (itemErr) return res.status(400).json({ message: itemErr.message });
-            if (!item) return res.status(404).json({ message: "Library item not found" });
-
-            const { error: itemUpdateErr } = await supabase
-                .from("library_items")
-                .update({ is_available: false })
-                .eq("id", item.id);
-
-            if (itemUpdateErr) return res.status(400).json({ message: itemUpdateErr.message });
-        }
-
         const nowIso = new Date().toISOString();
         const { error: updateReqErr } = await supabase
             .from("student_borrow_requests")
             .update({
                 status: "approved",
                 approved_at: nowIso,
+                approved_by_staff_id: userId,
+                decision_at: nowIso,
+                decision_note: null,
             })
             .eq("id", requestId);
 
@@ -391,7 +445,7 @@ export const requestReturnController = async (req, res) => {
         // Borrower can request return only for an active approved borrow.
         const { data: activeBorrow, error: borrowErr } = await supabase
             .from("student_borrow_requests")
-            .select("id, status")
+            .select("id, status, decision_note")
             .eq("student_user_id", userId)
             .eq("library_item_id", itemId)
             .eq("status", "approved")
@@ -404,9 +458,18 @@ export const requestReturnController = async (req, res) => {
             return res.status(404).json({ message: "No approved borrow record found for this item" });
         }
 
+        if (String(activeBorrow.decision_note || "").trim().toUpperCase() === "RETURN_REQUESTED") {
+            return res.status(409).json({ message: "Return request already submitted" });
+        }
+
+        const nowIso = new Date().toISOString();
+
         const { error: updateErr } = await supabase
             .from("student_borrow_requests")
-            .update({ status: "pending_return" })
+            .update({
+                decision_note: "RETURN_REQUESTED",
+                decision_at: nowIso,
+            })
             .eq("id", activeBorrow.id);
 
         if (updateErr) return res.status(400).json({ message: updateErr.message });
@@ -439,14 +502,14 @@ export const confirmReturnController = async (req, res) => {
 
         const { data: pendingReturn, error: returnErr } = await supabase
             .from("student_borrow_requests")
-            .select("id, status, library_item_id")
+            .select("id, status, library_item_id, decision_note")
             .eq("id", requestId)
             .maybeSingle();
 
         if (returnErr) return res.status(400).json({ message: returnErr.message });
         if (!pendingReturn) return res.status(404).json({ message: "Borrow request not found" });
-        if (!["pending_return", "approved"].includes(String(pendingReturn.status || "").toLowerCase())) {
-            return res.status(400).json({ message: "Only approved or pending return requests can be confirmed" });
+        if (String(pendingReturn.status || "").toLowerCase() !== "approved") {
+            return res.status(400).json({ message: "Only approved borrow requests can be confirmed as returned" });
         }
 
         // Mark request as returned and persist return timestamp.
@@ -456,29 +519,12 @@ export const confirmReturnController = async (req, res) => {
             .update({
                 status: "returned",
                 returned_at: nowIso,
+                decision_at: nowIso,
+                decision_note: null,
             })
             .eq("id", pendingReturn.id);
 
         if (updateReturnErr) return res.status(400).json({ message: updateReturnErr.message });
-
-        // Re-open item availability after return confirmation.
-        if (pendingReturn.library_item_id) {
-            const { data: item, error: itemErr } = await supabase
-                .from("library_items")
-                .select("id, is_available")
-                .eq("id", pendingReturn.library_item_id)
-                .maybeSingle();
-
-            if (itemErr) return res.status(400).json({ message: itemErr.message });
-            if (!item) return res.status(404).json({ message: "Library item not found" });
-
-            const { error: itemUpdateErr } = await supabase
-                .from("library_items")
-                .update({ is_available: true })
-                .eq("id", pendingReturn.library_item_id);
-
-            if (itemUpdateErr) return res.status(400).json({ message: itemUpdateErr.message });
-        }
 
         return res.status(200).json({ message: "Book marked as returned" });
     } catch (error) {

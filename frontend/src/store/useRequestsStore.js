@@ -54,7 +54,7 @@ export const useRequest = create((set, get) => ({
         
             const res = await axiosInstance.post("/items/borrow-item", {item_title :title, item_type: type, item_id});
             
-            showSuccess(res?.data?.message || "Item created");
+            showSuccess(res?.data?.message || "Borrow request sent");
             
             await get().fetchHistory();
 
@@ -66,6 +66,22 @@ export const useRequest = create((set, get) => ({
         }
         finally{
             set({loading: false});
+        }
+    },
+
+    cancelBorrowRequest: async (requestId) => {
+        set({ loading: true });
+        try {
+            const res = await axiosInstance.patch("/items/cancel-borrow-request", { requestId });
+            showSuccess(res?.data?.message || "Borrow request cancelled");
+            await get().fetchHistory();
+            return { ok: true };
+        } catch (error) {
+            const message = error?.response?.data?.message || "Failed to cancel borrow request";
+            showError(message);
+            return { ok: false, error: message };
+        } finally {
+            set({ loading: false });
         }
     },
 

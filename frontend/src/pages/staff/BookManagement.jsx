@@ -53,6 +53,7 @@ const INITIAL_FORM = {
     description: "",
     keywords: "", // comma-separated string
     itemNumber: "",
+    copies: "3",
 };
 
 const BookManagement = () => {
@@ -96,11 +97,13 @@ const BookManagement = () => {
     }, [books, searchQuery, selectedCategory]);
 
     const regularBooks = useMemo(() => {
-        return filteredBooks.filter((book) => String(book.item_type || "").toLowerCase() !== "thesis");
+        const regular = filteredBooks.filter((book) => String(book.item_type || "").toLowerCase() !== "thesis");
+        return regular.sort((a, b) => String(a.title || "").localeCompare(String(b.title || "")));
     }, [filteredBooks]);
 
     const thesisBooks = useMemo(() => {
-        return filteredBooks.filter((book) => String(book.item_type || "").toLowerCase() === "thesis");
+        const thesis = filteredBooks.filter((book) => String(book.item_type || "").toLowerCase() === "thesis");
+        return thesis.sort((a, b) => String(a.title || "").localeCompare(String(b.title || "")));
     }, [filteredBooks]);
 
     const handleCategoryToggle = (category) => {
@@ -127,6 +130,12 @@ const BookManagement = () => {
         if (!form.title.trim()) return showError("Title is required.");
         if (!form.author.trim()) return showError("Author is required.");
 
+        const parsedCopies = Number.parseInt(form.copies, 10);
+        const copies = form.itemType === "thesis" ? 1 : Math.max(Number.isFinite(parsedCopies) ? parsedCopies : 0, 1);
+        if (form.itemType !== "thesis" && (!Number.isInteger(copies) || copies < 1)) {
+            return showError("Copies must be at least 1.");
+        }
+
         const keywordsArray = String(form.keywords || "")
         .split(",")
         .map((k) => k.trim())
@@ -139,6 +148,7 @@ const BookManagement = () => {
             description: form.description?.trim() || "",
             keywords: keywordsArray,
             itemNumber: form.itemNumber?.trim() || "",
+            copies,
         };
 
         try {
@@ -398,6 +408,7 @@ selectedCategory === "thesis" ? " book-category-filter__btn--active" : ""
                                 setForm((current) => ({
                                     ...current,
                                     itemType: nextType,
+                                    copies: nextType === "thesis" ? "1" : (current.copies === "1" ? "3" : current.copies),
                                 }));
                             }}
                             disabled={isLoading}
@@ -429,6 +440,18 @@ selectedCategory === "thesis" ? " book-category-filter__btn--active" : ""
                             onChange={(event) => setForm((c) => ({ ...c, itemNumber: event.target.value }))}
                             disabled={isLoading}
                         />
+
+                        <label className="label">Copies</label>
+                        <input
+                            className="input"
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={form.copies}
+                            onChange={(event) => setForm((c) => ({ ...c, copies: event.target.value }))}
+                            disabled={isLoading || form.itemType === "thesis"}
+                        />
+                        <p className="micro">This sets both the total and available quantity for the new item. Thesis stays at 1 copy.</p>
 
                         <label className="label">Description</label>
                         <textarea

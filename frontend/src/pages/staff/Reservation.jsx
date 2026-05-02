@@ -77,7 +77,7 @@ const Reservation = () => {
       return "Canceled";
     }
 
-    if (normalizedAction.includes("CLOSED")) {
+    if (normalizedAction.includes("CLOSED") || normalizedAction.includes("REJECTED")) {
       return "CLOSED";
     }
 
@@ -291,14 +291,15 @@ const Reservation = () => {
                   <td data-label="Reason">
                     <div className="reservation-reason-cell">
                       {getReservationReason(reservation) ? (
-                        <span>{getReservationReason(reservation)}</span>
-                      ) : null}
-                      <button
-                        className="btn btn--view"
-                        onClick={() => openReasonModal(reservation)}
-                      >
-                        View
-                      </button>
+                        <button
+                          className="btn btn--view"
+                          onClick={() => openReasonModal(reservation)}
+                        >
+                          View
+                        </button>
+                      ) : (
+                        <span className="muted">-</span>
+                      )}
                     </div>
                   </td>
                   <td data-label="Action">

@@ -43,13 +43,14 @@ const BorrowerTracking = () => {
   const currentBorrowers = (itemRequests || [])
     .filter((entry) => {
       const normalizedStatus = String(entry.status || "").toLowerCase();
-      return normalizedStatus === "approved" || normalizedStatus === "pending_return";
+      return normalizedStatus === "approved";
     })
     .sort((a, b) => new Date(b.approved_at || b.decision_at || 0) - new Date(a.approved_at || a.decision_at || 0))
     .map((entry) => {
       const fullName = `${entry.student_profiles?.first_name || ""} ${entry.student_profiles?.last_name || ""}`.trim();
       const itemId = entry.library_item_id;
       const book = itemId ? booksById.get(itemId) : null;
+      const isReturnRequested = String(entry.decision_note || "").trim().toUpperCase() === "RETURN_REQUESTED";
 
       return {
         requestId: entry.id,
@@ -58,7 +59,7 @@ const BorrowerTracking = () => {
         book: entry.item_title || book?.title || "-",
         bookId: itemId || entry.id,
         time: entry.approved_at || entry.decision_at || entry.requested_at,
-        status: String(entry.status || "").toLowerCase() === "pending_return" ? "return requested" : "borrowed",
+        status: isReturnRequested ? "return requested" : "borrowed",
       };
     });
 

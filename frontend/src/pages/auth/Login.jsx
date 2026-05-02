@@ -66,7 +66,7 @@ const Login = () => {
   };
 
   return (
-    <>
+    <div className="auth-page auth-page--login">
     <AuthCard
       title="Welcome back"
       subtitle="Sign in with your CSU account to manage books and reservations."
@@ -129,7 +129,7 @@ const Login = () => {
         // TODO(BACKEND): Call resend verification endpoint for `pendingEmail`.
       }}
     />
-    </>
+    </div>
   );
 };
 

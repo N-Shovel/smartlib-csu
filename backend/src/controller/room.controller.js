@@ -210,7 +210,7 @@ export const getReservationsController = async (req, res) => {
                 purpose, 
                 status, 
                 created_at,
-                student_profiles(id_number, first_name, last_name, users_public:users_public(email))
+                student_profiles(id_number, first_name, last_name, email, users_public:users_public(email))
                 `
             );
 
@@ -240,7 +240,7 @@ export const getReservationsController = async (req, res) => {
             student_user_id: res.student_user_id,
             room: res.room_number,
             reservationHour: getHourFromTimestamp(res.time_start),
-            requestedBy: res.student_profiles?.users_public?.email || "unknown",
+            requestedBy: res.student_profiles?.users_public?.email || res.student_profiles?.email || "unknown",
             notes: res.purpose,
             status: res.status,
             createdAt: res.created_at,
@@ -446,7 +446,7 @@ export const getReservationHistoryController = async (req, res) => {
                 purpose, 
                 status, 
                 created_at,
-                student_profiles(id_number, first_name, last_name, users_public:users_public(email))
+                student_profiles(id_number, first_name, last_name, email, users_public:users_public(email))
                 `
             )
             .order("created_at", { ascending: false });
@@ -460,7 +460,7 @@ export const getReservationHistoryController = async (req, res) => {
             id: res.id,
             room: res.room_number,
             reservationHour: getHourFromTimestamp(res.time_start),
-            requestedBy: res.student_profiles?.users_public?.email || "unknown",
+            requestedBy: res.student_profiles?.users_public?.email || res.student_profiles?.email || "unknown",
             notes: res.purpose,
             status: res.status,
             createdAt: res.created_at,
@@ -470,7 +470,7 @@ export const getReservationHistoryController = async (req, res) => {
             action:
                 res.status === "approved"
                     ? "RESERVATION_APPROVED"
-                    : res.status === "rejected" || res.status === "closed"
+                    : res.status === "rejected"
                         ? "RESERVATION_CLOSED"
                         : res.status === "cancelled"
                             ? "RESERVATION_CANCELLATION_REQUESTED"

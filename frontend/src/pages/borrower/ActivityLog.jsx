@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
     autoClosePassedReservations,
     formatReservationHour,
-    getReservationHistory,
     getReservations,
     isReservationTimePassed,
     requestReservationCancellation
@@ -45,16 +44,6 @@ const ActivityLog = () => {
         fetchHistory();
     },[fetchHistory])
 
-    useEffect(() => {
-        const intervalId = setInterval(() => {
-            fetchHistory();
-        }, 5000);
-
-        return () => {
-            clearInterval(intervalId);
-        };
-    }, [fetchHistory]);
-
     const loadReservationData = useCallback(async () => {
         const loadId = latestReservationLoadRef.current + 1;
         latestReservationLoadRef.current = loadId;
@@ -69,30 +58,43 @@ const ActivityLog = () => {
         try {
             await autoClosePassedReservations();
 
-            const [history, reservations] = await Promise.all([
-                getReservationHistory(),
-                getReservations(),
-            ]);
-
-            const scopedHistory = Array.isArray(history)
-                ? history.filter((entry) => String(entry.requestedBy || "").toLowerCase() === userEmail)
-                : [];
+            const reservations = await getReservations();
 
             const scopedReservations = Array.isArray(reservations)
-                ? reservations.filter(
-                    (entry) =>
-                        String(entry.requestedBy || "").toLowerCase() === userEmail &&
-                        entry.status === RESERVATION_STATUS.PENDING &&
-                        !isReservationTimePassed(entry)
-                )
+                ? reservations.filter((entry) => String(entry.requestedBy || "").toLowerCase() === userEmail)
                 : [];
+
+            const activeReservations = scopedReservations
+                .filter(
+                    (entry) =>
+                        entry.status === RESERVATION_STATUS.PENDING ||
+                        entry.status === RESERVATION_STATUS.APPROVED
+                )
+                .filter((entry) => !isReservationTimePassed(entry))
+                .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
+            const historyRows = scopedReservations
+                .slice()
+                .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+                .map((entry) => ({
+                    ...entry,
+                    action:
+                        entry.status === "approved"
+                            ? "RESERVATION_APPROVED"
+                            : entry.status === "rejected"
+                                ? "RESERVATION_CLOSED"
+                                : entry.status === "cancelled"
+                                    ? "RESERVATION_CANCELLATION_REQUESTED"
+                                    : "RESERVATION_CREATED",
+                    timestamp: entry.createdAt,
+                }));
 
             if (latestReservationLoadRef.current !== loadId) {
                 return;
             }
 
-            setReservationUpdates(scopedHistory);
-            setMyReservations(scopedReservations);
+            setReservationUpdates(historyRows);
+            setMyReservations(activeReservations);
             setIsReservationLoading(false);
         } catch (error) {
             console.error("Error loading reservation activity:", error);
@@ -105,16 +107,6 @@ const ActivityLog = () => {
 
     useEffect(() => {
         loadReservationData();
-    }, [loadReservationData]);
-
-    useEffect(() => {
-        const intervalId = setInterval(() => {
-            loadReservationData();
-        }, 5000);
-
-        return () => {
-            clearInterval(intervalId);
-        };
     }, [loadReservationData]);
 
     const myBorrowRequests = useMemo(() => {
@@ -146,6 +138,8 @@ const ActivityLog = () => {
             })),
         [myBorrowRequests]
     );
+
+    const reservationHistoryRows = useMemo(() => reservationUpdates, [reservationUpdates]);
 
     const cancellationTimeoutRef = useRef(null);
 
@@ -263,6 +257,7 @@ const ActivityLog = () => {
                                 <span>Room</span>
                                 <span>Time Slot</span>
                                 <span>Status</span>
+                                <span>Date Requested</span>
                                 <span>Action</span>
                             </div>
                             {myReservations.map((entry) => (
@@ -274,6 +269,7 @@ const ActivityLog = () => {
                                             ? "cancellation requested"
                                             : entry.status}
                                     </span>
+                                    <span>{formatDateTimeFull(entry.createdAt)}</span>
                                     <button
                                         className="btn btn--danger btn--cancel"
                                         onClick={() => handleCancellationRequest(entry.id)}
@@ -290,12 +286,12 @@ const ActivityLog = () => {
             <div className="page-header" style={{ marginTop: "2rem" }}>
                 <div>
                     <h2>Reservation History</h2>
-                    <p className="muted">Latest updates for your room reservation requests.</p>
+                    <p className="muted">Latest updates for your room reservation requests from Supabase.</p>
                 </div>
             </div>
-            {isReservationLoading && reservationUpdates.length === 0 ? (
+            {isReservationLoading && reservationHistoryRows.length === 0 ? (
                 <div className="empty-state">Loading reservation updates...</div>
-            ) : reservationUpdates.length === 0 ? (
+            ) : reservationHistoryRows.length === 0 ? (
                 <div className="empty-state">No reservation updates yet.</div>
             ) : (
                     <div className="card table-scroll table-scroll--five activity-log-table-card">
@@ -307,7 +303,7 @@ const ActivityLog = () => {
                                 <span>Status</span>
                                 <span>Updated</span>
                             </div>
-                            {reservationUpdates.map((entry) => (
+                            {reservationHistoryRows.map((entry) => (
                                 <div className="table__row" key={entry.id}>
                                     <span>{entry.room}</span>
                                     <span>{formatReservationHour(entry.reservationHour)}</span>

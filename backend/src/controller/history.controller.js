@@ -9,7 +9,7 @@ export const getRequestHistoryController = async (req, res) =>{
 
         const {data, error} = await supabase
             .from("student_borrow_requests")
-            .select("*, student_profiles(id_number, first_name, last_name, contact_number, program, users_public(email))")
+            .select("*, student_profiles(id_number, first_name, last_name, email, contact_number, program, users_public(email))")
         
         if(!data) return res.status(404).json({message: "History does not exist"});
         if(error) return res.status(400).json({message: error.message});
@@ -20,7 +20,7 @@ export const getRequestHistoryController = async (req, res) =>{
             student_profiles: entry?.student_profiles
                 ? {
                     ...entry.student_profiles,
-                    email: entry.student_profiles?.users_public?.email ?? null,
+                                        email: entry.student_profiles?.users_public?.email ?? entry.student_profiles?.email ?? null,
                   }
                 : null,
         }));

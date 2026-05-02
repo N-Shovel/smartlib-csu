@@ -4,36 +4,37 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 
 import ThesisPermissionModal from "../../components/ThesisPermissionModal";
-import {
-  borrowBook,
-  cancelBorrowRequest,
-  getBookById,
-  getBorrowRequestsByBorrower,
-} from "../../services/bookService";
 import { showError, showInfo, showSuccess } from "../../utils/notification";
 import { useStore } from "../../store/useAuthStore";
+import useItems from "../../store/useItemsStore";
+import { useRequest } from "../../store/useRequestsStore";
 
 const BookDetails = () => {
   const { id } = useParams();
   const { user } = useStore();
-  const [refreshVersion, setRefreshVersion] = useState(0);
+  const { books, fetchBooks } = useItems();
+  const { itemRequests, fetchHistory, sendRequest, cancelBorrowRequest } = useRequest();
   const [isPermissionModalOpen, setIsPermissionModalOpen] = useState(false);
   const [permissionCode, setPermissionCode] = useState("");
   const [permissionError, setPermissionError] = useState("");
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [refreshVersion, setRefreshVersion] = useState(0);
   const queuedActionRef = useRef(null);
-  const userEmail = user?.user?.email || user?.email || "";
+
+  const currentUserId = user?.profile?.user_id || user?.user?.id || null;
+
+  useEffect(() => {
+    fetchBooks();
+    fetchHistory();
+  }, [fetchBooks, fetchHistory, refreshVersion]);
+
   const book = useMemo(() => {
-    void refreshVersion;
-    return getBookById(id);
-  }, [id, refreshVersion]);
-  const borrowRequests = useMemo(
-    () => {
-      void refreshVersion;
-      return getBorrowRequestsByBorrower(userEmail);
-    },
-    [userEmail, refreshVersion]
-  );
+    return books.find((entry) => String(entry.id) === String(id)) || null;
+  }, [books, id]);
+
+  const borrowRequests = useMemo(() => {
+    return (itemRequests || []).filter((request) => request.student_user_id === currentUserId);
+  }, [currentUserId, itemRequests]);
 
   const clearQueuedAction = () => {
     if (queuedActionRef.current) {
@@ -69,28 +70,33 @@ const BookDetails = () => {
     );
   }
 
-  // Thesis items require the permission-code modal flow.
-  const isThesis = String(book.category || "").toLowerCase() === "thesis";
+  const isThesis = String(book.item_type || book.category || "").toLowerCase() === "thesis";
+  const isBookAvailable = Number(book.available_copies) > 0 || book.is_available !== false;
 
   const pendingRequest = borrowRequests.find(
-    (request) => request.bookId === book.id && request.status === "pending"
+    (request) => String(request.library_item_id || request.bookId || "") === String(book.id) && request.status === "pending"
   );
 
-  const submitBorrow = (code = "", handlers = {}) => {
+  const submitBorrow = (handlers = {}) => {
     const { onError, onSuccess } = handlers;
     if (!user) return;
     showInfo("Processing borrow request, please wait...");
-    queueAction(() => {
-      const result = borrowBook(book.id, userEmail, code);
-      if (!result.ok) {
-        showError(result.error);
-        if (onError) onError(result);
-        return;
-      }
 
-      showSuccess("Pending. Please pick it up at the library.");
-      refresh();
-      if (onSuccess) onSuccess(result);
+    queueAction(() => {
+      sendRequest(book.title, book.item_type || book.category, book.id)
+        .then((result) => {
+          showSuccess(result?.data?.message || "Pending. Please pick it up at the library.");
+          setIsPermissionModalOpen(false);
+          setPermissionCode("");
+          setPermissionError("");
+          refresh();
+          if (onSuccess) onSuccess(result);
+        })
+        .catch((error) => {
+          const message = error?.response?.data?.message || error?.message || "Unable to send borrow request.";
+          showError(message);
+          if (onError) onError({ ok: false, error: message });
+        });
     }, 500);
   };
 
@@ -100,7 +106,7 @@ const BookDetails = () => {
       setIsCancelModalOpen(true);
       return;
     }
-    // Thesis borrowing is gated by manual permission code submission.
+
     if (isThesis) {
       setIsPermissionModalOpen(true);
       setPermissionCode("");
@@ -108,12 +114,11 @@ const BookDetails = () => {
       return;
     }
 
-    // Non-thesis items are borrowed directly.
     submitBorrow();
   };
 
   const handleThesisApply = () => {
-    submitBorrow(permissionCode, {
+    submitBorrow({
       onError: (result) => {
         setPermissionError(result?.error || "Unable to apply for this thesis.");
       },
@@ -121,25 +126,29 @@ const BookDetails = () => {
         setIsPermissionModalOpen(false);
         setPermissionCode("");
         setPermissionError("");
-      }
+      },
     });
   };
 
   const handleCancelPendingRequest = () => {
     if (!user || !pendingRequest) return;
     showInfo("Cancelling borrow request, please wait...");
-    // LOGIC: Mirror borrow/return delay pattern so all borrower mutations
-    // have uniform processing feedback and transition timing.
-    queueAction(() => {
-      const result = cancelBorrowRequest(pendingRequest.id, userEmail);
-      if (!result.ok) {
-        showError(result.error || "Unable to cancel borrow request.");
-        return;
-      }
 
-      showSuccess("Borrow request cancelled.");
-      setIsCancelModalOpen(false);
-      refresh();
+    queueAction(() => {
+      cancelBorrowRequest(pendingRequest.id)
+        .then((result) => {
+          if (!result.ok) {
+            showError(result.error || "Unable to cancel borrow request.");
+            return;
+          }
+
+          showSuccess("Borrow request cancelled.");
+          setIsCancelModalOpen(false);
+          refresh();
+        })
+        .catch((error) => {
+          showError(error?.message || "Unable to cancel borrow request.");
+        });
     }, 500);
   };
 
@@ -147,7 +156,7 @@ const BookDetails = () => {
     <section className="detail-card">
       <div>
         <h2>{book.title}</h2>
-        {book.category ? <p className="detail-card__category">{book.category}</p> : null}
+        {book.item_type || book.category ? <p className="detail-card__category">{book.item_type || book.category}</p> : null}
         <p className="muted">{book.author}</p>
         {Array.isArray(book.keywords) && book.keywords.length > 0 ? (
           <p className="micro">Keywords: {book.keywords.join(", ")}</p>
@@ -155,14 +164,11 @@ const BookDetails = () => {
         <p className="detail-card__desc">{book.description}</p>
       </div>
       <div className="detail-card__meta">
-        <span className={`status ${book.available ? "status--ok" : "status--busy"}`}>
-          {book.available ? "Available" : "Borrowed"}
+        <span className={`status ${isBookAvailable ? "status--ok" : "status--busy"}`}>
+          {isBookAvailable ? "Available" : "Borrowed"}
         </span>
-        {!book.available && book.borrowedBy ? (
-          <p className="micro">Borrowed by {book.borrowedBy}</p>
-        ) : null}
         <div className="detail-card__actions">
-          {book.available ? (
+          {isBookAvailable ? (
             <button className={`btn ${pendingRequest ? "btn--view" : "btn--primary"}`} onClick={handleBorrow}>
               {pendingRequest ? "Pending" : isThesis ? "Apply" : "Borrow"}
             </button>

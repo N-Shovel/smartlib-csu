@@ -54,7 +54,6 @@ body {
   color: var(--ink);
   background: radial-gradient(circle at top, #f8fff9 0%, var(--bg) 55%, #e2efe7 100%);
   min-height: 100vh;
-  padding-bottom: 2.2rem;
 }
 
 a {
@@ -72,6 +71,20 @@ textarea {
 .app-shell {
   display: flex;
   min-height: 100vh;
+}
+
+.app-root-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.app-root-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .app-shell__main {
@@ -350,17 +363,14 @@ textarea {
 }
 
 .app-copyright {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1200;
+  position: static;
   padding: 0.35rem 0.85rem;
   border-top: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.9);
   color: var(--muted);
   text-align: center;
   font-size: 0.78rem;
+  margin-top: auto;
 }
 
 .page {
@@ -609,23 +619,6 @@ h2 {
   margin-top: 0.25rem;
 }
 
-.book-grid--thesis-scroller {
-  display: flex;
-  gap: 1rem;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding-bottom: 0.4rem;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-}
-
-.book-grid--thesis-scroller .book-card {
-  flex: 0 0 min(84vw, 360px);
-  min-width: min(84vw, 360px);
-  max-width: min(84vw, 360px);
-  scroll-snap-align: start;
-}
-
 .book-card {
   display: flex;
   flex-direction: column;
@@ -829,7 +822,8 @@ h2 {
 
 @media (min-width: 768px) and (max-width: 1023px) {
   .staff-book-management-page .book-grid,
-  .browse-books-page .book-grid {
+  .browse-books-page .book-grid,
+  .book-grid--thesis-scroller {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     overflow: visible;
@@ -854,6 +848,13 @@ h2 {
   }
 }
 
+@media (min-width: 1440px) {
+  .browse-books-page .book-grid,
+  .book-grid--thesis-scroller {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (min-width: 768px) and (max-width: 1199px) {
   .staff-book-management-page .book-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -867,8 +868,53 @@ h2 {
 }
 
 @media (max-width: 767px) {
+  .auth-page {
+    align-items: flex-start;
+    justify-content: flex-start;
+    min-height: 100vh;
+    overflow-y: auto;
+    padding: 1rem 0 2rem;
+  }
+
+  .auth-card {
+    width: min(94vw, 420px);
+    max-width: min(94vw, 420px);
+    padding: 1.25rem 1.1rem;
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
+    margin: 1.25rem auto 1rem;
+  }
+
+  .auth-card--signup {
+    width: min(94vw, 460px);
+    max-width: min(94vw, 460px);
+    height: auto;
+    max-height: calc(100dvh - 2rem);
+    padding: 1rem 0.9rem;
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
+    margin: 0.75rem auto 1rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .auth-card--signup .auth-card__form {
+    overflow: visible;
+    padding-right: 0;
+    margin-top: 0.45rem;
+  }
+
+  .auth-card__form {
+    width: 100%;
+  }
+
   .browse-books-page .book-grid,
-  .staff-book-management-page .book-grid {
+  .staff-book-management-page .book-grid,
+  .book-grid--thesis-scroller {
     display: flex;
     gap: 1rem;
     overflow-x: auto;
@@ -994,23 +1040,63 @@ textarea.input {
 
 .auth-card {
   max-width: 420px;
-  margin: 12vh auto;
   background: var(--card);
   padding: 2.5rem;
   border-radius: 24px;
   box-shadow: var(--shadow);
   animation: fadeIn 0.5s ease;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 100;
+}
+
+.auth-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.auth-page--login {
+  position: relative;
+  isolation: isolate;
+}
+
+.auth-page--login::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("./assets/backgroundCSU.jpg") center/cover no-repeat;
+  filter: blur(10px) brightness(0.9) saturate(0.95);
+  transform: scale(1.06);
+  z-index: -2;
+}
+
+.auth-page--login::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(236, 245, 239, 0.35);
+  z-index: -1;
 }
 
 .auth-card--signup {
   width: 620px;
   max-width: 620px;
   height: min(80vh, 680px);
-  margin: 4.5vh auto;
   padding: 0.95rem 1rem;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 100;
 }
 
 .auth-card--signup h2 {
@@ -1531,7 +1617,7 @@ textarea.input.input--warning {
 }
 
 .table--reservation-actions .table__row {
-  grid-template-columns: minmax(120px, 1fr) minmax(160px, 1.1fr) minmax(120px, 0.95fr) minmax(150px, 1fr);
+  grid-template-columns: minmax(120px, 1fr) minmax(160px, 1.1fr) minmax(160px, 1.1fr) minmax(120px, 0.95fr) minmax(120px, 0.85fr);
   gap: 0.75rem;
 }
 
@@ -1556,6 +1642,11 @@ textarea.input.input--warning {
 
 .table__row .btn {
   justify-self: start;
+}
+
+.activity-log-page .table--reservation-actions .table__row > button {
+  justify-self: center;
+  white-space: nowrap;
 }
 
 .table__head {
@@ -1636,7 +1727,7 @@ textarea.input.input--warning {
 }
 
 .activity-log-page .table--reservation-actions .table__row {
-  grid-template-columns: minmax(90px, 0.9fr) minmax(145px, 1fr) minmax(120px, 0.9fr) minmax(165px, 1fr);
+  grid-template-columns: minmax(90px, 0.85fr) minmax(145px, 1fr) minmax(120px, 0.85fr) minmax(175px, 1.1fr) minmax(110px, 0.75fr);
 }
 
 .activity-log-page .table--borrow-history .table__row {
@@ -1649,6 +1740,10 @@ textarea.input.input--warning {
 
 .activity-log-page .table--reservation-updates {
   min-width: 860px;
+}
+
+.activity-log-page .table--reservation-actions {
+  min-width: 900px;
 }
 
 .activity-log-page .table--borrow-history {
@@ -1678,6 +1773,23 @@ textarea.input.input--warning {
   white-space: nowrap;
   overflow: visible;
   text-overflow: clip;
+}
+
+/* Ensure reservation action table shows the full "Date Requested" timestamp
+   and keep the action header/button centered and aligned. */
+.activity-log-page .table--reservation-actions .table__row:not(.table__head) > span:nth-child(4) {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.activity-log-page .table--reservation-actions .table__row.table__head > span:nth-child(5) {
+  justify-self: center;
+  text-align: center;
+}
+
+.activity-log-page .table--reservation-actions .table__row:not(.table__head) > button {
+  justify-self: center;
 }
 
 .staff-tracking-page .table--staff-borrow-requests .table__row {

@@ -28,8 +28,10 @@ const AppRoutes = () => {
 	const isPublicAuthPath = currentPath === "/login" || currentPath === "/signup";
     
     useEffect(() => {
-        checkAuth();
-    }, [checkAuth])
+		if (!isPublicAuthPath) {
+			checkAuth();
+		}
+	}, [checkAuth, isPublicAuthPath])
     
 	if (isCheckingAuth && !isPublicAuthPath) return <PageLoader/>;
 

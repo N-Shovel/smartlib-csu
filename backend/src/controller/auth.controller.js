@@ -82,6 +82,7 @@ export const signupController = async (req, res) => {
                     program: String(program).trim(),
                     contact_number: contactNumber ? String(contactNumber).trim() : null,
                     address: address ? String(address).trim() : null,
+                    email: String(email).trim().toLowerCase(),
                 },
             ])
             .select(
