@@ -4,6 +4,7 @@ import { setCookies } from "../lib/utils.js";
 const NAME_PATTERN = /^[A-Za-z\s.'-]+$/;
 const DIGITS_ONLY_PATTERN = /^\d+$/;
 const CONTACT_PATTERN = /^\d{11}$/;
+const PROGRAM_PATTERN = /^[A-Z]{2,5} - [1-4](st|nd|rd|th) Year$/;
 
 export const signupController = async (req, res) => {
     const {
@@ -37,6 +38,10 @@ export const signupController = async (req, res) => {
 
     if (!DIGITS_ONLY_PATTERN.test(String(idNumber || "").trim())) {
         return res.status(400).json({ message: "ID number must contain numbers only." });
+    }
+
+    if (!PROGRAM_PATTERN.test(String(program || "").trim())) {
+        return res.status(400).json({ message: "Program must match format like BSCS - 2nd Year." });
     }
 
     if (contactNumber && (!DIGITS_ONLY_PATTERN.test(String(contactNumber).trim()) || !CONTACT_PATTERN.test(String(contactNumber).trim()))) {

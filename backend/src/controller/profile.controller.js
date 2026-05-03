@@ -203,8 +203,7 @@ export const getStudentBorrowers = async (req, res) =>{
  
         const { data, error } = await supabase
             .from("student_profiles")
-            .select("*, users_public(email)")
-            .limit(10);       
+            .select("*, users_public(email)");       
 
 
         if (error) {

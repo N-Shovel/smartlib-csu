@@ -10,11 +10,14 @@ import EmailConfirmationPopup from "../../confirmation/EmailConfirmationPopup";
 
 const sanitizeNameInput = (value) => String(value || "").replace(/\d/g, "");
 const sanitizeDigitsInput = (value) => String(value || "").replace(/\D/g, "");
+const PROGRAM_PATTERN = /^[A-Z]{2,5} - [1-4](st|nd|rd|th) Year$/;
 
 const formatStudentId = (digits) => {
   const d = String(digits || "").replace(/\D/g, "");
   if (!d) return "";
-  if (d.length <= 3) return d;
+  if (d.length <= 3) {
+    return d.length === 3 ? `${d} - ` : d;
+  }
   const first = d.substring(0, 3);
   const rest = d.substring(3, 8); // limit to next 5 chars
   return `${first} - ${rest}`;
@@ -67,6 +70,13 @@ const Signup = () => {
 
       if (!/^\d+$/.test(contactInfo)) {
         const errorMsg = "Contact number must contain numbers only.";
+        setError(errorMsg);
+        showError(errorMsg);
+        return;
+      }
+
+      if (!PROGRAM_PATTERN.test(String(courseAndYear || "").trim())) {
+        const errorMsg = "Program & Year Level must match format like BSCS - 2nd Year.";
         setError(errorMsg);
         showError(errorMsg);
         return;
@@ -150,7 +160,7 @@ const Signup = () => {
         </label>
         <input
           className="input"
-          placeholder="BSCS-2nd Year"
+          placeholder="BSCS - 2nd Year"
           value={courseAndYear}
           onChange={(e) => setCourseAndYear(e.target.value)}
           disabled={isLoading}
@@ -167,7 +177,10 @@ const Signup = () => {
           placeholder="241 - 01234"
           value={formatStudentId(id)}
           inputMode="numeric"
-          onChange={(e) => setId(sanitizeDigitsInput(e.target.value))}
+          onChange={(e) => {
+            const digits = sanitizeDigitsInput(e.target.value).slice(0, 8); // 3 + 5
+            setId(digits);
+          }}
           disabled={isLoading}
           required
         />
