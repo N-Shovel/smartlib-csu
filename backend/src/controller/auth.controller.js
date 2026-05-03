@@ -1,6 +1,10 @@
 import { supabase, supabaseForRequest } from "../lib/supabaseClient.js"
 import { setCookies } from "../lib/utils.js";
 
+const NAME_PATTERN = /^[A-Za-z\s.'-]+$/;
+const DIGITS_ONLY_PATTERN = /^\d+$/;
+const CONTACT_PATTERN = /^\d{11}$/;
+
 export const signupController = async (req, res) => {
     const {
         email,
@@ -25,6 +29,18 @@ export const signupController = async (req, res) => {
 
     if (!email || !password) {
         return res.status(400).json({ message: "Email and password are required" });
+    }
+
+    if (!NAME_PATTERN.test(String(firstName || "").trim()) || !NAME_PATTERN.test(String(lastName || "").trim())) {
+        return res.status(400).json({ message: "First name and last name must contain letters only." });
+    }
+
+    if (!DIGITS_ONLY_PATTERN.test(String(idNumber || "").trim())) {
+        return res.status(400).json({ message: "ID number must contain numbers only." });
+    }
+
+    if (contactNumber && (!DIGITS_ONLY_PATTERN.test(String(contactNumber).trim()) || !CONTACT_PATTERN.test(String(contactNumber).trim()))) {
+        return res.status(400).json({ message: "Contact number must contain numbers only and be 11 digits." });
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

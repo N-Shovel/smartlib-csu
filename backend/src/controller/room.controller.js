@@ -248,7 +248,8 @@ export const getReservationsController = async (req, res) => {
             notes: res.purpose,
             status: res.status,
             createdAt: res.created_at,
-            approvedAt: res.approved_at,
+            // DB uses `decision_at` for approval/decision timestamps for room reservations.
+            approvedAt: res.decision_at,
             decisionAt: res.decision_at,
             decisionNote: res.decision_note,
             timeEnd: res.time_end,
@@ -291,13 +292,15 @@ export const approveReservationController = async (req, res) => {
             return res.status(staffAccess.code || 403).json({ message: staffAccess.error });
         }
 
-        // Update reservation
+        const nowIso = new Date().toISOString();
+
+        // Update reservation: mark approved, record approver id and decision timestamp/note.
         const { data: updated, error } = await supabase
             .from("student_room_reservations")
             .update({
                 status: "approved",
-                approved_at: new Date().toISOString(),
-                decision_at: new Date().toISOString(),
+                approved_by_staff_id: userId,
+                decision_at: nowIso,
                 decision_note: null,
             })
             .eq("id", id)
@@ -464,7 +467,6 @@ export const getReservationHistoryController = async (req, res) => {
                 purpose, 
                 status, 
                 created_at,
-                approved_at,
                 decision_at,
                 decision_note,
                 student_profiles(id_number, first_name, last_name, email, users_public:users_public(email))
@@ -486,7 +488,8 @@ export const getReservationHistoryController = async (req, res) => {
             status: res.status,
             createdAt: res.created_at,
             reservationDate: res.time_start,
-            approvedAt: res.approved_at,
+            // Use `decision_at` as the canonical approval/decision timestamp in the schema.
+            approvedAt: res.decision_at,
             decisionAt: res.decision_at,
             decisionNote: res.decision_note,
             timeEnd: res.time_end,

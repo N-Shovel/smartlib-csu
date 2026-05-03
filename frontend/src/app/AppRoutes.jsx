@@ -1,6 +1,6 @@
 // Purpose: Central route table for public and role-protected pages.
 // Parts: public routes, borrower routes, staff routes, fallback routes.
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import Layout from "../components/Layout";
 import ProtectedRoute from "../components/ProtectedRoute";
 import Login from "../pages/auth/Login";
@@ -20,155 +20,162 @@ import { useStore } from "../store/useAuthStore";
 import { useEffect } from "react";
 import PageLoader from "../components/PageLoader";
 
-const AppRoutes = () => {
+const publicAuthPaths = new Set(["/", "/login", "/signup"]);
 
-    const {user, checkAuth, isCheckingAuth} = useStore();
-	const isStaff = ["staff", "admin"].includes(String(user?.profile?.role || "").toLowerCase());
-	const currentPath = window.location.pathname;
-	const isPublicAuthPath = currentPath === "/login" || currentPath === "/signup";
-    
-    useEffect(() => {
+const AppRoutesContent = () => {
+	const { user, checkAuth, isCheckingAuth } = useStore();
+	const location = useLocation();
+	const isPublicAuthPath = publicAuthPaths.has(location.pathname);
+
+	useEffect(() => {
 		if (!isPublicAuthPath) {
 			checkAuth();
 		}
-	}, [checkAuth, isPublicAuthPath])
-    
-	if (isCheckingAuth && !isPublicAuthPath) return <PageLoader/>;
+	}, [checkAuth, isPublicAuthPath, location.pathname]);
+
+	const isStaff = ["staff", "admin"].includes(String(user?.profile?.role || "").toLowerCase());
+
+	if (isCheckingAuth && !isPublicAuthPath) return <PageLoader />;
 
 	return (
-<BrowserRouter>
-			<div className="app-root-shell">
-				<div className="app-root-content">
-					<Routes>
-				{/* Default entry redirects to login. */}
-				<Route path="/" element={<Navigate to="/login" replace />} />
-				{/* Public authentication routes. */}
-				<Route path="/login" element={!user? <Login /> : 
-                    isStaff ? <Navigate to={"/staff/dashboard"}/> : <Navigate to={"/borrower/browse"}/>} />
-				<Route path="/signup" element={!user? <Signup /> : <Navigate to={"/borrower/browse"}/>}/>
+		<div className="app-root-shell">
+			<div className="app-root-content">
+				<Routes>
+					{/* Default entry redirects to login. */}
+					<Route path="/" element={<Navigate to="/login" replace />} />
+					{/* Public authentication routes. */}
+					<Route path="/login" element={!user ? <Login /> : isStaff ? <Navigate to={"/staff/dashboard"} /> : <Navigate to={"/borrower/browse"} />} />
+					<Route path="/signup" element={!user ? <Signup /> : <Navigate to={"/borrower/browse"} />} />
 
-				{/* Borrower-only routes guarded by role check. */}
-				<Route
-					path="/borrower/browse"
-					element={
-						<ProtectedRoute>
-							<Layout>
-								<BrowseBooks />
-							</Layout>
-						</ProtectedRoute>
-					}
-				/>
+					{/* Borrower-only routes guarded by role check. */}
+					<Route
+						path="/borrower/browse"
+						element={
+							<ProtectedRoute>
+								<Layout>
+									<BrowseBooks />
+								</Layout>
+							</ProtectedRoute>
+						}
+					/>
 
-				<Route
-					path="/borrower/activity"
-					element={
-						<ProtectedRoute>
-							<Layout>
-								<ActivityLog />
-							</Layout>
-						</ProtectedRoute>
-					}
-				/>
+					<Route
+						path="/borrower/activity"
+						element={
+							<ProtectedRoute>
+								<Layout>
+									<ActivityLog />
+								</Layout>
+							</ProtectedRoute>
+						}
+					/>
 
-				<Route
-					path="/borrower/book/:id"
-					element={
-						<ProtectedRoute>
-							<Layout>
-								<BookDetails />
-							</Layout>
-						</ProtectedRoute>
-					}
-				/>
+					<Route
+						path="/borrower/book/:id"
+						element={
+							<ProtectedRoute>
+								<Layout>
+									<BookDetails />
+								</Layout>
+							</ProtectedRoute>
+						}
+					/>
 
-				<Route
-					path="/borrower/reserve"
-					element={
-						<ProtectedRoute>
-							<Layout>
-								<RoomReservation />
-							</Layout>
-						</ProtectedRoute>
-					}
-				/>
+					<Route
+						path="/borrower/reserve"
+						element={
+							<ProtectedRoute>
+								<Layout>
+									<RoomReservation />
+								</Layout>
+							</ProtectedRoute>
+						}
+					/>
 
-				<Route
-					path="/borrower/account"
-					element={
-						<ProtectedRoute role="borrower">
-							<Layout>
-								<Account />
-							</Layout>
-						</ProtectedRoute>
-					}
-				/>
+					<Route
+						path="/borrower/account"
+						element={
+							<ProtectedRoute role="borrower">
+								<Layout>
+									<Account />
+								</Layout>
+							</ProtectedRoute>
+						}
+					/>
 
-				{/* Staff-only routes guarded by role check. */}
-				<Route
-					path="/staff/dashboard"
-					element={
-						<ProtectedRoute>
-							<Layout>
-								<Dashboard />
-							</Layout>
-						</ProtectedRoute>
-					}
-				/>
+					{/* Staff-only routes guarded by role check. */}
+					<Route
+						path="/staff/dashboard"
+						element={
+							<ProtectedRoute>
+								<Layout>
+									<Dashboard />
+								</Layout>
+							</ProtectedRoute>
+						}
+					/>
 
-				<Route
-					path="/staff/tracking"
-					element={
-						<ProtectedRoute>
-							<Layout>
-								<BorrowerTracking />
-							</Layout>
-						</ProtectedRoute>
-					}
-				/>
+					<Route
+						path="/staff/tracking"
+						element={
+							<ProtectedRoute>
+								<Layout>
+									<BorrowerTracking />
+								</Layout>
+							</ProtectedRoute>
+						}
+					/>
 
-				<Route
-					path="/staff/borrowers"
-					element={
-						<ProtectedRoute>
-							<Layout>
-								<StaffAndBorrowerList />
-							</Layout>
-						</ProtectedRoute>
-					}
-				/>
+					<Route
+						path="/staff/borrowers"
+						element={
+							<ProtectedRoute>
+								<Layout>
+									<StaffAndBorrowerList />
+								</Layout>
+							</ProtectedRoute>
+						}
+					/>
 
-				<Route
-					path="/staff/books"
-					element={
-						<ProtectedRoute>
-							<Layout>
-								<BookManagement />
-							</Layout>
-						</ProtectedRoute>
-					}
-				/>
+					<Route
+						path="/staff/books"
+						element={
+							<ProtectedRoute>
+								<Layout>
+									<BookManagement />
+								</Layout>
+							</ProtectedRoute>
+						}
+					/>
 
-				<Route
-					path="/staff/reservation"
-					element={
-						<ProtectedRoute role="staff">
-							<Layout>
-								<Reservation />
-							</Layout>
-						</ProtectedRoute>
-					}
-				/>
+					<Route
+						path="/staff/reservation"
+						element={
+							<ProtectedRoute role="staff">
+								<Layout>
+									<Reservation />
+								</Layout>
+							</ProtectedRoute>
+						}
+					/>
 
-				{/* Catch-all fallback for unknown URLs. */}
-				<Route path="*" element={<NotFound />} />
-					</Routes>
-				</div>
-				<footer className="app-copyright" aria-label="Copyright">
-					© {new Date().getFullYear()} SmartLib CSU. All rights reserved.
-				</footer>
+					{/* Catch-all fallback for unknown URLs. */}
+					<Route path="*" element={<NotFound />} />
+				</Routes>
 			</div>
-		</BrowserRouter>
+			<footer className="app-copyright" aria-label="Copyright">
+				© {new Date().getFullYear()} SmartLib CSU. All rights reserved.
+			</footer>
+		</div>
 	);
+};
+
+const AppRoutes = () => {
+    return (
+        <BrowserRouter>
+		    <AppRoutesContent />
+	    </BrowserRouter>
+    );
 };
 
 export default AppRoutes;

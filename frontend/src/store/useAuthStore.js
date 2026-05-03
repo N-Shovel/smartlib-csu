@@ -2,6 +2,8 @@ import {create} from "zustand"
 import { axiosInstance } from "./axios"
 import { showSuccess, showError } from "../utils/notification"
 
+const isDev = import.meta.env.DEV;
+
 
 const setupAxiosInterceptors = (store) => {
     let refreshPromise = null;
@@ -17,17 +19,16 @@ const setupAxiosInterceptors = (store) => {
                                 requestUrl.includes("/auth/logout") ||
                                 requestUrl.includes("/auth/refresh-token");
 
-            // Debug: log interceptor-triggering 401s to help diagnose unexpected refresh calls
-            if (error.response?.status === 401) {
-                console.error("Axios interceptor: 401 for", requestUrl, "isAuthEndpoint:", isAuthEndpoint);
-            }
-
       if (
         error.response?.status === 401 &&
                 originalRequest &&
         !originalRequest._retry &&
                                 !isAuthEndpoint
       ) {
+                if (isDev) {
+                        console.debug("[auth] 401 intercepted on", requestUrl, "retrying refresh flow");
+                }
+
         originalRequest._retry = true;
 
         try {
@@ -141,7 +142,6 @@ export const useStore = create((set, get) => ({
             return true;
         }
         catch(error){
-            console.log("Login failed: ", error.message);
             showError(error.response?.data?.message || "An error occurred");
             set({ user: null });
             return false;
@@ -165,9 +165,6 @@ export const useStore = create((set, get) => ({
 
             return true;
         } catch (error) {
-                        if (error?.response?.status !== 401) {
-                            console.error("Token refresh failed:", error);
-                        }
             return false;
         }
     },
@@ -177,8 +174,6 @@ export const useStore = create((set, get) => ({
         try {
             await axiosInstance.post("/auth/logout");
         } catch (error) {
-            // Even if server logout fails, clear client auth state and try best-effort cleanup
-            console.error("Logout request failed:", error?.message || error);
         } finally {
             set({ user: null, isLoading: false });
         }
@@ -189,9 +184,7 @@ export const useStore = create((set, get) => ({
             set({isLoading: true});
 
             const res = await axiosInstance.get("/profile/borrowers");
-            
-            console.log(res.data);
-            
+
             set({ borrowers: Array.isArray(res.data.borrowers) ? res.data.borrowers : [] });
 
         } catch (error) {

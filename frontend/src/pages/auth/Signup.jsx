@@ -8,6 +8,18 @@ import { showError } from "../../utils/notification";
 import AuthCard from "../../components/AuthCard";
 import EmailConfirmationPopup from "../../confirmation/EmailConfirmationPopup";
 
+const sanitizeNameInput = (value) => String(value || "").replace(/\d/g, "");
+const sanitizeDigitsInput = (value) => String(value || "").replace(/\D/g, "");
+
+const formatStudentId = (digits) => {
+  const d = String(digits || "").replace(/\D/g, "");
+  if (!d) return "";
+  if (d.length <= 3) return d;
+  const first = d.substring(0, 3);
+  const rest = d.substring(3, 8); // limit to next 5 chars
+  return `${first} - ${rest}`;
+};
+
 const Signup = () => {
   const [id, setId] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -34,6 +46,27 @@ const Signup = () => {
       // Guard: all required borrower fields must be present.
       if (!firstName || !lastName || !courseAndYear || !id || !contactInfo || !email || !currentAddress || !password || !confirmPassword) {
         const errorMsg = "Please fill up all required fields";
+        setError(errorMsg);
+        showError(errorMsg);
+        return;
+      }
+
+      if (/\d/.test(firstName) || /\d/.test(lastName)) {
+        const errorMsg = "Names must contain letters only.";
+        setError(errorMsg);
+        showError(errorMsg);
+        return;
+      }
+
+      if (!/^\d+$/.test(id)) {
+        const errorMsg = "Student ID must contain numbers only.";
+        setError(errorMsg);
+        showError(errorMsg);
+        return;
+      }
+
+      if (!/^\d+$/.test(contactInfo)) {
+        const errorMsg = "Contact number must contain numbers only.";
         setError(errorMsg);
         showError(errorMsg);
         return;
@@ -91,7 +124,7 @@ const Signup = () => {
           className="input"
           placeholder="Juan"
           value={firstName}
-          onChange={(e) => setFirstName(e.target.value)}
+          onChange={(e) => setFirstName(sanitizeNameInput(e.target.value))}
           disabled={isLoading}
           required
         />
@@ -105,7 +138,7 @@ const Signup = () => {
           className="input"
           placeholder="Dela Cruz"
           value={lastName}
-          onChange={(e) => setLastName(e.target.value)}
+          onChange={(e) => setLastName(sanitizeNameInput(e.target.value))}
           disabled={isLoading}
           required
         />
@@ -131,9 +164,10 @@ const Signup = () => {
         </label>
         <input
           className="input"
-          placeholder="241-01234"
-          value={id}
-          onChange={(e) => setId(e.target.value)}
+          placeholder="241 - 01234"
+          value={formatStudentId(id)}
+          inputMode="numeric"
+          onChange={(e) => setId(sanitizeDigitsInput(e.target.value))}
           disabled={isLoading}
           required
         />
@@ -147,7 +181,8 @@ const Signup = () => {
           className="input"
           placeholder="09XXXXXXXXX"
           value={contactInfo}
-          onChange={(e) => setContactInfo(e.target.value)}
+          inputMode="numeric"
+          onChange={(e) => setContactInfo(sanitizeDigitsInput(e.target.value))}
           disabled={isLoading}
           required
         />

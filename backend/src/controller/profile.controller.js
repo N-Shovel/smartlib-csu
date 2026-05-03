@@ -1,5 +1,8 @@
 import {supabaseForRequest } from "../lib/supabaseClient.js";
 
+const DIGITS_ONLY_PATTERN = /^\d+$/;
+const CONTACT_PATTERN = /^\d{11}$/;
+
 export const Profile = async (req, res) => {
     try {
         const access_token = req.cookies?.access_token;
@@ -157,7 +160,11 @@ export const changeNumber = async (req, res) =>{
         const {newNumber} = req.body;
 
         const normalized = String(newNumber).trim();
-        if (normalized.length < 11 || normalized.length > 11) {
+        if (!DIGITS_ONLY_PATTERN.test(normalized)) {
+            return res.status(400).json({ message: "Contact number must contain numbers only" });
+        }
+
+        if (!CONTACT_PATTERN.test(normalized)) {
             return res.status(400).json({ message: "Invalid contact number length" });
         }
 

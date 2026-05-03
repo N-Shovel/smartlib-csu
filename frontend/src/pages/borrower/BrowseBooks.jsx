@@ -95,7 +95,6 @@ const BrowseBooks = () => {
             const currentRequests = useRequest.getState().itemRequests || [];
             setBorrowHistory(currentRequests);
         } catch (e) {
-            console.error("Error loading borrow history:", e);
             setBorrowHistory([]);
         }
     }, [fetchHistory]);
@@ -192,8 +191,6 @@ const BrowseBooks = () => {
             if (!book) {
                 throw new Error("Book not found");
             }
-            console.log(book.title);
-            console.log(book.item_type);
             // Use the sendRequest function from useRequest store
             await sendRequest(book.title, book.item_type, id);
 

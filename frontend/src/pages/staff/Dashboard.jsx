@@ -32,7 +32,6 @@ const Dashboard = () => {
         await fetchHistory();
         setReservationHistory(reservationData || []);
       } catch (error) {
-        console.error("Error fetching dashboard data:", error);
         setReservationHistory([]);
       } finally {
         setLoading(false);

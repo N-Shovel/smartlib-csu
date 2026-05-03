@@ -6,7 +6,6 @@ export const getBorrowerSignups = async () => {
     const response = await axiosInstance.get("/borrowers");
     return response.data || [];
   } catch (error) {
-    console.error("Failed to fetch borrower signups:", error);
     return [];
   }
 };

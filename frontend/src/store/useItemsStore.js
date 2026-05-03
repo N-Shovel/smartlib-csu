@@ -42,7 +42,6 @@ const useItems = create((set, get) => ({
             set({ books: books, count });
             clearFetchBooksErrorDedupe();
         } catch (err) {
-            console.error("fetchBooks error:", err);
             const msg =
                 err?.response?.data?.message ||
                     err?.message ||

@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Eye, EyeOff, PenSquare } from "lucide-react";
-import { getUserProfileByEmail, updateBorrowerAccountUser } from "../../services/authService";
+import { updateBorrowerAccountUser } from "../../services/authService";
 import { showError, showSuccess } from "../../utils/notification";
 import { useStore } from "../../store/useAuthStore";
+
+const sanitizeDigitsInput = (value) => String(value || "").replace(/\D/g, "");
 
 const Account = () => {
   const { user } = useStore();
@@ -16,12 +18,12 @@ const Account = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const accountEmail = user?.user?.email || user?.email || "";
-  const profile = accountEmail ? getUserProfileByEmail(accountEmail) : null;
+  const profile = user?.profile || null;
 
   const openModal = (type) => {
     // Prefill each modal with current persisted values for quicker edits.
     if (type === "email") {
-      setEmailDraft(profile?.email || "");
+      setEmailDraft(accountEmail || "");
     }
 
     if (type === "contact") {
@@ -62,11 +64,28 @@ const Account = () => {
       return;
     }
 
+    useStore.setState((state) => ({
+      user: state.user
+        ? {
+            ...state.user,
+            user: {
+              ...(state.user.user || {}),
+              email: emailDraft,
+            },
+          }
+        : state.user,
+    }));
+
     showSuccess("Email updated.");
     closeModal();
   };
 
   const handleUpdateContact = async () => {
+    if (!/^\d+$/.test(String(contactDraft || "").trim())) {
+      showError("Contact number must contain numbers only.");
+      return;
+    }
+
     const result = await updateBorrowerAccountUser({
       contactInfo: contactDraft
     });
@@ -75,6 +94,18 @@ const Account = () => {
       showError(result.error || "Unable to update contact number.");
       return;
     }
+
+    useStore.setState((state) => ({
+      user: state.user
+        ? {
+            ...state.user,
+            profile: {
+              ...(state.user.profile || {}),
+              contact_number: contactDraft,
+            },
+          }
+        : state.user,
+    }));
 
     showSuccess("Contact number updated.");
     closeModal();
@@ -158,7 +189,7 @@ const Account = () => {
           </div>
           <div className="form-field">
             <span className="label">Address</span>
-            <p>{user?.profile?.address || "-"}</p>
+            <p>{profile?.address || "-"}</p>
           </div>
         </div>
       </div>
@@ -169,7 +200,7 @@ const Account = () => {
           <div style={{ display: "grid", gap: "0.4rem" }}>
             <span className="label">Email</span>
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <p style={{ flex: 1 }}>{profile.email || "-"}</p>
+              <p style={{ flex: 1 }}>{accountEmail || "-"}</p>
               <button
                 type="button"
                 className="btn btn--ghost account-update-action"
@@ -184,7 +215,7 @@ const Account = () => {
           <div style={{ display: "grid", gap: "0.4rem" }}>
             <span className="label">Contact Number</span>
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <p style={{ flex: 1 }}>{user?.profile?.contact_number || "-"}</p>
+              <p style={{ flex: 1 }}>{profile?.contact_number || "-"}</p>
               <button
                 type="button"
                 className="btn btn--ghost account-update-action"
@@ -238,8 +269,9 @@ const Account = () => {
             <input
               className="input"
               type="text"
+              inputMode="numeric"
               value={contactDraft}
-              onChange={(event) => setContactDraft(event.target.value)}
+              onChange={(event) => setContactDraft(sanitizeDigitsInput(event.target.value))}
             />
             <div className="modal-actions">
               <button className="btn btn--danger btn--cancel" onClick={closeModal}>
