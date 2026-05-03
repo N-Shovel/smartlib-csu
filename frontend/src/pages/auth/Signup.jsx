@@ -119,7 +119,7 @@ const Signup = () => {
   };
 
   return (
-    <div className="auth-page">
+    <div className="auth-page auth-page--login">
     <AuthCard
       title="Create account"
       subtitle="Create your CSU library account and start borrowing."

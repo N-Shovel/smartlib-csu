@@ -17,7 +17,7 @@ import StaffAndBorrowerList from "../pages/staff/StaffAndBorrowerList";
 import BookManagement from "../pages/staff/BookManagement";
 import Reservation from "../pages/staff/Reservation";
 import { useStore } from "../store/useAuthStore";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import PageLoader from "../components/PageLoader";
 
 const publicAuthPaths = new Set(["/", "/login", "/signup"]);
@@ -35,7 +35,20 @@ const AppRoutesContent = () => {
 
 	const isStaff = ["staff", "admin"].includes(String(user?.profile?.role || "").toLowerCase());
 
+	const [routeLoading, setRouteLoading] = useState(false);
+
+	useEffect(() => {
+		// Slightly defer showing the loader to avoid synchronous setState in effect.
+		const start = setTimeout(() => setRouteLoading(true), 8);
+		const end = setTimeout(() => setRouteLoading(false), 340);
+		return () => {
+			clearTimeout(start);
+			clearTimeout(end);
+		};
+	}, [location.pathname]);
+
 	if (isCheckingAuth && !isPublicAuthPath) return <PageLoader />;
+	if (routeLoading) return <PageLoader />;
 
 	return (
 		<div className="app-root-shell">
