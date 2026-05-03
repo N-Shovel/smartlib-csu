@@ -18,12 +18,9 @@ const setupAxiosInterceptors = (store) => {
                                 requestUrl.includes("/auth/refresh-token");
 
             // Debug: log interceptor-triggering 401s to help diagnose unexpected refresh calls
-            try {
-                if (error.response?.status === 401) {
-                    // eslint-disable-next-line no-console
-                    console.error("Axios interceptor: 401 for", requestUrl, "isAuthEndpoint:", isAuthEndpoint);
-                }
-            } catch (e) {}
+            if (error.response?.status === 401) {
+                console.error("Axios interceptor: 401 for", requestUrl, "isAuthEndpoint:", isAuthEndpoint);
+            }
 
       if (
         error.response?.status === 401 &&
@@ -182,9 +179,6 @@ export const useStore = create((set, get) => ({
         } catch (error) {
             // Even if server logout fails, clear client auth state and try best-effort cleanup
             console.error("Logout request failed:", error?.message || error);
-            try {
-                await axiosInstance.post("/auth/refresh-token").catch(() => null);
-            } catch (_) {}
         } finally {
             set({ user: null, isLoading: false });
         }

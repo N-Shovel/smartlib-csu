@@ -6,6 +6,8 @@ export const formatActivityAction = (action) => {
   if (normalizedAction === "RESERVATION_CREATED") return "ROOM REQUESTED";
   if (normalizedAction === "RESERVATION_APPROVED") return "ROOM APPROVED";
   if (normalizedAction === "RESERVATION_CLOSED") return "ROOM CLOSED";
+  if (normalizedAction === "RESERVATION_ENDED") return "ROOM ENDED";
+  if (normalizedAction === "RESERVATION_AVAILABLE") return "ROOM AVAILABLE";
   if (normalizedAction === "RESERVATION_CANCELLATION_REQUESTED") {
     return "ROOM CANCELED";
   }

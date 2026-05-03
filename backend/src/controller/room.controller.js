@@ -55,7 +55,11 @@ const autoCloseExpiredPendingReservations = async (supabase) => {
 
     const { error } = await supabase
         .from("student_room_reservations")
-        .update({ status: "rejected" })
+        .update({
+            status: "rejected",
+            decision_at: nowIso,
+            decision_note: "AUTO_EXPIRED",
+        })
         .eq("status", "pending")
         .lt("time_end", nowIso);
 
@@ -244,6 +248,10 @@ export const getReservationsController = async (req, res) => {
             notes: res.purpose,
             status: res.status,
             createdAt: res.created_at,
+            approvedAt: res.approved_at,
+            decisionAt: res.decision_at,
+            decisionNote: res.decision_note,
+            timeEnd: res.time_end,
             studentId: res.student_profiles?.id_number || "-",
             studentName: `${res.student_profiles?.first_name || ""} ${res.student_profiles?.last_name || ""}`.trim(),
         }));
@@ -286,7 +294,12 @@ export const approveReservationController = async (req, res) => {
         // Update reservation
         const { data: updated, error } = await supabase
             .from("student_room_reservations")
-            .update({ status: "approved" })
+            .update({
+                status: "approved",
+                approved_at: new Date().toISOString(),
+                decision_at: new Date().toISOString(),
+                decision_note: null,
+            })
             .eq("id", id)
             .select("*")
             .single();
@@ -331,11 +344,16 @@ export const closeReservationController = async (req, res) => {
             return res.status(staffAccess.code || 403).json({ message: staffAccess.error });
         }
 
-        // Update reservation to closed status (using rejected to mark as closed)
-        // Note: The schema only allows pending, approved, rejected, cancelled
+        const nowIso = new Date().toISOString();
+
+        // Update reservation to a terminal state while preserving the close event.
         const { data: updated, error } = await supabase
             .from("student_room_reservations")
-            .update({ status: "rejected" })
+            .update({
+                status: "rejected",
+                decision_at: nowIso,
+                decision_note: "MANUAL_CLOSED",
+            })
             .eq("id", id)
             .select("*")
             .single();
@@ -446,6 +464,9 @@ export const getReservationHistoryController = async (req, res) => {
                 purpose, 
                 status, 
                 created_at,
+                approved_at,
+                decision_at,
+                decision_note,
                 student_profiles(id_number, first_name, last_name, email, users_public:users_public(email))
                 `
             )
@@ -465,16 +486,22 @@ export const getReservationHistoryController = async (req, res) => {
             status: res.status,
             createdAt: res.created_at,
             reservationDate: res.time_start,
+            approvedAt: res.approved_at,
+            decisionAt: res.decision_at,
+            decisionNote: res.decision_note,
+            timeEnd: res.time_end,
             studentId: res.student_profiles?.id_number || "-",
             studentName: `${res.student_profiles?.first_name || ""} ${res.student_profiles?.last_name || ""}`.trim(),
             action:
                 res.status === "approved"
                     ? "RESERVATION_APPROVED"
-                    : res.status === "rejected"
-                        ? "RESERVATION_CLOSED"
+                    : res.status === "rejected" && res.decision_note === "AUTO_EXPIRED"
+                        ? "RESERVATION_AVAILABLE"
+                        : res.status === "rejected"
+                            ? "RESERVATION_ENDED"
                         : res.status === "cancelled"
                             ? "RESERVATION_CANCELLATION_REQUESTED"
-                            : "RESERVATION_CREATED",
+                                : "RESERVATION_REQUESTED",
         }));
 
         return res.status(200).json({

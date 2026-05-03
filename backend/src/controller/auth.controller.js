@@ -200,9 +200,22 @@ export const loginController = async (req, res) => {
 export const logoutController = async (_, res) => {
     try {
 
-        await supabase.auth.signOut();
-        res.clearCookie("access_token");
-        res.clearCookie("refresh_token");
+        try {
+            await supabase.auth.signOut();
+        } catch (e) {
+            console.error("Supabase signOut error:", e);
+            // continue to clear cookies even if supabase call fails
+        }
+
+        // Ensure cookies are cleared with proper options
+        try {
+            const { clearAuthCookies } = await import("../lib/utils.js");
+            clearAuthCookies(res);
+        } catch (e) {
+            // Fallback to generic clear
+            res.clearCookie("access_token");
+            res.clearCookie("refresh_token");
+        }
 
         return res.status(200).json({ message: "Logout successfully" });
     } catch (error) {

@@ -45,6 +45,10 @@ export const getReservationsAPI = async () => {
             notes: res.notes,
             status: res.status,
             createdAt: res.createdAt,
+            approvedAt: res.approvedAt,
+            decisionAt: res.decisionAt,
+            decisionNote: res.decisionNote,
+            timeEnd: res.timeEnd,
             cancellationRequested: false,
         }));
 
@@ -111,6 +115,10 @@ export const getReservationHistoryAPI = async () => {
             notes: entry.notes,
             action: entry.action,
             timestamp: entry.createdAt,
+            approvedAt: entry.approvedAt,
+            decisionAt: entry.decisionAt,
+            decisionNote: entry.decisionNote,
+            timeEnd: entry.timeEnd,
         }));
 
         return { ok: true, history: normalizedHistory };

@@ -15,6 +15,30 @@ import { showError, showSuccess } from "../../utils/notification";
 import { exportToCSV } from "../../services/exportService";
 import { useStore } from "../../store/useAuthStore";
 
+const getReservationDisplayAction = (entry) => {
+  const status = String(entry?.status || "").toLowerCase();
+  const decisionNote = String(entry?.decisionNote || entry?.decision_note || "").toUpperCase();
+
+  if (status === "pending") return "REQUESTED";
+  if (status === "approved") return "APPROVED";
+  if (status === "cancelled") return "CANCELLED";
+  if (status === "rejected" && decisionNote === "AUTO_EXPIRED") return "AVAILABLE";
+  if (status === "rejected") return "ENDED";
+  return "REQUESTED";
+};
+
+const getReservationDisplayStatus = (entry) => {
+  const status = String(entry?.status || "").toLowerCase();
+  const decisionNote = String(entry?.decisionNote || entry?.decision_note || "").toUpperCase();
+
+  if (status === "pending") return "request";
+  if (status === "approved") return "approve";
+  if (status === "cancelled") return "rejected";
+  if (status === "rejected" && decisionNote === "AUTO_EXPIRED") return "available";
+  if (status === "rejected") return "rejected";
+  return status || "-";
+};
+
 const Reservation = () => {
   const { borrowers, getStudentBorrowers } = useStore();
 
@@ -71,6 +95,14 @@ const Reservation = () => {
 
     if (normalizedAction.includes("APPROVED")) {
       return "APPROVED";
+    }
+
+    if (normalizedAction.includes("AVAILABLE")) {
+      return "AVAILABLE";
+    }
+
+    if (normalizedAction.includes("ENDED")) {
+      return "ENDED";
     }
 
     if (normalizedAction.includes("CANCEL")) {
@@ -286,7 +318,7 @@ const Reservation = () => {
                   <td data-label="Status">
                     {reservation.cancellationRequested
                       ? "approved · cancellation requested"
-                      : reservation.status}
+                      : getReservationDisplayStatus(reservation)}
                   </td>
                   <td data-label="Reason">
                     <div className="reservation-reason-cell">
@@ -362,8 +394,8 @@ const Reservation = () => {
                   <td data-label="Time Slot">{formatReservationHour(entry.reservationHour)}</td>
                   <td data-label="Email">{entry.requestedBy}</td>
                   <td data-label="ID">{getStudentIdByEmail(entry.requestedBy)}</td>
-                  <td data-label="Action">{formatHistoryAction(entry.action)}</td>
-                  <td data-label="Status">{entry.status}</td>
+                  <td data-label="Action">{formatHistoryAction(getReservationDisplayAction(entry))}</td>
+                  <td data-label="Status">{getReservationDisplayStatus(entry)}</td>
                   <td data-label="Time">{formatDateTimeFull(entry.timestamp)}</td>
                 </tr>
               ))}

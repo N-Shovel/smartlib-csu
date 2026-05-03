@@ -28,6 +28,18 @@ const toBorrowActionLabel = (status) => {
     return normalized || "-";
 };
 
+const getReservationActionLabel = (entry) => {
+    const status = String(entry?.status || "").toLowerCase();
+    const decisionNote = String(entry?.decisionNote || entry?.decision_note || "").toUpperCase();
+
+    if (status === "pending") return "RESERVATION_REQUESTED";
+    if (status === "approved") return "RESERVATION_APPROVED";
+    if (status === "cancelled") return "RESERVATION_CANCELLATION_REQUESTED";
+    if (status === "rejected" && decisionNote === "AUTO_EXPIRED") return "RESERVATION_AVAILABLE";
+    if (status === "rejected") return "RESERVATION_ENDED";
+    return "RESERVATION_REQUESTED";
+};
+
 const ActivityLog = () => {
     const { user } = useStore();
     // Use normalized current-user email to scope visible activity records.
@@ -78,15 +90,8 @@ const ActivityLog = () => {
                 .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
                 .map((entry) => ({
                     ...entry,
-                    action:
-                        entry.status === "approved"
-                            ? "RESERVATION_APPROVED"
-                            : entry.status === "rejected"
-                                ? "RESERVATION_CLOSED"
-                                : entry.status === "cancelled"
-                                    ? "RESERVATION_CANCELLATION_REQUESTED"
-                                    : "RESERVATION_CREATED",
-                    timestamp: entry.createdAt,
+                    action: getReservationActionLabel(entry),
+                    timestamp: entry.decisionAt || entry.approvedAt || entry.createdAt,
                 }));
 
             if (latestReservationLoadRef.current !== loadId) {
@@ -308,7 +313,11 @@ const ActivityLog = () => {
                                     <span>{entry.room}</span>
                                     <span>{formatReservationHour(entry.reservationHour)}</span>
                                     <span>{formatActivityAction(entry.action)}</span>
-                                    <span>{entry.status || "-"}</span>
+                                    <span>
+                                        {String(entry.status || "").toLowerCase() === "rejected" && String(entry.decisionNote || entry.decision_note || "").toUpperCase() === "AUTO_EXPIRED"
+                                            ? "available"
+                                            : String(entry.status || "-")}
+                                    </span>
                                     <span>{formatDateTimeFull(entry.timestamp)}</span>
                                 </div>
                             ))}
