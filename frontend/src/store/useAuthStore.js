@@ -21,7 +21,7 @@ const setupAxiosInterceptors = (store) => {
             try {
                 if (error.response?.status === 401) {
                     // eslint-disable-next-line no-console
-                    console.debug("Axios interceptor: 401 for", requestUrl, "isAuthEndpoint:", isAuthEndpoint);
+                    console.error("Axios interceptor: 401 for", requestUrl, "isAuthEndpoint:", isAuthEndpoint);
                 }
             } catch (e) {}
 
