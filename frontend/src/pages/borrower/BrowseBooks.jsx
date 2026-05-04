@@ -83,9 +83,10 @@ const BrowseBooks = () => {
             const currentRequests = useRequest.getState().itemRequests || [];
             const myRequests = currentRequests.filter((request) => request.student_user_id === currentUserId);
             setBorrowRequests(myRequests);
-        } catch (e) {
+        } catch (err) {
             setBorrowRequests([]);
-            showError(e?.message || "Unable to load borrow requests.");
+            console.error(err);
+            showError(err?.message || "Unable to load borrow requests.");
         }
     }, [currentUserId, fetchHistory]);
 
@@ -94,9 +95,10 @@ const BrowseBooks = () => {
             await fetchHistory();
             const currentRequests = useRequest.getState().itemRequests || [];
             setBorrowHistory(currentRequests);
-        } catch (e) {
-            setBorrowHistory([]);
-        }
+        } catch (err) {
+                setBorrowHistory([]);
+                console.error(err);
+            }
     }, [fetchHistory]);
 
     const refresh = useCallback(async () => {
@@ -197,8 +199,9 @@ const BrowseBooks = () => {
             // Give time for success message to show before refresh
             await new Promise(resolve => setTimeout(resolve, 500));
             await refresh();
-        } catch (e) {
-            const errorMsg = e?.response?.data?.message || e?.message || "Unable to borrow book.";
+        } catch (err) {
+            console.error(err);
+            const errorMsg = err?.response?.data?.message || err?.message || "Unable to borrow book.";
             if (onError) onError({ ok: false, error: errorMsg });
         } finally {
             markProcessing(id, false);
@@ -256,8 +259,9 @@ const BrowseBooks = () => {
             showSuccess("Borrow request cancelled.");
             setRequestToCancel(null);
             await refresh();
-        } catch (e) {
-            const errorMsg = e?.response?.data?.message || e?.message || "Unable to cancel borrow request.";
+        } catch (err) {
+            console.error(err);
+            const errorMsg = err?.response?.data?.message || err?.message || "Unable to cancel borrow request.";
             showError(errorMsg);
         } finally {
             markProcessing(bookId, false);

@@ -31,8 +31,9 @@ const Dashboard = () => {
         await getStudentBorrowers();
         await fetchHistory();
         setReservationHistory(reservationData || []);
-      } catch (error) {
+      } catch (err) {
         setReservationHistory([]);
+        console.error(err);
       } finally {
         setLoading(false);
       }

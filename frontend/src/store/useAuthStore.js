@@ -164,7 +164,8 @@ export const useStore = create((set, get) => ({
             set({ user: profileRes.data });
 
             return true;
-        } catch (error) {
+        } catch (err) {
+            console.error(err);
             return false;
         }
     },
@@ -173,7 +174,8 @@ export const useStore = create((set, get) => ({
         set({isLoading: true})
         try {
             await axiosInstance.post("/auth/logout");
-        } catch (error) {
+        } catch (err) {
+            console.error(err);
         } finally {
             set({ user: null, isLoading: false });
         }
@@ -187,8 +189,9 @@ export const useStore = create((set, get) => ({
 
             set({ borrowers: Array.isArray(res.data.borrowers) ? res.data.borrowers : [] });
 
-        } catch (error) {
-           showError(error?.response?.data?.message || "An error occured fetching data"); 
+        } catch (err) {
+           console.error(err);
+           showError(err?.response?.data?.message || "An error occured fetching data"); 
         }
         finally{
             set({isLoading: false});

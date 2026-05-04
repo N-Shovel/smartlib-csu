@@ -6,6 +6,7 @@ export const getData = (key, defaultValue = null) => {
     const stored = localStorage.getItem(key);
     return stored ? JSON.parse(stored) : defaultValue;
   } catch (error) {
+    console.error(error);
     return defaultValue;
   }
 };
@@ -14,6 +15,7 @@ export const saveData = (key, value) => {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (error) {
+    console.error(error);
   }
 };
 
@@ -21,5 +23,6 @@ export const removeData = (key) => {
   try {
     localStorage.removeItem(key);
   } catch (error) {
+    console.error(error);
   }
 };

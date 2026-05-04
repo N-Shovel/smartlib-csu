@@ -62,7 +62,8 @@ const Reservation = () => {
         ]);
         setReservations(reservationsData);
         setHistory(historyData);
-      } catch (error) {
+      } catch (err) {
+        console.error(err);
       } finally {
         setIsLoading(false);
       }
@@ -129,7 +130,8 @@ const Reservation = () => {
       ]);
       setReservations(reservationsData);
       setHistory(historyData);
-    } catch (error) {
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -150,7 +152,8 @@ const Reservation = () => {
       } else {
         showError(result.error ?? "Failed to approve reservation.");
       }
-    } catch (error) {
+    } catch (err) {
+      console.error(err);
       showError("An error occurred while approving the reservation.");
     }
   };
@@ -164,7 +167,8 @@ const Reservation = () => {
       } else {
         showError(result.error ?? "Failed to close reservation.");
       }
-    } catch (error) {
+    } catch (err) {
+      console.error(err);
       showError("An error occurred while closing the reservation.");
     }
   };

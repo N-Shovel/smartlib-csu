@@ -5,7 +5,8 @@ export const getBorrowerSignups = async () => {
   try {
     const response = await axiosInstance.get("/borrowers");
     return response.data || [];
-  } catch (error) {
+  } catch (err) {
+    console.error(err);
     return [];
   }
 };
@@ -45,10 +46,11 @@ export const updateBorrowerAccountUser = async (payload = {}) => {
     }
 
     return { ok: false, error: "No valid update payload provided." };
-  } catch (error) {
+  } catch (err) {
+    console.error(err);
     return {
       ok: false,
-      error: error?.response?.data?.message || error?.message || "Failed to update account.",
+      error: err?.response?.data?.message || err?.message || "Failed to update account.",
     };
   }
 };
