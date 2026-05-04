@@ -837,6 +837,48 @@ textarea.input.input--warning {
   color: var(--ink);
 }
 
+/* Hide browser-native password reveal / decoration buttons so our custom toggle is the only visible control */
+/* Edge / IE */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+/* WebKit-based browsers (Chrome, Edge Chromium, Safari) - best-effort selectors */
+input[type="password"]::-webkit-textfield-decoration-button,
+input::-webkit-credentials-auto-fill-button,
+input::-webkit-textfield-decoration-button {
+  display: none !important;
+}
+
+/* Extra safeguards: reset appearance and hide other vendor decorations */
+input[type="password"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="password"]::-webkit-textfield-decoration-container,
+input[type="password"]::-webkit-password-reveal-button,
+input[type="password"]::-webkit-clear-button {
+  display: none !important;
+}
+
+/* Firefox (if any native UI appears) */
+input[type="password"]::-moz-placeholder { }
+
+/* Ensure our custom toggle overlays any native browser decoration */
+.password-toggle {
+  z-index: 20;
+  right: 0.35rem; /* shift slightly to overlap native icon */
+  background: var(--card);
+  border-radius: 999px;
+  padding: 0.25rem 0.38rem;
+  box-shadow: none;
+}
+
+.password-input-wrapper .input {
+  padding-right: 4.8rem; /* ensure space for overlay */
+}
+
 .alert {
   background: rgba(211, 47, 47, 0.1);
   border: 1px solid rgba(211, 47, 47, 0.26);

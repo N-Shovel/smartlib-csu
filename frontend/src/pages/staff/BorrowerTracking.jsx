@@ -208,7 +208,7 @@ const BorrowerTracking = () => {
       <div className="page-header" style={{ marginTop: "2rem" }}>
         <div>
           <h2>Borrow History</h2>
-          <p className="muted">Latest 6 book activity entries for borrowers.</p>
+          <p className="muted">All book activity entries for borrowers.</p>
         </div>
         <button
           className="btn btn--ghost btn--export-soft"
@@ -230,7 +230,7 @@ const BorrowerTracking = () => {
               <span>Action</span>
               <span>Time</span>
             </div>
-            {borrowHistoryRows.slice(0, 6).map((entry) => (
+            {borrowHistoryRows.map((entry) => (
               <div className="table__row" key={entry.id}>
                 <span>{`${entry.student_profiles?.first_name || ""} ${entry.student_profiles?.last_name || ""}`.trim() || "-"}</span>
                 <span>{entry.student_profiles?.id_number || "-"}</span>

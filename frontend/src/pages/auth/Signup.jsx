@@ -1,8 +1,8 @@
 // Purpose: Signup page for creating borrower accounts.
 // Parts: form model, validation logic, submit handler, grouped form render.
-import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
 import { useStore } from "../../store/useAuthStore";
 import { showError } from "../../utils/notification";
 import AuthCard from "../../components/AuthCard";
@@ -235,7 +235,7 @@ const Signup = () => {
         <label className="label">
           Password <span className="required">*</span>
         </label>
-        <div className="password-input-wrapper">
+        <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
           <input
             className="input"
             type={showPassword ? "text" : "password"}
@@ -245,16 +245,25 @@ const Signup = () => {
             onChange={(e) => setPassword(e.target.value)}
             disabled={isLoading}
             required
+            style={{ paddingRight: "2.5rem" }}
           />
           <button
             type="button"
-            className="password-toggle"
             onClick={() => setShowPassword(!showPassword)}
-            aria-label={showPassword ? "Hide password" : "Show password"}
-            title={showPassword ? "Hide password" : "Show password"}
             disabled={isLoading}
+            style={{
+              position: "absolute",
+              right: "0.75rem",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "0.25rem",
+              display: "flex",
+              alignItems: "center",
+            }}
+            aria-label={showPassword ? "Hide password" : "Show password"}
           >
-            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         </div>
       </div>
@@ -263,7 +272,7 @@ const Signup = () => {
         <label className="label">
           Confirm Password <span className="required">*</span>
         </label>
-        <div className="password-input-wrapper">
+        <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
           <input
             className="input"
             type={showConfirmPassword ? "text" : "password"}
@@ -273,16 +282,25 @@ const Signup = () => {
             onChange={(e) => setConfirmPassword(e.target.value)}
             disabled={isLoading}
             required
+            style={{ paddingRight: "2.5rem" }}
           />
           <button
             type="button"
-            className="password-toggle"
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
-            title={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
             disabled={isLoading}
+            style={{
+              position: "absolute",
+              right: "0.75rem",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "0.25rem",
+              display: "flex",
+              alignItems: "center",
+            }}
+            aria-label={showConfirmPassword ? "Hide password" : "Show password"}
           >
-            {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         </div>
       </div>

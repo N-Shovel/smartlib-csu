@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Eye, EyeOff, PenSquare } from "lucide-react";
+import { PenSquare, Eye, EyeOff } from "lucide-react";
 import { updateBorrowerAccountUser } from "../../services/authService";
 import { showError, showSuccess } from "../../utils/notification";
 import { useStore } from "../../store/useAuthStore";
@@ -16,7 +16,7 @@ const Account = () => {
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
   const accountEmail = user?.user?.email || user?.email || "";
   const profile = user?.profile || null;
 
@@ -34,9 +34,6 @@ const Account = () => {
       setOldPassword("");
       setNewPassword("");
       setConfirmNewPassword("");
-      setShowOldPassword(false);
-      setShowNewPassword(false);
-      setShowConfirmPassword(false);
     }
 
     setActiveModal(type);
@@ -48,9 +45,6 @@ const Account = () => {
     setOldPassword("");
     setNewPassword("");
     setConfirmNewPassword("");
-    setShowOldPassword(false);
-    setShowNewPassword(false);
-    setShowConfirmPassword(false);
   };
 
   const handleUpdateEmail = async () => {
@@ -290,56 +284,86 @@ const Account = () => {
           <div className="card modal-card modal-card--account">
             <h3 id="change-password-title">Change Password</h3>
             <label className="label">Old Password</label>
-            <div className="password-input-wrapper">
+            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
               <input
                 className="input"
                 type={showOldPassword ? "text" : "password"}
                 value={oldPassword}
                 onChange={(event) => setOldPassword(event.target.value)}
+                style={{ paddingRight: "2.5rem" }}
               />
               <button
                 type="button"
-                className="password-toggle"
-                onClick={() => setShowOldPassword((prev) => !prev)}
-                aria-label={showOldPassword ? "Hide old password" : "Show old password"}
+                onClick={() => setShowOldPassword(!showOldPassword)}
+                style={{
+                  position: "absolute",
+                  right: "0.75rem",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "0.25rem",
+                  display: "flex",
+                  alignItems: "center",
+                }}
+                aria-label={showOldPassword ? "Hide password" : "Show password"}
               >
-                {showOldPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                {showOldPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
 
             <label className="label">New Password</label>
-            <div className="password-input-wrapper">
+            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
               <input
                 className="input"
                 type={showNewPassword ? "text" : "password"}
                 value={newPassword}
                 onChange={(event) => setNewPassword(event.target.value)}
+                style={{ paddingRight: "2.5rem" }}
               />
               <button
                 type="button"
-                className="password-toggle"
-                onClick={() => setShowNewPassword((prev) => !prev)}
-                aria-label={showNewPassword ? "Hide new password" : "Show new password"}
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                style={{
+                  position: "absolute",
+                  right: "0.75rem",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "0.25rem",
+                  display: "flex",
+                  alignItems: "center",
+                }}
+                aria-label={showNewPassword ? "Hide password" : "Show password"}
               >
-                {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
 
             <label className="label">Confirm New Password</label>
-            <div className="password-input-wrapper">
+            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
               <input
                 className="input"
-                type={showConfirmPassword ? "text" : "password"}
+                type={showConfirmNewPassword ? "text" : "password"}
                 value={confirmNewPassword}
                 onChange={(event) => setConfirmNewPassword(event.target.value)}
+                style={{ paddingRight: "2.5rem" }}
               />
               <button
                 type="button"
-                className="password-toggle"
-                onClick={() => setShowConfirmPassword((prev) => !prev)}
-                aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                style={{
+                  position: "absolute",
+                  right: "0.75rem",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "0.25rem",
+                  display: "flex",
+                  alignItems: "center",
+                }}
+                aria-label={showConfirmNewPassword ? "Hide password" : "Show password"}
               >
-                {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                {showConfirmNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
 

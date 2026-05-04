@@ -1,2 +1,4 @@
 node_modules
 .env
+# Ensure backend service role key file is ignored
+backend/.env

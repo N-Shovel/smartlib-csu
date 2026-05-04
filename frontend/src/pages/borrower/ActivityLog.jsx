@@ -50,6 +50,8 @@ const ActivityLog = () => {
     const [reservationUpdates, setReservationUpdates] = useState([]);
     const [myReservations, setMyReservations] = useState([]);
     const [isReservationLoading, setIsReservationLoading] = useState(true);
+    const [borrowHistorySearch, setBorrowHistorySearch] = useState("");
+    const [reservationHistorySearch, setReservationHistorySearch] = useState("");
     const latestReservationLoadRef = useRef(0);
     
     useEffect(() => {
@@ -146,6 +148,29 @@ const ActivityLog = () => {
 
     const reservationHistoryRows = useMemo(() => reservationUpdates, [reservationUpdates]);
 
+    const filteredBorrowHistory = useMemo(
+        () => borrowedHistory.filter((entry) => {
+            const searchLower = borrowHistorySearch.toLowerCase();
+            return (
+                (entry.title || "").toLowerCase().includes(searchLower) ||
+                (entry.action || "").toLowerCase().includes(searchLower)
+            );
+        }),
+        [borrowedHistory, borrowHistorySearch]
+    );
+
+    const filteredReservationHistory = useMemo(
+        () => reservationHistoryRows.filter((entry) => {
+            const searchLower = reservationHistorySearch.toLowerCase();
+            return (
+                (entry.room || "").toLowerCase().includes(searchLower) ||
+                (entry.action || "").toLowerCase().includes(searchLower) ||
+                (entry.status || "").toLowerCase().includes(searchLower)
+            );
+        }),
+        [reservationHistoryRows, reservationHistorySearch]
+    );
+
     const cancellationTimeoutRef = useRef(null);
 
     useEffect(() => () => {
@@ -230,20 +255,33 @@ const ActivityLog = () => {
                 <div className="empty-state">No borrowing history yet.</div>
             ) : (
                     <div className="card table-scroll table-scroll--five activity-log-table-card">
-                        <div className="table table--borrow-history">
-                            <div className="table__row table__head">
-                                <span>Book</span>
-                                <span>Action</span>
-                                <span>Time</span>
-                            </div>
-                            {borrowedHistory.map((entry) => (
-                                <div className="table__row" key={entry.id}>
-                                    <span>{entry.title || "-"}</span>
-                                    <span>{formatActivityAction(entry.action)}</span>
-                                    <span>{formatDateTimeFull(entry.timestamp)}</span>
-                                </div>
-                            ))}
+                        <div style={{ marginBottom: "1rem", padding: "0.5rem" }}>
+                            <input
+                                type="text"
+                                className="input"
+                                placeholder="Search by book title or action..."
+                                value={borrowHistorySearch}
+                                onChange={(e) => setBorrowHistorySearch(e.target.value)}
+                            />
                         </div>
+                        {filteredBorrowHistory.length === 0 ? (
+                            <div className="empty-state">No matching records found.</div>
+                        ) : (
+                            <div className="table table--borrow-history">
+                                <div className="table__row table__head">
+                                    <span>Book</span>
+                                    <span>Action</span>
+                                    <span>Time</span>
+                                </div>
+                                {filteredBorrowHistory.map((entry) => (
+                                    <div className="table__row" key={entry.id}>
+                                        <span>{entry.title || "-"}</span>
+                                        <span>{formatActivityAction(entry.action)}</span>
+                                        <span>{formatDateTimeFull(entry.timestamp)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -300,28 +338,41 @@ const ActivityLog = () => {
                 <div className="empty-state">No reservation updates yet.</div>
             ) : (
                     <div className="card table-scroll table-scroll--five activity-log-table-card">
-                        <div className="table table--reservation-updates">
-                            <div className="table__row table__head">
-                                <span>Room</span>
-                                <span>Time Slot</span>
-                                <span>Action</span>
-                                <span>Status</span>
-                                <span>Updated</span>
-                            </div>
-                            {reservationHistoryRows.map((entry) => (
-                                <div className="table__row" key={entry.id}>
-                                    <span>{entry.room}</span>
-                                    <span>{formatReservationHour(entry.reservationHour)}</span>
-                                    <span>{formatActivityAction(entry.action)}</span>
-                                    <span>
-                                        {String(entry.status || "").toLowerCase() === "rejected" && String(entry.decisionNote || entry.decision_note || "").toUpperCase() === "AUTO_EXPIRED"
-                                            ? "available"
-                                            : String(entry.status || "-")}
-                                    </span>
-                                    <span>{formatDateTimeFull(entry.timestamp)}</span>
-                                </div>
-                            ))}
+                        <div style={{ marginBottom: "1rem", padding: "0.5rem" }}>
+                            <input
+                                type="text"
+                                className="input"
+                                placeholder="Search by room number, action, or status..."
+                                value={reservationHistorySearch}
+                                onChange={(e) => setReservationHistorySearch(e.target.value)}
+                            />
                         </div>
+                        {filteredReservationHistory.length === 0 ? (
+                            <div className="empty-state">No matching records found.</div>
+                        ) : (
+                            <div className="table table--reservation-updates">
+                                <div className="table__row table__head">
+                                    <span>Room</span>
+                                    <span>Time Slot</span>
+                                    <span>Action</span>
+                                    <span>Status</span>
+                                    <span>Updated</span>
+                                </div>
+                                {filteredReservationHistory.map((entry) => (
+                                    <div className="table__row" key={entry.id}>
+                                        <span>{entry.room}</span>
+                                        <span>{formatReservationHour(entry.reservationHour)}</span>
+                                        <span>{formatActivityAction(entry.action)}</span>
+                                        <span>
+                                            {String(entry.status || "").toLowerCase() === "rejected" && String(entry.decisionNote || entry.decision_note || "").toUpperCase() === "AUTO_EXPIRED"
+                                                ? "available"
+                                                : String(entry.status || "-")}
+                                        </span>
+                                        <span>{formatDateTimeFull(entry.timestamp)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
         </section>
