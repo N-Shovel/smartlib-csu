@@ -45,9 +45,11 @@ export const getReservationsAPI = async () => {
             notes: res.notes,
             status: res.status,
             createdAt: res.createdAt,
+            requestedAt: res.requestedAt || res.createdAt,
             approvedAt: res.approvedAt,
             decisionAt: res.decisionAt,
             decisionNote: res.decisionNote,
+            approvedByStaffId: res.approvedByStaffId,
             timeEnd: res.timeEnd,
             cancellationRequested: false,
         }));
@@ -111,20 +113,46 @@ export const getReservationHistoryAPI = async () => {
             reservationHour: entry.reservationHour,
             requestedBy: entry.requestedBy,
             reservationDate: entry.reservationDate,
+            requestedAt: entry.requestedAt || entry.createdAt,
+            studentId: entry.studentId,
+            studentName: entry.studentName,
             status: entry.status,
             notes: entry.notes,
             action: entry.action,
-            timestamp: entry.createdAt,
+            timestamp: entry.requestedAt || entry.createdAt,
             approvedAt: entry.approvedAt,
             decisionAt: entry.decisionAt,
             decisionNote: entry.decisionNote,
+            approvedByStaffId: entry.approvedByStaffId,
             timeEnd: entry.timeEnd,
         }));
 
-        return { ok: true, history: normalizedHistory };
+        const normalizedEvents = Array.isArray(response.data.events)
+            ? response.data.events.map((event) => ({
+                id: event.id,
+                reservationId: event.reservationId,
+                room: event.room,
+                reservationHour: event.reservationHour,
+                requestedBy: event.requestedBy,
+                studentId: event.studentId,
+                studentName: event.studentName,
+                status: event.status,
+                action: event.action,
+                timestamp: event.timestamp,
+                occurredAt: event.occurredAt,
+                eventType: event.eventType,
+                eventNote: event.eventNote,
+                metadata: event.metadata,
+                legacyMetadataStatus: event.legacyMetadataStatus,
+                approvedByStaffId: event.staff_user_id ?? event.approvedByStaffId,
+                timeEnd: event.timeEnd,
+            }))
+            : [];
+
+        return { ok: true, history: normalizedHistory, events: normalizedEvents };
     } catch (error) {
         const message = error.response?.data?.message || error.message;
-        return { ok: false, error: message, history: [] };
+        return { ok: false, error: message, history: [], events: [] };
     }
 };
 

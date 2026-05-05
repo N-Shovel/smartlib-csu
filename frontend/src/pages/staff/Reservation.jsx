@@ -11,32 +11,30 @@ import {
 } from "../../services/reservationService";
 import { RESERVATION_STATUS } from "../../constants/status";
 import { formatDateTimeFull } from "../../utils/dateUtils";
+import { expandReservationHistoryEntries, formatActivityAction } from "../../utils/activityUtils";
 import { showError, showSuccess } from "../../utils/notification";
 import { exportToCSV } from "../../services/exportService";
 import { useStore } from "../../store/useAuthStore";
 
-const getReservationDisplayAction = (entry) => {
-  const status = String(entry?.status || "").toLowerCase();
-  const decisionNote = String(entry?.decisionNote || entry?.decision_note || "").toUpperCase();
-
-  if (status === "pending") return "REQUESTED";
-  if (status === "approved") return "APPROVED";
-  if (status === "cancelled") return "CANCELLED";
-  if (status === "rejected" && decisionNote === "AUTO_EXPIRED") return "AVAILABLE";
-  if (status === "rejected") return "ENDED";
-  return "REQUESTED";
-};
-
 const getReservationDisplayStatus = (entry) => {
   const status = String(entry?.status || "").toLowerCase();
-  const decisionNote = String(entry?.decisionNote || entry?.decision_note || "").toUpperCase();
+  const decisionNote = String(entry?.decisionNote || entry?.decision_note || entry?.eventNote || "").toUpperCase();
 
-  if (status === "pending") return "request";
-  if (status === "approved") return "approve";
-  if (status === "cancelled") return "rejected";
-  if (status === "rejected" && decisionNote === "AUTO_EXPIRED") return "available";
-  if (status === "rejected") return "rejected";
-  return status || "-";
+  // Handle reconstructed history format (pending, approved, rejected, cancelled)
+  if (status === "pending") return "Pending";
+  if (status === "approved") return "Confirmed";
+  if (status === "rejected" && decisionNote === "AUTO_EXPIRED") return "Timed Out";
+  if (status === "rejected") return "Rejected";
+  if (status === "cancelled") return "Cancelled";
+
+  // Handle raw event format (requested, approved, expired, closed, cancelled)
+  if (status === "requested") return "Pending";
+  if (status === "approved") return "Confirmed";
+  if (status === "expired") return "Timed Out";
+  if (status === "closed") return "Room Closed";
+  if (status === "cancelled") return "Cancelled";
+
+  return status ? status.charAt(0).toUpperCase() + status.slice(1) : "-";
 };
 
 const Reservation = () => {
@@ -44,6 +42,7 @@ const Reservation = () => {
 
   const [reservations, setReservations] = useState([]);
   const [history, setHistory] = useState([]);
+  const [reservationHistorySearch, setReservationHistorySearch] = useState("");
   const [selectedReason, setSelectedReason] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -53,26 +52,19 @@ const Reservation = () => {
 
   // Initial load and periodic refresh
   useEffect(() => {
-    const refresh = async () => {
+    (async () => {
       try {
-        await autoClosePassedReservations();
-        const [reservationsData, historyData] = await Promise.all([
-          getReservations(),
-          getReservationHistory(),
-        ]);
-        setReservations(reservationsData);
-        setHistory(historyData);
-      } catch (err) {
-        console.error(err);
+        await refresh();
       } finally {
         setIsLoading(false);
       }
-    };
+    })();
 
-    refresh();
+    // Set up interval for periodic refresh (no loading state on subsequent ticks)
+    const intervalId = setInterval(() => {
+      refresh().catch((err) => console.error(err));
+    }, 30000);
 
-    // Set up interval for periodic refresh
-    const intervalId = setInterval(refresh, 30000);
     return () => clearInterval(intervalId);
   }, []);
 
@@ -89,36 +81,6 @@ const Reservation = () => {
   // Student ID is resolved from a memoized profile map to avoid repeated lookups.
   const getStudentIdByEmail = (email) =>
     studentIdByEmail[String(email || "").trim().toLowerCase()] || "-";
-  // Collapse legacy/raw history action strings into table-safe labels.
-  const formatHistoryAction = (action) => {
-    const normalizedAction = String(action || "").trim().toUpperCase();
-
-    if (normalizedAction.includes("APPROVED")) {
-      return "APPROVED";
-    }
-
-    if (normalizedAction.includes("AVAILABLE")) {
-      return "AVAILABLE";
-    }
-
-    if (normalizedAction.includes("ENDED")) {
-      return "ENDED";
-    }
-
-    if (normalizedAction.includes("CANCEL")) {
-      return "Canceled";
-    }
-
-    if (normalizedAction.includes("CLOSED") || normalizedAction.includes("REJECTED")) {
-      return "CLOSED";
-    }
-
-    if (normalizedAction.includes("REQUEST") || normalizedAction.includes("CREATED")) {
-      return "REQUESTED";
-    }
-
-    return "REQUESTED";
-  };
 
   const refresh = async () => {
     // Keep reservations and history in sync after approve/close actions.
@@ -136,12 +98,51 @@ const Reservation = () => {
   };
 
   // Split live reservations into pending and currently approved sections.
-  const pending = reservations.filter(
-    (reservation) => reservation.status === RESERVATION_STATUS.PENDING
+  const pending = useMemo(
+    () => reservations
+      .filter((reservation) => reservation.status === RESERVATION_STATUS.PENDING)
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()),
+    [reservations]
   );
-  const currentReservations = reservations.filter(
-    (reservation) => reservation.status === RESERVATION_STATUS.APPROVED
+  const currentReservations = useMemo(
+    () => reservations
+      .filter((reservation) => reservation.status === RESERVATION_STATUS.APPROVED)
+      .sort((a, b) => {
+        const left = a.decisionAt || a.approvedAt || a.createdAt;
+        const right = b.decisionAt || b.approvedAt || b.createdAt;
+        return new Date(right || 0).getTime() - new Date(left || 0).getTime();
+      }),
+    [reservations]
   );
+  const filteredHistory = useMemo(() => {
+    const query = reservationHistorySearch.trim().toLowerCase();
+    const expandedHistory = (Array.isArray(history?.events) && history.events.length > 0)
+      ? history.events
+      : expandReservationHistoryEntries(history);
+    if (!query) return expandedHistory;
+
+    return expandedHistory.filter((entry) => {
+      const searchableText = [
+        entry.room,
+        entry.requestedBy,
+        entry.studentId,
+        entry.studentName,
+        entry.reservationHour,
+        formatReservationHour(entry.reservationHour),
+        entry.action,
+        entry.status,
+        entry.eventType,
+        entry.eventNote,
+        entry.legacyMetadataStatus,
+        entry.metadata?.status,
+        entry.requestedAt || entry.timestamp,
+      ]
+        .map((value) => String(value || "").toLowerCase())
+        .join(" ");
+
+      return searchableText.includes(query);
+    });
+  }, [history, reservationHistorySearch]);
 
   const handleApprove = async (id) => {
     try {
@@ -174,14 +175,19 @@ const Reservation = () => {
   };
 
   const handleHistoryExport = () => {
-    // Export intentionally includes only the latest six rows shown in the UI.
-    if (history.length === 0) return;
-    const historyData = history.slice(0, 6).map((entry) => ({
-      "Room": entry.room || "-",
-      "Requester": entry.requestedBy || "-",
+    // Export all reservation history events.
+    const historyEvents = (Array.isArray(history?.events) && history.events.length > 0)
+      ? history.events
+      : expandReservationHistoryEntries(history);
+    if (historyEvents.length === 0) return;
+    const historyData = historyEvents.map((entry) => ({
+      Room: entry.room || "-",
+      Requester: entry.requestedBy || "-",
+      "Student ID": entry.studentId || "-",
       "Reservation Hour": formatReservationHour(entry.reservationHour),
-      "Date": formatDateTimeFull(entry.reservationDate),
-      "Status": entry.status || "-",
+      Action: formatActivityAction(entry.action),
+      Status: getReservationDisplayStatus(entry),
+      Time: formatDateTimeFull(entry.timestamp),
     }));
     exportToCSV(
       historyData,
@@ -280,7 +286,7 @@ const Reservation = () => {
       <div className="page-header" style={{ marginTop: "2rem" }}>
         <div>
           <h2>Current Reservations</h2>
-          <p className="muted">Latest 6 approved reservations currently in use.</p>
+          <p className="muted">Approved reservations currently in use.</p>
         </div>
       </div>
       {currentReservations.length === 0 ? (
@@ -309,7 +315,7 @@ const Reservation = () => {
               </tr>
             </thead>
             <tbody>
-              {currentReservations.slice(0, 6).map((reservation) => (
+              {currentReservations.map((reservation) => (
                 <tr key={reservation.id}>
                   <td data-label="Room">{reservation.room}</td>
                   <td data-label="Time Slot">{formatReservationHour(reservation.reservationHour)}</td>
@@ -317,7 +323,7 @@ const Reservation = () => {
                   <td data-label="Requested">{formatDateTimeFull(reservation.createdAt)}</td>
                   <td data-label="Status">
                     {reservation.cancellationRequested
-                      ? "approved · cancellation requested"
+                      ? "Confirmed · Cancellation Requested"
                       : getReservationDisplayStatus(reservation)}
                   </td>
                   <td data-label="Reason">
@@ -352,7 +358,7 @@ const Reservation = () => {
       <div className="page-header" style={{ marginTop: "2rem" }}>
         <div>
           <h2>Reservation History</h2>
-          <p className="muted">Latest 6 reservation updates.</p>
+          <p className="muted">All reservation updates.</p>
         </div>
         <button
           className="btn btn--ghost btn--export-soft"
@@ -362,7 +368,18 @@ const Reservation = () => {
           Export CSV
         </button>
       </div>
-      {history.length === 0 ? (
+      <div className="card staff-table-card reservation-table-wrap" style={{ marginBottom: "1rem" }}>
+        <div className="search-input-wrapper">
+          <input
+            type="search"
+            className="input search-input"
+            placeholder="Search reservation history by room, email, ID, action, or status"
+            value={reservationHistorySearch}
+            onChange={(event) => setReservationHistorySearch(event.target.value)}
+          />
+        </div>
+      </div>
+      {filteredHistory.length === 0 ? (
         <div className="empty-state">No reservation request history yet.</div>
       ) : (
         <div className="card staff-table-card reservation-table-wrap">
@@ -388,13 +405,13 @@ const Reservation = () => {
               </tr>
             </thead>
             <tbody>
-              {history.slice(0, 6).map((entry) => (
-                <tr key={entry.id}>
+              {filteredHistory.map((entry) => (
+                <tr key={`${entry.id}-${entry.action}-${entry.timestamp}`}>
                   <td data-label="Room">{entry.room}</td>
                   <td data-label="Time Slot">{formatReservationHour(entry.reservationHour)}</td>
                   <td data-label="Email">{entry.requestedBy}</td>
-                  <td data-label="ID">{getStudentIdByEmail(entry.requestedBy)}</td>
-                  <td data-label="Action">{formatHistoryAction(getReservationDisplayAction(entry))}</td>
+                  <td data-label="ID">{entry.studentId || getStudentIdByEmail(entry.requestedBy)}</td>
+                  <td data-label="Action">{formatActivityAction(entry.action)}</td>
                   <td data-label="Status">{getReservationDisplayStatus(entry)}</td>
                   <td data-label="Time">{formatDateTimeFull(entry.timestamp)}</td>
                 </tr>

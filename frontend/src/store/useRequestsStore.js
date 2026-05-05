@@ -34,7 +34,9 @@ export const useRequest = create((set, get) => ({
             const res = await axiosInstance.get("/history/borrower-logs");
 
             const requests = Array.isArray(res.data?.requests) ? res.data.requests : [];
+            const events = Array.isArray(res.data?.events) ? res.data.events : [];
             requests.sort((a, b) => new Date(b.requested_at || 0) - new Date(a.requested_at || 0));
+            requests.events = events;
 
             set({itemRequests: requests});
                 clearFetchHistoryErrorDedupe();

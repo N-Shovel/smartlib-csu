@@ -5,7 +5,7 @@ import { exportToCSV } from "../../services/exportService";
 import { formatDateTimeFull } from "../../utils/dateUtils";
 import { showError } from "../../utils/notification";
 import useItems from "../../store/useItemsStore";
-import { formatActivityAction } from "../../utils/activityUtils";
+import { expandBorrowHistoryEntries, formatActivityAction } from "../../utils/activityUtils";
 import { useRequest } from "../../store/useRequestsStore";
 
 const BorrowerTracking = () => {
@@ -14,6 +14,7 @@ const BorrowerTracking = () => {
   const { fetchHistory, itemRequests, approveBorrowRequest, confirmReturnRequest } = useRequest();
   const [receivingRequestId, setReceivingRequestId] = useState(null);
   const [returningRequestId, setReturningRequestId] = useState(null);
+  const [borrowHistorySearch, setBorrowHistorySearch] = useState("");
 
   useEffect(() => {
     fetchBooks();
@@ -36,40 +37,68 @@ const BorrowerTracking = () => {
     return map;
   }, [storeBooks]);
 
-  const formatHistoryAction = (action) => String(action || "-").replace(/_/g, " ");
+  const pendingRequests = useMemo(
+    () => (itemRequests || [])
+      .filter((entry) => String(entry.status || "").toLowerCase() === "pending")
+      .sort((a, b) => new Date(b.requested_at || 0).getTime() - new Date(a.requested_at || 0).getTime()),
+    [itemRequests]
+  );
 
-  const pendingRequests = (itemRequests || []).filter((entry) => entry.status === "pending");
+  const currentBorrowers = useMemo(
+    () => (itemRequests || [])
+      .filter((entry) => String(entry.status || "").toLowerCase() === "approved")
+      .sort((a, b) => new Date(b.approved_at || b.decision_at || 0).getTime() - new Date(a.approved_at || a.decision_at || 0).getTime())
+      .map((entry) => {
+        const fullName = `${entry.student_profiles?.first_name || ""} ${entry.student_profiles?.last_name || ""}`.trim();
+        const itemId = entry.library_item_id;
+        const book = itemId ? booksById.get(itemId) : null;
+        const isReturnRequested = String(entry.decision_note || "").trim().toUpperCase() === "RETURN_REQUESTED";
 
-  const currentBorrowers = (itemRequests || [])
-    .filter((entry) => {
-      const normalizedStatus = String(entry.status || "").toLowerCase();
-      return normalizedStatus === "approved";
-    })
-    .sort((a, b) => new Date(b.approved_at || b.decision_at || 0) - new Date(a.approved_at || a.decision_at || 0))
-    .map((entry) => {
-      const fullName = `${entry.student_profiles?.first_name || ""} ${entry.student_profiles?.last_name || ""}`.trim();
-      const itemId = entry.library_item_id;
-      const book = itemId ? booksById.get(itemId) : null;
-      const isReturnRequested = String(entry.decision_note || "").trim().toUpperCase() === "RETURN_REQUESTED";
+        return {
+          requestId: entry.id,
+          user: fullName || entry.student_profiles?.last_name || "-",
+          studentId: entry.student_profiles?.id_number || "-",
+          book: entry.item_title || book?.title || "-",
+          bookId: itemId || entry.id,
+          time: entry.approved_at || entry.decision_at || entry.requested_at,
+          status: isReturnRequested ? "return requested" : "borrowed",
+        };
+      }),
+    [itemRequests, booksById]
+  );
 
-      return {
-        requestId: entry.id,
-        user: fullName || entry.student_profiles?.last_name || "-",
-        studentId: entry.student_profiles?.id_number || "-",
-        book: entry.item_title || book?.title || "-",
-        bookId: itemId || entry.id,
-        time: entry.approved_at || entry.decision_at || entry.requested_at,
-        status: isReturnRequested ? "return requested" : "borrowed",
-      };
+  const borrowHistoryRows = useMemo(
+    () => (Array.isArray(itemRequests?.events) && itemRequests.events.length > 0)
+      ? itemRequests.events
+      : expandBorrowHistoryEntries(itemRequests || []),
+    [itemRequests]
+  );
+  const filteredBorrowHistoryRows = useMemo(() => {
+    const query = borrowHistorySearch.trim().toLowerCase();
+    if (!query) return borrowHistoryRows;
+
+    return borrowHistoryRows.filter((entry) => {
+      const searchableText = [
+        entry.student_profiles?.first_name,
+        entry.student_profiles?.last_name,
+        entry.student_profiles?.id_number,
+        entry.student_profiles?.program,
+        entry.studentId,
+        entry.item_title,
+        entry.library_item_id,
+        entry.status,
+        entry.action,
+        entry.eventType,
+        entry.eventNote,
+        entry.legacyMetadataStatus,
+        entry.timestamp,
+      ]
+        .map((value) => String(value || "").toLowerCase())
+        .join(" ");
+
+      return searchableText.includes(query);
     });
-
-  const borrowHistoryRows = (itemRequests || [])
-    .filter((entry) => ["approved", "returned", "cancelled"].includes(String(entry.status || "").toLowerCase()))
-    .sort((a, b) => {
-      const aTime = a.returned_at || a.approved_at || a.decision_at || a.requested_at;
-      const bTime = b.returned_at || b.approved_at || b.decision_at || b.requested_at;
-      return new Date(bTime || 0) - new Date(aTime || 0);
-    });
+  }, [borrowHistoryRows, borrowHistorySearch]);
 
   const refresh = () => {
     fetchBooks();
@@ -110,8 +139,9 @@ const BorrowerTracking = () => {
       "Book ID": entry.library_item_id || "-",
       "Book Title": entry.item_title || "-",
       "Borrower": `${entry.student_profiles?.first_name || ""} ${entry.student_profiles?.last_name || ""}`.trim() || "-",
-      "Action": formatHistoryAction(String(entry.status || "")),
-      "Timestamp": formatDateTimeFull(entry.returned_at || entry.approved_at || entry.decision_at || entry.requested_at),
+      "Student ID": entry.studentId || entry.student_profiles?.id_number || "-",
+      "Action": formatActivityAction(entry.action),
+      "Timestamp": formatDateTimeFull(entry.timestamp),
     }));
     exportToCSV(historyData, "borrow-history.csv");
   };
@@ -218,7 +248,18 @@ const BorrowerTracking = () => {
           Export CSV
         </button>
       </div>
-      {borrowHistoryRows.length === 0 ? (
+      <div className="card table-scroll table-scroll--five staff-table-card" style={{ marginBottom: "1rem" }}>
+        <div className="search-input-wrapper">
+          <input
+            type="search"
+            className="input search-input"
+            placeholder="Search borrow history by student, ID, book, action, status, or time"
+            value={borrowHistorySearch}
+            onChange={(event) => setBorrowHistorySearch(event.target.value)}
+          />
+        </div>
+      </div>
+      {filteredBorrowHistoryRows.length === 0 ? (
         <div className="empty-state">No request history yet.</div>
       ) : (
         <div className="card table-scroll table-scroll--five staff-table-card">
@@ -230,13 +271,13 @@ const BorrowerTracking = () => {
               <span>Action</span>
               <span>Time</span>
             </div>
-            {borrowHistoryRows.map((entry) => (
-              <div className="table__row" key={entry.id}>
+            {filteredBorrowHistoryRows.map((entry) => (
+              <div className="table__row" key={`${entry.id}-${entry.action}-${entry.timestamp}`}>
                 <span>{`${entry.student_profiles?.first_name || ""} ${entry.student_profiles?.last_name || ""}`.trim() || "-"}</span>
-                <span>{entry.student_profiles?.id_number || "-"}</span>
+                <span>{entry.studentId || entry.student_profiles?.id_number || "-"}</span>
                 <span>{entry.item_title || "-"}</span>
-                <span>{formatActivityAction(`BORROW_${String(entry.status || "").toUpperCase()}`)}</span>
-                <span>{formatDateTimeFull(entry.returned_at || entry.approved_at || entry.decision_at || entry.requested_at)}</span>
+                <span>{formatActivityAction(entry.action)}</span>
+                <span>{formatDateTimeFull(entry.timestamp)}</span>
               </div>
             ))}
           </div>

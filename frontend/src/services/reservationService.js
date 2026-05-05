@@ -97,8 +97,9 @@ export const getReservationHistory = async () => {
   const result = await getReservationHistoryAPI();
   if (result.ok) {
     historyCacheMask = result.history;
+    historyCacheMask.events = result.events || [];
     cacheTimestamp = now;
-    return result.history;
+    return historyCacheMask;
   }
   return [];
 };

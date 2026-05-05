@@ -70,7 +70,22 @@ const Dashboard = () => {
   // Keeping these concerns separate prevents pending/noisy events from inflating summary counts.
   // Show a short, recent feed to keep dashboard quick to scan.
   // Normalize borrow logs into a single shape used by the shared feed table.
-  const borrowRequestLogs = (itemRequests || []).flatMap((entry) => {
+  const borrowEventSource = Array.isArray(itemRequests?.events) && itemRequests.events.length > 0
+    ? itemRequests.events
+    : null;
+
+  const borrowRequestLogs = borrowEventSource
+    ? borrowEventSource.map((entry) => ({
+        id: entry.id,
+        action: entry.action || "BORROW_REQUESTED",
+        room: "-",
+        userEmail: entry.student_profiles?.email || entry.studentEmail || "",
+        firstName: entry.student_profiles?.first_name || "",
+        lastName: entry.student_profiles?.last_name || "",
+        userId: entry.student_profiles?.id_number || entry.studentId || "-",
+        sourceTimestamp: entry.timestamp || entry.occurredAt,
+      }))
+    : (itemRequests || []).flatMap((entry) => {
     const logs = [];
 
     logs.push({
@@ -103,22 +118,38 @@ const Dashboard = () => {
 
   // Only include reservation actions that matter for day-to-day monitoring.
   const reservationActionsForFeed = new Set([
-    "RESERVATION_CREATED",
+    "RESERVATION_REQUESTED",
     "RESERVATION_APPROVED",
+    "RESERVATION_DECLINED",
+    "RESERVATION_EXPIRED",
+    "RESERVATION_CANCELLED",
+    "RESERVATION_CREATED",
     "RESERVATION_CLOSED",
     "RESERVATION_CANCELLATION_REQUESTED"
   ]);
 
   // Project reservation history into same feed schema as borrow logs.
-  const reservationRequestLogs = reservationHistory
-    .filter((entry) =>
-      reservationActionsForFeed.has(String(entry.action || "").toUpperCase())
-    )
-    .map((entry) => ({
-      ...entry,
-      userEmail: entry.requestedBy || "",
-      sourceTimestamp: entry.timestamp
-    }));
+  const reservationEventSource = Array.isArray(reservationHistory?.events) && reservationHistory.events.length > 0
+    ? reservationHistory.events
+    : null;
+
+  const reservationRequestLogs = reservationEventSource
+    ? reservationEventSource
+        .filter((entry) => reservationActionsForFeed.has(String(entry.action || "").toUpperCase()))
+        .map((entry) => ({
+          ...entry,
+          userEmail: entry.requestedBy || "",
+          sourceTimestamp: entry.timestamp,
+        }))
+    : reservationHistory
+        .filter((entry) =>
+          reservationActionsForFeed.has(String(entry.action || "").toUpperCase())
+        )
+        .map((entry) => ({
+          ...entry,
+          userEmail: entry.requestedBy || "",
+          sourceTimestamp: entry.timestamp
+        }));
 
   // Merge, sort newest-first, then cap to the latest six events.
   const logs = [...borrowRequestLogs, ...reservationRequestLogs]

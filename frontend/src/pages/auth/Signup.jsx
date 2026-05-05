@@ -10,6 +10,7 @@ import EmailConfirmationPopup from "../../confirmation/EmailConfirmationPopup";
 
 const sanitizeNameInput = (value) => String(value || "").replace(/\d/g, "");
 const sanitizeDigitsInput = (value) => String(value || "").replace(/\D/g, "");
+const sanitizeIdInput = (value) => String(value || "").replace(/[^0-9-]/g, "");
 const PROGRAM_PATTERN = /^[A-Z]{2,5} - [1-4](st|nd|rd|th) Year$/;
 
 const formatStudentId = (digits) => {
@@ -61,8 +62,9 @@ const Signup = () => {
         return;
       }
 
-      if (!/^\d+$/.test(id)) {
-        const errorMsg = "Student ID must contain numbers only.";
+      // Student ID must be entered with a hyphen, e.g. 241-01234
+      if (!/^\d{3}-\d{5}$/.test(id)) {
+        const errorMsg = "Student ID must be in the format XXX-XXXXX (include the hyphen).";
         setError(errorMsg);
         showError(errorMsg);
         return;
@@ -70,6 +72,13 @@ const Signup = () => {
 
       if (!/^\d+$/.test(contactInfo)) {
         const errorMsg = "Contact number must contain numbers only.";
+        setError(errorMsg);
+        showError(errorMsg);
+        return;
+      }
+
+      if (String(contactInfo || "").length !== 11) {
+        const errorMsg = "Contact number must be 11 digits.";
         setError(errorMsg);
         showError(errorMsg);
         return;
@@ -89,14 +98,16 @@ const Signup = () => {
         showError(errorMsg);
         return;
       }
+      // Backend expects digits-only ID; strip the hyphen before sending.
+      const cleanedId = id.replace(/\D/g, "");
       const success = await studentSignUp(
         email,
         password,
-        id,
+        cleanedId,
         firstName,
         lastName,
         null, // suffix - optional
-        courseAndYear,        
+        courseAndYear,
         contactInfo,
         currentAddress
       );
@@ -174,16 +185,20 @@ const Signup = () => {
         </label>
         <input
           className="input"
-          placeholder="241 - 01234"
-          value={formatStudentId(id)}
+          placeholder="241-01234"
+          value={id}
           inputMode="numeric"
+          pattern="[0-9-]*"
+          maxLength={9}
+          autoComplete="off"
           onChange={(e) => {
-            const digits = sanitizeDigitsInput(e.target.value).slice(0, 8); // 3 + 5
-            setId(digits);
+            const cleaned = sanitizeIdInput(e.target.value).slice(0, 9); // 3 + 1 + 5
+            setId(cleaned);
           }}
           disabled={isLoading}
           required
         />
+        
       </div>
 
       <div className="signup-field">
@@ -195,7 +210,8 @@ const Signup = () => {
           placeholder="09XXXXXXXXX"
           value={contactInfo}
           inputMode="numeric"
-          onChange={(e) => setContactInfo(sanitizeDigitsInput(e.target.value))}
+          maxLength={11}
+          onChange={(e) => setContactInfo(sanitizeDigitsInput(e.target.value).slice(0, 11))}
           disabled={isLoading}
           required
         />

@@ -50,10 +50,10 @@ const getHourFromTimestamp = (timestamp) => {
     return date.getHours();
 };
 
-const autoCloseExpiredPendingReservations = async (supabase) => {
+const autoCloseExpiredReservations = async (supabase) => {
     const nowIso = new Date().toISOString();
 
-    const { error } = await supabase
+    const { error: pendingError } = await supabase
         .from("student_room_reservations")
         .update({
             status: "rejected",
@@ -63,9 +63,170 @@ const autoCloseExpiredPendingReservations = async (supabase) => {
         .eq("status", "pending")
         .lt("time_end", nowIso);
 
-    if (error) {
-        throw new Error(error.message);
+    if (pendingError) {
+        throw new Error(pendingError.message);
     }
+
+    // Preserve approval timestamp for approved reservations so history can show both Approved and Expired events.
+    const { error: approvedError } = await supabase
+        .from("student_room_reservations")
+        .update({
+            status: "rejected",
+            decision_note: "AUTO_EXPIRED",
+        })
+        .eq("status", "approved")
+        .lt("time_end", nowIso);
+
+    if (approvedError) {
+        throw new Error(approvedError.message);
+    }
+};
+
+const normalizeReservationEvents = (events = []) => {
+    const grouped = new Map();
+
+    for (const event of events) {
+        const key = event.reservation_id;
+        if (!grouped.has(key)) {
+            grouped.set(key, []);
+        }
+        grouped.get(key).push(event);
+    }
+
+    return Array.from(grouped.entries()).map(([reservationId, reservationEvents]) => {
+        const sortedEvents = [...reservationEvents].sort(
+            (left, right) => new Date(left.occurred_at || 0).getTime() - new Date(right.occurred_at || 0).getTime()
+        );
+
+        const requestedEvent = sortedEvents.find((entry) => entry.event_type === "requested") || sortedEvents[0] || {};
+        const requestedMeta = requestedEvent.metadata || {};
+        const studentProfile = requestedEvent.student_profiles || null;
+
+        let status = "pending";
+        let decisionAt = null;
+        let decisionNote = null;
+        let approvedAt = null;
+        let approvedByStaffId = null;
+
+        for (const event of sortedEvents) {
+            const occurredAt = event.occurred_at;
+
+            if (event.event_type === "approved") {
+                status = "approved";
+                approvedAt = occurredAt;
+                decisionAt = occurredAt;
+                decisionNote = null;
+                approvedByStaffId = event.staff_user_id || approvedByStaffId;
+                continue;
+            }
+
+            if (event.event_type === "expired") {
+                status = "rejected";
+                decisionAt = occurredAt;
+                decisionNote = event.event_note || "AUTO_EXPIRED";
+                approvedByStaffId = event.staff_user_id || approvedByStaffId;
+                continue;
+            }
+
+            if (event.event_type === "closed") {
+                status = "closed";
+                decisionAt = occurredAt;
+                decisionNote = event.event_note || "MANUAL_DECLINED";
+                approvedByStaffId = event.staff_user_id || approvedByStaffId;
+                continue;
+            }
+
+            if (event.event_type === "cancelled") {
+                status = "cancelled";
+                decisionAt = occurredAt;
+                decisionNote = event.event_note || "CANCELLED";
+            }
+        }
+
+        const timeStart = requestedMeta.time_start || requestedMeta.timeStart || null;
+        const timeEnd = requestedMeta.time_end || requestedMeta.timeEnd || null;
+
+        return {
+            id: reservationId,
+            room: requestedMeta.room_number || requestedMeta.room || "-",
+            reservationHour: getHourFromTimestamp(timeStart || requestedEvent.occurred_at),
+            requestedBy: studentProfile?.users_public?.email || studentProfile?.email || "unknown",
+            notes: requestedMeta.purpose ?? null,
+            status,
+            createdAt: requestedEvent.occurred_at,
+            requestedAt: requestedEvent.occurred_at,
+            reservationDate: timeStart,
+            approvedAt,
+            decisionAt,
+            decisionNote,
+            approvedByStaffId,
+            timeEnd,
+            studentId: studentProfile?.id_number || "-",
+            studentName: `${studentProfile?.first_name || ""} ${studentProfile?.last_name || ""}`.trim(),
+            action:
+                status === "pending"
+                    ? "RESERVATION_REQUESTED"
+                    : status === "approved"
+                        ? "RESERVATION_APPROVED"
+                        : status === "rejected" && String(decisionNote || "").toUpperCase() === "AUTO_EXPIRED"
+                            ? "RESERVATION_EXPIRED"
+                            : status === "rejected"
+                                ? "RESERVATION_DECLINED"
+                                : status === "cancelled"
+                                    ? "RESERVATION_CANCELLED"
+                                    : "RESERVATION_REQUESTED",
+        };
+    });
+};
+
+const normalizeRawReservationEvents = (events = []) => {
+    return events.map((event) => {
+        const metadata = event.metadata || {};
+        const studentProfile = event.student_profiles || null;
+        const parentReservation = event.student_room_reservations || null;
+        const timeStart = metadata.time_start || metadata.timeStart || null;
+        const parentTimeStart = parentReservation?.time_start || null;
+        const parentTimeEnd = parentReservation?.time_end || null;
+        const parentPurpose = parentReservation?.purpose || null;
+        const parentRoom = parentReservation?.room_number || null;
+
+        return {
+            id: event.id,
+            reservationId: event.reservation_id,
+            student_user_id: event.student_user_id,
+            staff_user_id: event.staff_user_id,
+            eventType: event.event_type,
+            eventNote: event.event_note,
+            occurredAt: event.occurred_at,
+            timestamp: event.occurred_at,
+            room: metadata.room_number || metadata.room || parentRoom || "-",
+            reservationHour: getHourFromTimestamp(timeStart || parentTimeStart || event.occurred_at),
+            requestedBy: studentProfile?.users_public?.email || studentProfile?.email || "unknown",
+            studentId: studentProfile?.id_number || "-",
+            studentName: `${studentProfile?.first_name || ""} ${studentProfile?.last_name || ""}`.trim(),
+            status: event.event_type,
+            action:
+                event.event_type === "requested"
+                    ? "RESERVATION_REQUESTED"
+                    : event.event_type === "approved"
+                        ? "RESERVATION_APPROVED"
+                        : event.event_type === "expired"
+                            ? "RESERVATION_EXPIRED"
+                            : event.event_type === "closed"
+                                ? "RESERVATION_CLOSED"
+                                : event.event_type === "cancelled"
+                                    ? "RESERVATION_CANCELLED"
+                                    : "RESERVATION_REQUESTED",
+            metadata: {
+                ...metadata,
+                status: event.event_type,
+            },
+            legacyMetadataStatus: metadata.status || null,
+            timeStart: timeStart || parentTimeStart,
+            timeEnd: metadata.time_end || metadata.timeEnd || parentTimeEnd || null,
+            notes: metadata.purpose ?? parentPurpose ?? null,
+        };
+    });
 };
 
 /**
@@ -93,8 +254,8 @@ export const createReservationController = async (req, res) => {
 
         const supabase = supabaseForRequest(access_token);
 
-        // Expired pending requests should no longer block a new reservation.
-        await autoCloseExpiredPendingReservations(supabase);
+        // Expired reservations should no longer block a new reservation.
+        await autoCloseExpiredReservations(supabase);
 
         // Check if student profile exists
         const { data: studentProfile, error: studentErr } = await supabase
@@ -195,8 +356,8 @@ export const getReservationsController = async (req, res) => {
 
         const supabase = supabaseForRequest(access_token);
 
-        // Ensure pending reservations that already passed are auto-closed before listing.
-        await autoCloseExpiredPendingReservations(supabase);
+        // Ensure reservations that already passed are auto-closed before listing.
+        await autoCloseExpiredReservations(supabase);
 
         // Check staff access for filtering
         const staffAccess = await hasStaffAccess(supabase, userId, req.user);
@@ -214,6 +375,9 @@ export const getReservationsController = async (req, res) => {
                 purpose, 
                 status, 
                 created_at,
+                decision_at,
+                decision_note,
+                approved_by_staff_id,
                 student_profiles(id_number, first_name, last_name, email, users_public:users_public(email))
                 `
             );
@@ -248,10 +412,12 @@ export const getReservationsController = async (req, res) => {
             notes: res.purpose,
             status: res.status,
             createdAt: res.created_at,
+            requestedAt: res.created_at,
             // DB uses `decision_at` for approval/decision timestamps for room reservations.
             approvedAt: res.decision_at,
             decisionAt: res.decision_at,
             decisionNote: res.decision_note,
+            approvedByStaffId: res.approved_by_staff_id,
             timeEnd: res.time_end,
             studentId: res.student_profiles?.id_number || "-",
             studentName: `${res.student_profiles?.first_name || ""} ${res.student_profiles?.last_name || ""}`.trim(),
@@ -284,7 +450,7 @@ export const approveReservationController = async (req, res) => {
         const supabase = supabaseForRequest(access_token);
 
         // Keep history/status accurate by auto-closing expired pending reservations first.
-        await autoCloseExpiredPendingReservations(supabase);
+        await autoCloseExpiredReservations(supabase);
 
         // Check staff access
         const staffAccess = await hasStaffAccess(supabase, userId, req.user);
@@ -355,7 +521,7 @@ export const closeReservationController = async (req, res) => {
             .update({
                 status: "rejected",
                 decision_at: nowIso,
-                decision_note: "MANUAL_CLOSED",
+                decision_note: "MANUAL_DECLINED",
             })
             .eq("id", id)
             .select("*")
@@ -454,62 +620,38 @@ export const getReservationHistoryController = async (req, res) => {
             return res.status(staffAccess.code || 403).json({ message: staffAccess.error });
         }
 
-        // Get all reservations with history across all statuses
-        const { data: reservations, error } = await supabase
-            .from("student_room_reservations")
+        // Read from the append-only audit table instead of the mutable reservation row.
+        const { data: events, error } = await supabase
+            .from("reservation_events")
             .select(
                 `
-                id, 
-                student_user_id, 
-                room_number, 
-                time_start, 
-                time_end, 
-                purpose, 
-                status, 
-                created_at,
-                decision_at,
-                decision_note,
+                id,
+                reservation_id,
+                student_user_id,
+                staff_user_id,
+                event_type,
+                event_note,
+                metadata,
+                occurred_at,
                 student_profiles(id_number, first_name, last_name, email, users_public:users_public(email))
+                ,student_room_reservations(room_number, time_start, time_end, purpose)
                 `
             )
-            .order("created_at", { ascending: false });
+            .order("occurred_at", { ascending: false });
 
         if (error) {
             return res.status(400).json({ message: error.message });
         }
 
-        // Flatten response
-        const normalized = reservations.map((res) => ({
-            id: res.id,
-            room: res.room_number,
-            reservationHour: getHourFromTimestamp(res.time_start),
-            requestedBy: res.student_profiles?.users_public?.email || res.student_profiles?.email || "unknown",
-            notes: res.purpose,
-            status: res.status,
-            createdAt: res.created_at,
-            reservationDate: res.time_start,
-            // Use `decision_at` as the canonical approval/decision timestamp in the schema.
-            approvedAt: res.decision_at,
-            decisionAt: res.decision_at,
-            decisionNote: res.decision_note,
-            timeEnd: res.time_end,
-            studentId: res.student_profiles?.id_number || "-",
-            studentName: `${res.student_profiles?.first_name || ""} ${res.student_profiles?.last_name || ""}`.trim(),
-            action:
-                res.status === "approved"
-                    ? "RESERVATION_APPROVED"
-                    : res.status === "rejected" && res.decision_note === "AUTO_EXPIRED"
-                        ? "RESERVATION_AVAILABLE"
-                        : res.status === "rejected"
-                            ? "RESERVATION_ENDED"
-                        : res.status === "cancelled"
-                            ? "RESERVATION_CANCELLATION_REQUESTED"
-                                : "RESERVATION_REQUESTED",
-        }));
+        const normalized = normalizeReservationEvents(events || [])
+            .sort((left, right) => new Date(right.requestedAt || right.createdAt || 0).getTime() - new Date(left.requestedAt || left.createdAt || 0).getTime());
+        const rawEvents = normalizeRawReservationEvents(events || [])
+            .sort((left, right) => new Date(right.timestamp || 0).getTime() - new Date(left.timestamp || 0).getTime());
 
         return res.status(200).json({
             message: "Reservation history retrieved successfully",
             history: normalized,
+            events: rawEvents,
         });
     } catch (error) {
         console.error("Error fetching reservation history:", error.message);
