@@ -43,7 +43,10 @@ const resolveItemAvailability = (item) => {
 
 const getDisplayAvailability = (item) => {
     const { availableCopies, totalCopies } = resolveItemAvailability(item);
-    return `${availableCopies}/${totalCopies}`;
+    const isThesis = String(item.item_type || "").toLowerCase() === "thesis";
+    const displayAvailable = isThesis ? Math.min(availableCopies, 1) : availableCopies;
+    const displayTotal = isThesis ? 1 : totalCopies;
+    return `${displayAvailable}/${displayTotal}`;
 };
 
 const INITIAL_FORM = {
