@@ -72,9 +72,9 @@ const invalidateCache = () => {
 };
 
 // Get all reservations with caching
-export const getReservations = async () => {
+export const getReservations = async (forceRefresh = false) => {
   const now = Date.now();
-  if (reservationCache && now - cacheTimestamp < CACHE_DURATION) {
+  if (!forceRefresh && reservationCache && now - cacheTimestamp < CACHE_DURATION) {
     return reservationCache;
   }
 
@@ -97,8 +97,9 @@ export const getReservationHistory = async () => {
   const result = await getReservationHistoryAPI();
   if (result.ok) {
     historyCacheMask = result.history;
+    historyCacheMask.events = result.events || [];
     cacheTimestamp = now;
-    return result.history;
+    return historyCacheMask;
   }
   return [];
 };
@@ -114,6 +115,7 @@ export const approveReservation = async (reservationId) => {
   const result = await approveReservationAPI(reservationId);
   if (result.ok) {
     invalidateCache();
+    await getReservations(true);
   }
   return result;
 };
@@ -123,6 +125,7 @@ export const closeReservation = async (reservationId) => {
   const result = await closeReservationAPI(reservationId);
   if (result.ok) {
     invalidateCache();
+    await getReservations(true);
   }
   return result;
 };
@@ -132,6 +135,7 @@ export const cancelReservation = async (reservationId) => {
   const result = await cancelReservationAPI(reservationId);
   if (result.ok) {
     invalidateCache();
+    await getReservations(true);
   }
   return result;
 };
@@ -159,10 +163,10 @@ export const isLunchBreakHour = (hour) => {
 };
 
 // Get unavailable reservation hours for a room (async now - uses API)
-export const getUnavailableReservationHours = async (room) => {
+export const getUnavailableReservationHours = async (room, forceRefresh = false) => {
   if (!room) return [];
   
-  const reservations = await getReservations();
+  const reservations = await getReservations(forceRefresh);
   const unavailable = [];
   
   // Add lunch break hours
@@ -182,8 +186,8 @@ export const getUnavailableReservationHours = async (room) => {
 };
 
 // Get active (pending or approved) reservations for a user
-export const getUserActiveReservation = async (userEmail) => {
-  const reservations = await getReservations();
+export const getUserActiveReservation = async (userEmail, forceRefresh = false) => {
+  const reservations = await getReservations(forceRefresh);
   const normalizedEmail = String(userEmail || "").toLowerCase().trim();
   
   return reservations.find(
@@ -206,6 +210,7 @@ export const addReservation = async (room, reservationHour, notes, requestedBy) 
     const result = await createReservationAPI(room, hour, notes, requestedBy);
     if (result.ok) {
       invalidateCache();
+      await getReservations(true);
     }
     return result;
   } catch (error) {

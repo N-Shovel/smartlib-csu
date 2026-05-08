@@ -29,6 +29,18 @@ const useItems = create((set, get) => ({
 
     clearItems: () => set({ books: [], count: 0 }),
 
+    patchItem: (updatedItem) => {
+        if (!updatedItem?.id) return;
+
+        set((state) => ({
+            books: state.books.map((book) => (
+                book.id === updatedItem.id
+                    ? { ...book, ...updatedItem }
+                    : book
+            )),
+        }));
+    },
+
     fetchBooks: async () => {
         set({ isLoading: true });
         try {
@@ -42,7 +54,6 @@ const useItems = create((set, get) => ({
             set({ books: books, count });
             clearFetchBooksErrorDedupe();
         } catch (err) {
-            console.error("fetchBooks error:", err);
             const msg =
                 err?.response?.data?.message ||
                     err?.message ||

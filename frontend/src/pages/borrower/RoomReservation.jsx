@@ -1,6 +1,7 @@
 // Purpose: Borrower page to request and track room reservations.
 // Parts: form state, slot derivations, submit workflow, reservations render.
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { RefreshCw } from "lucide-react";
 import {
   addReservation,
   getReservationHourOptions,
@@ -24,33 +25,33 @@ const RoomReservation = () => {
   const { user } = useStore();
   const userEmail = user?.user?.email || user?.email || "";
 
+  const refreshReservationState = useCallback(async (forceRefresh = false) => {
+    setIsLoading(true);
+    try {
+      if (room) {
+        const hours = await getUnavailableReservationHours(room, forceRefresh);
+        setUnavailableHours(hours);
+      } else {
+        setUnavailableHours([]);
+      }
+
+      if (userEmail) {
+        const active = await getUserActiveReservation(userEmail, forceRefresh);
+        setActiveReservation(active);
+      } else {
+        setActiveReservation(null);
+      }
+    } catch (error) {
+      console.error("Error fetching reservation data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [room, userEmail]);
+
   // Fetch unavailable hours and active reservation on component mount and when room changes
   useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        // Fetch unavailable hours
-        if (room) {
-          const hours = await getUnavailableReservationHours(room);
-          setUnavailableHours(hours);
-        } else {
-          setUnavailableHours([]);
-        }
-
-        // Fetch active reservation if user email is available
-        if (userEmail) {
-          const active = await getUserActiveReservation(userEmail);
-          setActiveReservation(active);
-        }
-      } catch (error) {
-        console.error("Error fetching reservation data:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [room, userEmail]);
+    refreshReservationState(true);
+  }, [refreshReservationState]);
 
   const currentHour = new Date().getHours();
 
@@ -64,7 +65,7 @@ const RoomReservation = () => {
       showError("Please choose a time slot");
       return;
     }
-    if (Number(reservationHour) <= currentHour) {
+    if (Number(reservationHour) < currentHour) {
       showError("Cannot reserve for a past time slot");
       return;
     }
@@ -93,8 +94,7 @@ const RoomReservation = () => {
       showSuccess("Reservation request submitted");
 
       // Refresh active reservation
-      const active = await getUserActiveReservation(userEmail);
-      setActiveReservation(active);
+      await refreshReservationState(true);
     } catch (error) {
       showError("An error occurred while submitting the reservation");
       console.error("Error submitting reservation:", error);
@@ -112,11 +112,24 @@ const RoomReservation = () => {
       
       {activeReservation ? (
         <div className="card alert alert--warning">
-          <p>
-            <strong>Active Reservation</strong><br />
-            You already have a reservation for <strong>{activeReservation.room}</strong> at{" "}
-            <strong>{activeReservation.reservationHour}:00</strong> ({activeReservation.status === "pending" ? "Pending Approval" : "Approved"}).
-          </p>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", alignItems: "start" }}>
+            <p>
+              <strong>Active Reservation</strong><br />
+              You already have a reservation for <strong>{activeReservation.room}</strong> at{" "}
+              <strong>{activeReservation.reservationHour}:00</strong> ({activeReservation.status === "pending" ? "Pending Approval" : "Approved"}).
+            </p>
+            <button
+              type="button"
+              className="btn btn--ghost"
+              onClick={() => refreshReservationState(true)}
+              disabled={isLoading}
+              aria-label="Refresh active reservation"
+              title="Refresh active reservation"
+              style={{ minWidth: "2.4rem", padding: "0.45rem 0.65rem" }}
+            >
+              <RefreshCw size={16} />
+            </button>
+          </div>
           <p className="micro muted">Please close or cancel this reservation before creating a new one.</p>
         </div>
       ) : (
@@ -147,7 +160,7 @@ const RoomReservation = () => {
                 <option value="">Select time (8:00 AM - 6:00 PM)</option>
                 {reservationHourOptions.map((slot) => {
                   // Slot can be unavailable due to lunch break, approved reservation, or past time.
-                  const isPastSlot = Number(slot.value) <= currentHour;
+                  const isPastSlot = Number(slot.value) < currentHour;
                   const isUnavailable = unavailableHours.includes(slot.value) || isPastSlot;
                   const stateLabel = isPastSlot
                     ? "Passed"

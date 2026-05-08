@@ -1,6 +1,11 @@
 import { supabase, supabaseForRequest } from "../lib/supabaseClient.js"
 import { setCookies } from "../lib/utils.js";
 
+const NAME_PATTERN = /^[A-Za-z\s.'-]+$/;
+const DIGITS_ONLY_PATTERN = /^\d+$/;
+const CONTACT_PATTERN = /^\d{11}$/;
+const PROGRAM_PATTERN = /^[A-Z]{2,5} - [1-4](st|nd|rd|th) Year$/;
+
 export const signupController = async (req, res) => {
     const {
         email,
@@ -25,6 +30,22 @@ export const signupController = async (req, res) => {
 
     if (!email || !password) {
         return res.status(400).json({ message: "Email and password are required" });
+    }
+
+    if (!NAME_PATTERN.test(String(firstName || "").trim()) || !NAME_PATTERN.test(String(lastName || "").trim())) {
+        return res.status(400).json({ message: "First name and last name must contain letters only." });
+    }
+
+    if (!DIGITS_ONLY_PATTERN.test(String(idNumber || "").trim())) {
+        return res.status(400).json({ message: "ID number must contain numbers only." });
+    }
+
+    if (!PROGRAM_PATTERN.test(String(program || "").trim())) {
+        return res.status(400).json({ message: "Program must match format like BSCS - 2nd Year." });
+    }
+
+    if (contactNumber && (!DIGITS_ONLY_PATTERN.test(String(contactNumber).trim()) || !CONTACT_PATTERN.test(String(contactNumber).trim()))) {
+        return res.status(400).json({ message: "Contact number must contain numbers only and be 11 digits." });
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -200,9 +221,22 @@ export const loginController = async (req, res) => {
 export const logoutController = async (_, res) => {
     try {
 
-        await supabase.auth.signOut();
-        res.clearCookie("access_token");
-        res.clearCookie("refresh_token");
+        try {
+            await supabase.auth.signOut();
+        } catch (e) {
+            console.error("Supabase signOut error:", e);
+            // continue to clear cookies even if supabase call fails
+        }
+
+        // Ensure cookies are cleared with proper options
+        try {
+            const { clearAuthCookies } = await import("../lib/utils.js");
+            clearAuthCookies(res);
+        } catch (e) {
+            // Fallback to generic clear
+            res.clearCookie("access_token");
+            res.clearCookie("refresh_token");
+        }
 
         return res.status(200).json({ message: "Logout successfully" });
     } catch (error) {

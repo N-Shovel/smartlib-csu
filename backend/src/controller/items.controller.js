@@ -422,7 +422,18 @@ export const approveBorrowRequestController = async (req, res) => {
 
         if (updateReqErr) return res.status(400).json({ message: updateReqErr.message });
 
-        return res.status(200).json({ message: "Borrow request approved" });
+        const { data: updatedItem, error: itemErr } = await supabase
+            .from("library_items")
+            .select("id, available_copies, is_available")
+            .eq("id", borrowRequest.library_item_id)
+            .maybeSingle();
+
+        if (itemErr) return res.status(400).json({ message: itemErr.message });
+
+        return res.status(200).json({
+            message: "Borrow request approved",
+            updatedItem,
+        });
     } catch (error) {
         console.log("Error in approveBorrowRequestController: ", error);
         return res.status(500).json({ message: "Internal server error" });
@@ -526,7 +537,18 @@ export const confirmReturnController = async (req, res) => {
 
         if (updateReturnErr) return res.status(400).json({ message: updateReturnErr.message });
 
-        return res.status(200).json({ message: "Book marked as returned" });
+        const { data: updatedItem, error: itemErr } = await supabase
+            .from("library_items")
+            .select("id, available_copies, is_available")
+            .eq("id", pendingReturn.library_item_id)
+            .maybeSingle();
+
+        if (itemErr) return res.status(400).json({ message: itemErr.message });
+
+        return res.status(200).json({
+            message: "Book marked as returned",
+            updatedItem,
+        });
     } catch (error) {
         console.log("Error in confirmReturnController: ", error);
         return res.status(500).json({ message: "Internal server error" });

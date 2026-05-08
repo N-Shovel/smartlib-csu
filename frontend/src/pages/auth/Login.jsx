@@ -1,8 +1,8 @@
 // Purpose: Login page handling borrower/staff authentication flow.
 // Parts: form state, submit handler, validation/errors, render.
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
 import { useStore } from "../../store/useAuthStore";
 import AuthCard from "../../components/AuthCard";
 import EmailConfirmationPopup from "../../confirmation/EmailConfirmationPopup";
@@ -83,7 +83,7 @@ const Login = () => {
           disabled={isLoading}
         />
         <label className="label" htmlFor="login-password">Password</label>
-        <div className="password-input-wrapper">
+        <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
           <input
             className="input"
             type={showPassword ? "text" : "password"}
@@ -93,16 +93,25 @@ const Login = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             disabled={isLoading}
+            style={{ paddingRight: "2.5rem" }}
           />
           <button
             type="button"
-            className="password-toggle"
             onClick={() => setShowPassword(!showPassword)}
-            aria-label={showPassword ? "Hide password" : "Show password"}
-            title={showPassword ? "Hide password" : "Show password"}
             disabled={isLoading}
+            style={{
+              position: "absolute",
+              right: "0.75rem",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "0.25rem",
+              display: "flex",
+              alignItems: "center",
+            }}
+            aria-label={showPassword ? "Hide password" : "Show password"}
           >
-            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         </div>
         {error ? <div className="alert">{error}</div> : null}

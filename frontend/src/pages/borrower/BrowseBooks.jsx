@@ -83,9 +83,10 @@ const BrowseBooks = () => {
             const currentRequests = useRequest.getState().itemRequests || [];
             const myRequests = currentRequests.filter((request) => request.student_user_id === currentUserId);
             setBorrowRequests(myRequests);
-        } catch (e) {
+        } catch (err) {
             setBorrowRequests([]);
-            showError(e?.message || "Unable to load borrow requests.");
+            console.error(err);
+            showError(err?.message || "Unable to load borrow requests.");
         }
     }, [currentUserId, fetchHistory]);
 
@@ -94,10 +95,10 @@ const BrowseBooks = () => {
             await fetchHistory();
             const currentRequests = useRequest.getState().itemRequests || [];
             setBorrowHistory(currentRequests);
-        } catch (e) {
-            console.error("Error loading borrow history:", e);
-            setBorrowHistory([]);
-        }
+        } catch (err) {
+                setBorrowHistory([]);
+                console.error(err);
+            }
     }, [fetchHistory]);
 
     const refresh = useCallback(async () => {
@@ -152,6 +153,17 @@ const BrowseBooks = () => {
         return pendingMap;
     }, [borrowRequests]);
 
+    const approvedBorrowByBookId = useMemo(() => {
+        const approvedMap = new Map();
+        borrowRequests.forEach((request) => {
+            const itemId = request.library_item_id || request.bookId;
+            if (String(request.status || "").toLowerCase() === "approved" && itemId) {
+                approvedMap.set(itemId, request);
+            }
+        });
+        return approvedMap;
+    }, [borrowRequests]);
+
     const recommendedBooksLine = useMemo(() => {
         const borrowCountByTitle = borrowHistory.reduce((summary, entry) => {
             if (String(entry.action || "").toUpperCase() !== "BORROW_BOOK") return summary;
@@ -192,16 +204,15 @@ const BrowseBooks = () => {
             if (!book) {
                 throw new Error("Book not found");
             }
-            console.log(book.title);
-            console.log(book.item_type);
             // Use the sendRequest function from useRequest store
             await sendRequest(book.title, book.item_type, id);
 
             // Give time for success message to show before refresh
             await new Promise(resolve => setTimeout(resolve, 500));
             await refresh();
-        } catch (e) {
-            const errorMsg = e?.response?.data?.message || e?.message || "Unable to borrow book.";
+        } catch (err) {
+            console.error(err);
+            const errorMsg = err?.response?.data?.message || err?.message || "Unable to borrow book.";
             if (onError) onError({ ok: false, error: errorMsg });
         } finally {
             markProcessing(id, false);
@@ -259,8 +270,9 @@ const BrowseBooks = () => {
             showSuccess("Borrow request cancelled.");
             setRequestToCancel(null);
             await refresh();
-        } catch (e) {
-            const errorMsg = e?.response?.data?.message || e?.message || "Unable to cancel borrow request.";
+        } catch (err) {
+            console.error(err);
+            const errorMsg = err?.response?.data?.message || err?.message || "Unable to cancel borrow request.";
             showError(errorMsg);
         } finally {
             markProcessing(bookId, false);
@@ -298,6 +310,7 @@ const BrowseBooks = () => {
             {list.map((book) => {
                 const bookId = book.id;
                 const hasPendingBorrow = pendingRequestByBookId.has(bookId);
+                const hasApprovedBorrow = approvedBorrowByBookId.has(bookId);
 
                 return (
                     <BookCard
@@ -306,7 +319,8 @@ const BrowseBooks = () => {
                         isProcessing={isProcessing(bookId)}
                         canBorrow={isBookAvailable(book)}
                         isPending={hasPendingBorrow}
-                        borrowLabel={hasPendingBorrow ? "Pending" : undefined}
+                        isBorrowed={hasApprovedBorrow}
+                        borrowLabel={hasApprovedBorrow ? "Borrowed" : (hasPendingBorrow ? "Pending" : undefined)}
                         pendingMessage={hasPendingBorrow ? "Please pick it up at the library." : undefined}
                         onBorrow={handleBorrow}
                         onOpenDetails={setSelectedBook}
@@ -321,6 +335,7 @@ const BrowseBooks = () => {
             {list.map((book) => {
                 const bookId = book.id;
                 const hasPendingBorrow = pendingRequestByBookId.has(bookId);
+                const hasApprovedBorrow = approvedBorrowByBookId.has(bookId);
 
                 return (
                     <BookCard
@@ -329,7 +344,8 @@ const BrowseBooks = () => {
                         isProcessing={isProcessing(bookId)}
                         canBorrow={isBookAvailable(book)}
                         isPending={hasPendingBorrow}
-                        borrowLabel={hasPendingBorrow ? "Pending" : undefined}
+                        isBorrowed={hasApprovedBorrow}
+                        borrowLabel={hasApprovedBorrow ? "Borrowed" : (hasPendingBorrow ? "Pending" : undefined)}
                         pendingMessage={hasPendingBorrow ? "Please pick it up at the library." : undefined}
                         onBorrow={handleBorrow}
                         onOpenDetails={setSelectedBook}

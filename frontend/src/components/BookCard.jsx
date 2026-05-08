@@ -66,7 +66,10 @@ const resolveBookAvailability = (book) => {
 
 const getDisplayAvailability = (book) => {
 	const { availableCopies, totalCopies } = resolveBookAvailability(book);
-	return `${availableCopies}/${totalCopies}`;
+	const isThesis = String(book.item_type || "").toLowerCase() === "thesis";
+	const displayAvailable = isThesis ? Math.min(availableCopies, 1) : availableCopies;
+	const displayTotal = isThesis ? 1 : totalCopies;
+	return `${displayAvailable}/${displayTotal}`;
 };
 
 // Purpose: Displays a single book with availability and quick actions.
@@ -78,6 +81,7 @@ const BookCard = ({
 	onOpenDetails,
 	borrowLabel,
 	isPending = false,
+	isBorrowed = false,
 	pendingMessage,
 	isProcessing = false,
 	showBorrower = false
@@ -159,7 +163,7 @@ const BookCard = ({
 					<button
 						className={`btn ${isPending ? "btn--view" : "btn--primary"}`}
 						onClick={() => onBorrow(book)}
-						disabled={isProcessing || isPending || (!canBorrow && !isPending)}
+						disabled={isProcessing || isPending || isBorrowed || (!canBorrow && !isPending)}
 					>
 						{borrowLabel || (isThesis ? "Apply" : "Borrow")}
 					</button>

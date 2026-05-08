@@ -2,6 +2,8 @@ import {create} from "zustand"
 import { axiosInstance } from "./axios"
 import { showSuccess, showError } from "../utils/notification"
 
+const isDev = import.meta.env.DEV;
+
 
 const setupAxiosInterceptors = (store) => {
     let refreshPromise = null;
@@ -10,13 +12,23 @@ const setupAxiosInterceptors = (store) => {
     res => res,
     async error => {
             const originalRequest = error.config;
+                        const requestUrl = String(originalRequest?.url || "");
+                        const isAuthEndpoint =
+                                requestUrl.includes("/auth/login") ||
+                                requestUrl.includes("/auth/signup") ||
+                                requestUrl.includes("/auth/logout") ||
+                                requestUrl.includes("/auth/refresh-token");
 
       if (
         error.response?.status === 401 &&
                 originalRequest &&
         !originalRequest._retry &&
-                !String(originalRequest.url || "").includes("/auth/refresh-token")
+                                !isAuthEndpoint
       ) {
+                if (isDev) {
+                        console.debug("[auth] 401 intercepted on", requestUrl, "retrying refresh flow");
+                }
+
         originalRequest._retry = true;
 
         try {
@@ -130,7 +142,6 @@ export const useStore = create((set, get) => ({
             return true;
         }
         catch(error){
-            console.log("Login failed: ", error.message);
             showError(error.response?.data?.message || "An error occurred");
             set({ user: null });
             return false;
@@ -153,10 +164,8 @@ export const useStore = create((set, get) => ({
             set({ user: profileRes.data });
 
             return true;
-        } catch (error) {
-                        if (error?.response?.status !== 401) {
-                            console.error("Token refresh failed:", error);
-                        }
+        } catch (err) {
+            console.error(err);
             return false;
         }
     },
@@ -165,12 +174,10 @@ export const useStore = create((set, get) => ({
         set({isLoading: true})
         try {
             await axiosInstance.post("/auth/logout");
-            set({ user: null});
-        } catch (error) {
-            showError(error.response?.data?.message || "An error occurred during logout");
-        }
-        finally{
-            set({isLoading: false});
+        } catch (err) {
+            console.error(err);
+        } finally {
+            set({ user: null, isLoading: false });
         }
     },
     
@@ -179,13 +186,12 @@ export const useStore = create((set, get) => ({
             set({isLoading: true});
 
             const res = await axiosInstance.get("/profile/borrowers");
-            
-            console.log(res.data);
-            
+
             set({ borrowers: Array.isArray(res.data.borrowers) ? res.data.borrowers : [] });
 
-        } catch (error) {
-           showError(error?.response?.data?.message || "An error occured fetching data"); 
+        } catch (err) {
+           console.error(err);
+           showError(err?.response?.data?.message || "An error occured fetching data"); 
         }
         finally{
             set({isLoading: false});

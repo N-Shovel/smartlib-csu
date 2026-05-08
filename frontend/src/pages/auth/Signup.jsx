@@ -1,12 +1,28 @@
 // Purpose: Signup page for creating borrower accounts.
 // Parts: form model, validation logic, submit handler, grouped form render.
-import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
 import { useStore } from "../../store/useAuthStore";
 import { showError } from "../../utils/notification";
 import AuthCard from "../../components/AuthCard";
 import EmailConfirmationPopup from "../../confirmation/EmailConfirmationPopup";
+
+const sanitizeNameInput = (value) => String(value || "").replace(/\d/g, "");
+const sanitizeDigitsInput = (value) => String(value || "").replace(/\D/g, "");
+const sanitizeIdInput = (value) => String(value || "").replace(/[^0-9-]/g, "");
+const PROGRAM_PATTERN = /^[A-Z]{2,5} - [1-4](st|nd|rd|th) Year$/;
+
+const formatStudentId = (digits) => {
+  const d = String(digits || "").replace(/\D/g, "");
+  if (!d) return "";
+  if (d.length <= 3) {
+    return d.length === 3 ? `${d} - ` : d;
+  }
+  const first = d.substring(0, 3);
+  const rest = d.substring(3, 8); // limit to next 5 chars
+  return `${first} - ${rest}`;
+};
 
 const Signup = () => {
   const [id, setId] = useState("");
@@ -39,6 +55,42 @@ const Signup = () => {
         return;
       }
 
+      if (/\d/.test(firstName) || /\d/.test(lastName)) {
+        const errorMsg = "Names must contain letters only.";
+        setError(errorMsg);
+        showError(errorMsg);
+        return;
+      }
+
+      // Student ID must be entered with a hyphen, e.g. 241-01234
+      if (!/^\d{3}-\d{5}$/.test(id)) {
+        const errorMsg = "Student ID must be in the format XXX-XXXXX (include the hyphen).";
+        setError(errorMsg);
+        showError(errorMsg);
+        return;
+      }
+
+      if (!/^\d+$/.test(contactInfo)) {
+        const errorMsg = "Contact number must contain numbers only.";
+        setError(errorMsg);
+        showError(errorMsg);
+        return;
+      }
+
+      if (String(contactInfo || "").length !== 11) {
+        const errorMsg = "Contact number must be 11 digits.";
+        setError(errorMsg);
+        showError(errorMsg);
+        return;
+      }
+
+      if (!PROGRAM_PATTERN.test(String(courseAndYear || "").trim())) {
+        const errorMsg = "Program & Year Level must match format like BSCS - 2nd Year.";
+        setError(errorMsg);
+        showError(errorMsg);
+        return;
+      }
+
       // Guard: prevent account creation when password confirmation does not match.
       if (password !== confirmPassword) {
         const errorMsg = "Passwords do not match";
@@ -46,14 +98,16 @@ const Signup = () => {
         showError(errorMsg);
         return;
       }
+      // Backend expects digits-only ID; strip the hyphen before sending.
+      const cleanedId = id.replace(/\D/g, "");
       const success = await studentSignUp(
         email,
         password,
-        id,
+        cleanedId,
         firstName,
         lastName,
         null, // suffix - optional
-        courseAndYear,        
+        courseAndYear,
         contactInfo,
         currentAddress
       );
@@ -76,7 +130,7 @@ const Signup = () => {
   };
 
   return (
-    <div className="auth-page">
+    <div className="auth-page auth-page--login">
     <AuthCard
       title="Create account"
       subtitle="Create your CSU library account and start borrowing."
@@ -91,7 +145,7 @@ const Signup = () => {
           className="input"
           placeholder="Juan"
           value={firstName}
-          onChange={(e) => setFirstName(e.target.value)}
+          onChange={(e) => setFirstName(sanitizeNameInput(e.target.value))}
           disabled={isLoading}
           required
         />
@@ -105,7 +159,7 @@ const Signup = () => {
           className="input"
           placeholder="Dela Cruz"
           value={lastName}
-          onChange={(e) => setLastName(e.target.value)}
+          onChange={(e) => setLastName(sanitizeNameInput(e.target.value))}
           disabled={isLoading}
           required
         />
@@ -117,7 +171,7 @@ const Signup = () => {
         </label>
         <input
           className="input"
-          placeholder="BSCS-2nd Year"
+          placeholder="BSCS - 2nd Year"
           value={courseAndYear}
           onChange={(e) => setCourseAndYear(e.target.value)}
           disabled={isLoading}
@@ -133,10 +187,18 @@ const Signup = () => {
           className="input"
           placeholder="241-01234"
           value={id}
-          onChange={(e) => setId(e.target.value)}
+          inputMode="numeric"
+          pattern="[0-9-]*"
+          maxLength={9}
+          autoComplete="off"
+          onChange={(e) => {
+            const cleaned = sanitizeIdInput(e.target.value).slice(0, 9); // 3 + 1 + 5
+            setId(cleaned);
+          }}
           disabled={isLoading}
           required
         />
+        
       </div>
 
       <div className="signup-field">
@@ -147,7 +209,9 @@ const Signup = () => {
           className="input"
           placeholder="09XXXXXXXXX"
           value={contactInfo}
-          onChange={(e) => setContactInfo(e.target.value)}
+          inputMode="numeric"
+          maxLength={11}
+          onChange={(e) => setContactInfo(sanitizeDigitsInput(e.target.value).slice(0, 11))}
           disabled={isLoading}
           required
         />
@@ -187,7 +251,7 @@ const Signup = () => {
         <label className="label">
           Password <span className="required">*</span>
         </label>
-        <div className="password-input-wrapper">
+        <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
           <input
             className="input"
             type={showPassword ? "text" : "password"}
@@ -197,16 +261,25 @@ const Signup = () => {
             onChange={(e) => setPassword(e.target.value)}
             disabled={isLoading}
             required
+            style={{ paddingRight: "2.5rem" }}
           />
           <button
             type="button"
-            className="password-toggle"
             onClick={() => setShowPassword(!showPassword)}
-            aria-label={showPassword ? "Hide password" : "Show password"}
-            title={showPassword ? "Hide password" : "Show password"}
             disabled={isLoading}
+            style={{
+              position: "absolute",
+              right: "0.75rem",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "0.25rem",
+              display: "flex",
+              alignItems: "center",
+            }}
+            aria-label={showPassword ? "Hide password" : "Show password"}
           >
-            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         </div>
       </div>
@@ -215,7 +288,7 @@ const Signup = () => {
         <label className="label">
           Confirm Password <span className="required">*</span>
         </label>
-        <div className="password-input-wrapper">
+        <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
           <input
             className="input"
             type={showConfirmPassword ? "text" : "password"}
@@ -225,16 +298,25 @@ const Signup = () => {
             onChange={(e) => setConfirmPassword(e.target.value)}
             disabled={isLoading}
             required
+            style={{ paddingRight: "2.5rem" }}
           />
           <button
             type="button"
-            className="password-toggle"
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
-            title={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
             disabled={isLoading}
+            style={{
+              position: "absolute",
+              right: "0.75rem",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "0.25rem",
+              display: "flex",
+              alignItems: "center",
+            }}
+            aria-label={showConfirmPassword ? "Hide password" : "Show password"}
           >
-            {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         </div>
       </div>

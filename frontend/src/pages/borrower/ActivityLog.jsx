@@ -5,13 +5,18 @@ import {
     autoClosePassedReservations,
     formatReservationHour,
     getReservations,
+    getReservationHistory,
     isReservationTimePassed,
     requestReservationCancellation
 } from "../../services/reservationService";
 import { formatDateTimeFull } from "../../utils/dateUtils";
 import { showError, showInfo, showSuccess } from "../../utils/notification";
 import { RESERVATION_STATUS } from "../../constants/status";
-import { formatActivityAction } from "../../utils/activityUtils";
+import {
+    expandBorrowHistoryEntries,
+    expandReservationHistoryEntries,
+    formatActivityAction
+} from "../../utils/activityUtils";
 import { useStore } from "../../store/useAuthStore";
 import { useRequest } from "../../store/useRequestsStore";
 
@@ -22,10 +27,30 @@ const isBorrowHistoryStatus = (status) => {
 
 const toBorrowActionLabel = (status) => {
     const normalized = String(status || "").toLowerCase();
+    if (normalized === "pending") return "BORROW_REQUESTED";
     if (normalized === "approved") return "BORROW_BOOK";
     if (normalized === "returned") return "RETURN_BOOK";
     if (normalized === "cancelled") return "CANCELLED";
+    if (normalized === "rejected") return "BORROW_REJECTED";
     return normalized || "-";
+};
+
+const formatBorrowStatus = (status) => {
+    const normalized = String(status || "").trim().toLowerCase();
+    if (!normalized) return "-";
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+};
+
+const getReservationStatusLabel = (entry) => {
+    const status = String(entry?.status || "").toLowerCase();
+    const decisionNote = String(entry?.decisionNote || entry?.decision_note || "").toUpperCase();
+
+    if (status === "pending") return "Pending";
+    if (status === "approved") return "Confirmed";
+    if (status === "cancelled") return "Cancelled";
+    if (status === "rejected" && decisionNote === "AUTO_EXPIRED") return "Timed Out";
+    if (status === "rejected") return "Rejected";
+    return status ? status.charAt(0).toUpperCase() + status.slice(1) : "-";
 };
 
 const ActivityLog = () => {
@@ -38,6 +63,8 @@ const ActivityLog = () => {
     const [reservationUpdates, setReservationUpdates] = useState([]);
     const [myReservations, setMyReservations] = useState([]);
     const [isReservationLoading, setIsReservationLoading] = useState(true);
+    const [borrowHistorySearch, setBorrowHistorySearch] = useState("");
+    const [reservationHistorySearch, setReservationHistorySearch] = useState("");
     const latestReservationLoadRef = useRef(0);
     
     useEffect(() => {
@@ -59,9 +86,17 @@ const ActivityLog = () => {
             await autoClosePassedReservations();
 
             const reservations = await getReservations();
+            const reservationHistory = await getReservationHistory();
 
             const scopedReservations = Array.isArray(reservations)
                 ? reservations.filter((entry) => String(entry.requestedBy || "").toLowerCase() === userEmail)
+                : [];
+
+            const scopedReservationEvents = Array.isArray(reservationHistory?.events)
+                ? reservationHistory.events.filter((entry) => {
+                    const eventEmail = String(entry.requestedBy || entry.student_profiles?.email || "").toLowerCase();
+                    return eventEmail === userEmail;
+                })
                 : [];
 
             const activeReservations = scopedReservations
@@ -73,21 +108,9 @@ const ActivityLog = () => {
                 .filter((entry) => !isReservationTimePassed(entry))
                 .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
 
-            const historyRows = scopedReservations
-                .slice()
-                .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
-                .map((entry) => ({
-                    ...entry,
-                    action:
-                        entry.status === "approved"
-                            ? "RESERVATION_APPROVED"
-                            : entry.status === "rejected"
-                                ? "RESERVATION_CLOSED"
-                                : entry.status === "cancelled"
-                                    ? "RESERVATION_CANCELLATION_REQUESTED"
-                                    : "RESERVATION_CREATED",
-                    timestamp: entry.createdAt,
-                }));
+            const historyRows = scopedReservationEvents.length > 0
+                ? scopedReservationEvents
+                : expandReservationHistoryEntries(scopedReservations);
 
             if (latestReservationLoadRef.current !== loadId) {
                 return;
@@ -123,23 +146,67 @@ const ActivityLog = () => {
     }, [itemRequests, userEmail, userId]);
 
     const borrowUpdates = useMemo(
-        () => myBorrowRequests.filter((entry) => !isBorrowHistoryStatus(entry.status)),
+        () => myBorrowRequests
+            .filter((entry) => !isBorrowHistoryStatus(entry.status))
+            .sort((a, b) => {
+                const left = a.decision_at || a.requested_at;
+                const right = b.decision_at || b.requested_at;
+                return new Date(right || 0).getTime() - new Date(left || 0).getTime();
+            }),
         [myBorrowRequests]
     );
 
     const borrowedHistory = useMemo(
-        () => myBorrowRequests
-            .filter((entry) => isBorrowHistoryStatus(entry.status))
-            .map((entry) => ({
-                id: entry.id,
-                title: entry.item_title,
-                action: toBorrowActionLabel(entry.status),
-                timestamp: entry.returned_at || entry.approved_at || entry.decision_at || entry.requested_at,
-            })),
-        [myBorrowRequests]
+        () => (Array.isArray(itemRequests?.events) && itemRequests.events.length > 0)
+            ? itemRequests.events.filter((entry) => {
+                if (userId && entry.student_user_id) {
+                    return entry.student_user_id === userId;
+                }
+
+                const entryEmail = String(entry.student_profiles?.email || entry.borrowerEmail || "").toLowerCase();
+                return Boolean(userEmail) && entryEmail === userEmail;
+            })
+            : expandBorrowHistoryEntries(myBorrowRequests),
+        [itemRequests, userEmail, userId, myBorrowRequests]
     );
 
-    const reservationHistoryRows = useMemo(() => reservationUpdates, [reservationUpdates]);
+    const reservationHistoryRows = useMemo(
+        () => reservationUpdates
+            .slice()
+            .sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime()),
+        [reservationUpdates]
+    );
+
+    const filteredBorrowHistory = useMemo(
+        () => borrowedHistory.filter((entry) => {
+            const searchLower = borrowHistorySearch.toLowerCase();
+            return (
+                (entry.title || "").toLowerCase().includes(searchLower) ||
+                (entry.action || "").toLowerCase().includes(searchLower) ||
+                (entry.studentId || "").toLowerCase().includes(searchLower)
+                || String(entry.eventType || "").toLowerCase().includes(searchLower)
+                || String(entry.eventNote || "").toLowerCase().includes(searchLower)
+                || String(entry.legacyMetadataStatus || "").toLowerCase().includes(searchLower)
+            );
+        }),
+        [borrowedHistory, borrowHistorySearch]
+    );
+
+    const filteredReservationHistory = useMemo(
+        () => reservationHistoryRows.filter((entry) => {
+            const searchLower = reservationHistorySearch.toLowerCase();
+            return (
+                (entry.room || "").toLowerCase().includes(searchLower) ||
+                (entry.action || "").toLowerCase().includes(searchLower) ||
+                (entry.status || "").toLowerCase().includes(searchLower) ||
+                (entry.studentId || "").toLowerCase().includes(searchLower) ||
+                (entry.eventType || "").toLowerCase().includes(searchLower) ||
+                (entry.eventNote || "").toLowerCase().includes(searchLower) ||
+                (entry.legacyMetadataStatus || "").toLowerCase().includes(searchLower)
+            );
+        }),
+        [reservationHistoryRows, reservationHistorySearch]
+    );
 
     const cancellationTimeoutRef = useRef(null);
 
@@ -199,16 +266,16 @@ const ActivityLog = () => {
                         <div className="table table--borrow-updates">
                             <div className="table__row table__head">
                                 <span>Book</span>
+                                <span>Action</span>
                                 <span>Status</span>
                                 <span>Requested</span>
-                                <span>Updated</span>
                             </div>
                             {borrowUpdates.map((entry) => (
                                 <div className="table__row" key={entry.id}>
                                     <span>{entry.item_title || "-"}</span>
-                                    <span>{entry.status || "-"}</span>
+                                    <span>{formatActivityAction(toBorrowActionLabel(entry.status))}</span>
+                                    <span>{formatBorrowStatus(entry.status)}</span>
                                     <span>{formatDateTimeFull(entry.requested_at)}</span>
-                                    <span>{formatDateTimeFull(entry.decision_at || entry.requested_at)}</span>
                                 </div>
                             ))}
                         </div>
@@ -225,20 +292,35 @@ const ActivityLog = () => {
                 <div className="empty-state">No borrowing history yet.</div>
             ) : (
                     <div className="card table-scroll table-scroll--five activity-log-table-card">
-                        <div className="table table--borrow-history">
-                            <div className="table__row table__head">
-                                <span>Book</span>
-                                <span>Action</span>
-                                <span>Time</span>
-                            </div>
-                            {borrowedHistory.map((entry) => (
-                                <div className="table__row" key={entry.id}>
-                                    <span>{entry.title || "-"}</span>
-                                    <span>{formatActivityAction(entry.action)}</span>
-                                    <span>{formatDateTimeFull(entry.timestamp)}</span>
-                                </div>
-                            ))}
+                        <div style={{ marginBottom: "1rem", padding: "0.5rem" }}>
+                            <input
+                                type="text"
+                                className="input"
+                                placeholder="Search by book title or action..."
+                                value={borrowHistorySearch}
+                                onChange={(e) => setBorrowHistorySearch(e.target.value)}
+                            />
                         </div>
+                        {filteredBorrowHistory.length === 0 ? (
+                            <div className="empty-state">No matching records found.</div>
+                        ) : (
+                            <div className="table table--borrow-history">
+                                <div className="table__row table__head">
+                                    <span>Book</span>
+                                    <span>Action</span>
+                                    <span>Status</span>
+                                    <span>Time</span>
+                                </div>
+                                {filteredBorrowHistory.map((entry) => (
+                                        <div className="table__row" key={`${entry.id}-${entry.action}-${entry.timestamp}`}>
+                                        <span>{entry.title || entry.item_title || "-"}</span>
+                                        <span>{formatActivityAction(entry.action)}</span>
+                                        <span>{formatBorrowStatus(entry.status)}</span>
+                                        <span>{formatDateTimeFull(entry.timestamp)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -266,8 +348,8 @@ const ActivityLog = () => {
                                     <span>{formatReservationHour(entry.reservationHour)}</span>
                                     <span>
                                         {entry.cancellationRequested
-                                            ? "cancellation requested"
-                                            : entry.status}
+                                            ? "Cancellation Requested"
+                                            : getReservationStatusLabel(entry)}
                                     </span>
                                     <span>{formatDateTimeFull(entry.createdAt)}</span>
                                     <button
@@ -295,24 +377,37 @@ const ActivityLog = () => {
                 <div className="empty-state">No reservation updates yet.</div>
             ) : (
                     <div className="card table-scroll table-scroll--five activity-log-table-card">
-                        <div className="table table--reservation-updates">
-                            <div className="table__row table__head">
-                                <span>Room</span>
-                                <span>Time Slot</span>
-                                <span>Action</span>
-                                <span>Status</span>
-                                <span>Updated</span>
-                            </div>
-                            {reservationHistoryRows.map((entry) => (
-                                <div className="table__row" key={entry.id}>
-                                    <span>{entry.room}</span>
-                                    <span>{formatReservationHour(entry.reservationHour)}</span>
-                                    <span>{formatActivityAction(entry.action)}</span>
-                                    <span>{entry.status || "-"}</span>
-                                    <span>{formatDateTimeFull(entry.timestamp)}</span>
-                                </div>
-                            ))}
+                        <div style={{ marginBottom: "1rem", padding: "0.5rem" }}>
+                            <input
+                                type="text"
+                                className="input"
+                                placeholder="Search by room number, action, or status..."
+                                value={reservationHistorySearch}
+                                onChange={(e) => setReservationHistorySearch(e.target.value)}
+                            />
                         </div>
+                        {filteredReservationHistory.length === 0 ? (
+                            <div className="empty-state">No matching records found.</div>
+                        ) : (
+                            <div className="table table--reservation-updates">
+                                <div className="table__row table__head">
+                                    <span>Room</span>
+                                    <span>Time Slot</span>
+                                    <span>Action</span>
+                                    <span>Status</span>
+                                        <span>Time</span>
+                                </div>
+                                {filteredReservationHistory.map((entry) => (
+                                        <div className="table__row" key={`${entry.id}-${entry.action}-${entry.timestamp}`}>
+                                        <span>{entry.room}</span>
+                                        <span>{formatReservationHour(entry.reservationHour)}</span>
+                                        <span>{formatActivityAction(entry.action)}</span>
+                                        <span>{getReservationStatusLabel(entry)}</span>
+                                            <span>{formatDateTimeFull(entry.timestamp)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
         </section>

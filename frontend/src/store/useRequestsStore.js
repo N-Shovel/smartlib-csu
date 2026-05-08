@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { axiosInstance } from "./axios";
 import { showSuccess, showError } from "../utils/notification";
+import useItems from "./useItemsStore";
 
 const ERROR_DEDUPE_WINDOW_MS = 10000;
 let lastFetchHistoryErrorMessage = "";
@@ -22,6 +23,13 @@ const clearFetchHistoryErrorDedupe = () => {
     lastFetchHistoryErrorAt = 0;
 };
 
+const refreshLibraryItems = async () => {
+    const fetchBooks = useItems.getState().fetchBooks;
+    if (typeof fetchBooks === "function") {
+        await fetchBooks();
+    }
+};
+
 
 export const useRequest = create((set, get) => ({
     loading: false,
@@ -34,7 +42,9 @@ export const useRequest = create((set, get) => ({
             const res = await axiosInstance.get("/history/borrower-logs");
 
             const requests = Array.isArray(res.data?.requests) ? res.data.requests : [];
+            const events = Array.isArray(res.data?.events) ? res.data.events : [];
             requests.sort((a, b) => new Date(b.requested_at || 0) - new Date(a.requested_at || 0));
+            requests.events = events;
 
             set({itemRequests: requests});
                 clearFetchHistoryErrorDedupe();
@@ -57,6 +67,7 @@ export const useRequest = create((set, get) => ({
             showSuccess(res?.data?.message || "Borrow request sent");
             
             await get().fetchHistory();
+            await refreshLibraryItems();
 
             return { ok: true, data: res.data };
             
@@ -91,6 +102,11 @@ export const useRequest = create((set, get) => ({
             const res = await axiosInstance.patch("/items/approve-borrow-request", { requestId });
             showSuccess(res?.data?.message || "Borrow request approved");
             await get().fetchHistory();
+            if (res?.data?.updatedItem) {
+                useItems.getState().patchItem(res.data.updatedItem);
+            } else {
+                await refreshLibraryItems();
+            }
             return { ok: true };
         } catch (error) {
             const message = error?.response?.data?.message || "Failed to approve borrow request";
@@ -107,6 +123,11 @@ export const useRequest = create((set, get) => ({
             const res = await axiosInstance.patch("/items/confirm-return", { requestId });
             showSuccess(res?.data?.message || "Book marked as returned");
             await get().fetchHistory();
+            if (res?.data?.updatedItem) {
+                useItems.getState().patchItem(res.data.updatedItem);
+            } else {
+                await refreshLibraryItems();
+            }
             return { ok: true };
         } catch (error) {
             const message = error?.response?.data?.message || "Failed to confirm return";
