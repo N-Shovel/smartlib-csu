@@ -153,6 +153,17 @@ const BrowseBooks = () => {
         return pendingMap;
     }, [borrowRequests]);
 
+    const approvedBorrowByBookId = useMemo(() => {
+        const approvedMap = new Map();
+        borrowRequests.forEach((request) => {
+            const itemId = request.library_item_id || request.bookId;
+            if (String(request.status || "").toLowerCase() === "approved" && itemId) {
+                approvedMap.set(itemId, request);
+            }
+        });
+        return approvedMap;
+    }, [borrowRequests]);
+
     const recommendedBooksLine = useMemo(() => {
         const borrowCountByTitle = borrowHistory.reduce((summary, entry) => {
             if (String(entry.action || "").toUpperCase() !== "BORROW_BOOK") return summary;
@@ -299,6 +310,7 @@ const BrowseBooks = () => {
             {list.map((book) => {
                 const bookId = book.id;
                 const hasPendingBorrow = pendingRequestByBookId.has(bookId);
+                const hasApprovedBorrow = approvedBorrowByBookId.has(bookId);
 
                 return (
                     <BookCard
@@ -307,7 +319,8 @@ const BrowseBooks = () => {
                         isProcessing={isProcessing(bookId)}
                         canBorrow={isBookAvailable(book)}
                         isPending={hasPendingBorrow}
-                        borrowLabel={hasPendingBorrow ? "Pending" : undefined}
+                        isBorrowed={hasApprovedBorrow}
+                        borrowLabel={hasApprovedBorrow ? "Borrowed" : (hasPendingBorrow ? "Pending" : undefined)}
                         pendingMessage={hasPendingBorrow ? "Please pick it up at the library." : undefined}
                         onBorrow={handleBorrow}
                         onOpenDetails={setSelectedBook}
@@ -322,6 +335,7 @@ const BrowseBooks = () => {
             {list.map((book) => {
                 const bookId = book.id;
                 const hasPendingBorrow = pendingRequestByBookId.has(bookId);
+                const hasApprovedBorrow = approvedBorrowByBookId.has(bookId);
 
                 return (
                     <BookCard
@@ -330,7 +344,8 @@ const BrowseBooks = () => {
                         isProcessing={isProcessing(bookId)}
                         canBorrow={isBookAvailable(book)}
                         isPending={hasPendingBorrow}
-                        borrowLabel={hasPendingBorrow ? "Pending" : undefined}
+                        isBorrowed={hasApprovedBorrow}
+                        borrowLabel={hasApprovedBorrow ? "Borrowed" : (hasPendingBorrow ? "Pending" : undefined)}
                         pendingMessage={hasPendingBorrow ? "Please pick it up at the library." : undefined}
                         onBorrow={handleBorrow}
                         onOpenDetails={setSelectedBook}

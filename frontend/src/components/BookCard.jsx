@@ -81,6 +81,7 @@ const BookCard = ({
 	onOpenDetails,
 	borrowLabel,
 	isPending = false,
+	isBorrowed = false,
 	pendingMessage,
 	isProcessing = false,
 	showBorrower = false
@@ -162,7 +163,7 @@ const BookCard = ({
 					<button
 						className={`btn ${isPending ? "btn--view" : "btn--primary"}`}
 						onClick={() => onBorrow(book)}
-						disabled={isProcessing || isPending || (!canBorrow && !isPending)}
+						disabled={isProcessing || isPending || isBorrowed || (!canBorrow && !isPending)}
 					>
 						{borrowLabel || (isThesis ? "Apply" : "Borrow")}
 					</button>

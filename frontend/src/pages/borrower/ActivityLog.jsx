@@ -27,10 +27,18 @@ const isBorrowHistoryStatus = (status) => {
 
 const toBorrowActionLabel = (status) => {
     const normalized = String(status || "").toLowerCase();
+    if (normalized === "pending") return "BORROW_REQUESTED";
     if (normalized === "approved") return "BORROW_BOOK";
     if (normalized === "returned") return "RETURN_BOOK";
     if (normalized === "cancelled") return "CANCELLED";
+    if (normalized === "rejected") return "BORROW_REJECTED";
     return normalized || "-";
+};
+
+const formatBorrowStatus = (status) => {
+    const normalized = String(status || "").trim().toLowerCase();
+    if (!normalized) return "-";
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 };
 
 const getReservationStatusLabel = (entry) => {
@@ -159,7 +167,7 @@ const ActivityLog = () => {
                 return Boolean(userEmail) && entryEmail === userEmail;
             })
             : expandBorrowHistoryEntries(myBorrowRequests),
-        [myBorrowRequests]
+        [itemRequests, userEmail, userId, myBorrowRequests]
     );
 
     const reservationHistoryRows = useMemo(
@@ -258,16 +266,16 @@ const ActivityLog = () => {
                         <div className="table table--borrow-updates">
                             <div className="table__row table__head">
                                 <span>Book</span>
+                                <span>Action</span>
                                 <span>Status</span>
                                 <span>Requested</span>
-                                <span>Updated</span>
                             </div>
                             {borrowUpdates.map((entry) => (
                                 <div className="table__row" key={entry.id}>
                                     <span>{entry.item_title || "-"}</span>
-                                    <span>{entry.status || "-"}</span>
+                                    <span>{formatActivityAction(toBorrowActionLabel(entry.status))}</span>
+                                    <span>{formatBorrowStatus(entry.status)}</span>
                                     <span>{formatDateTimeFull(entry.requested_at)}</span>
-                                    <span>{formatDateTimeFull(entry.decision_at || entry.requested_at)}</span>
                                 </div>
                             ))}
                         </div>
@@ -300,12 +308,14 @@ const ActivityLog = () => {
                                 <div className="table__row table__head">
                                     <span>Book</span>
                                     <span>Action</span>
+                                    <span>Status</span>
                                     <span>Time</span>
                                 </div>
                                 {filteredBorrowHistory.map((entry) => (
                                         <div className="table__row" key={`${entry.id}-${entry.action}-${entry.timestamp}`}>
                                         <span>{entry.title || entry.item_title || "-"}</span>
                                         <span>{formatActivityAction(entry.action)}</span>
+                                        <span>{formatBorrowStatus(entry.status)}</span>
                                         <span>{formatDateTimeFull(entry.timestamp)}</span>
                                     </div>
                                 ))}

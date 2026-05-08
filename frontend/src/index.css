@@ -1731,11 +1731,11 @@ textarea.input.input--warning {
 }
 
 .activity-log-page .table--borrow-history .table__row {
-  grid-template-columns: minmax(160px, 1.2fr) minmax(120px, 0.85fr) minmax(145px, 1fr);
+  grid-template-columns: minmax(220px, 1.35fr) minmax(170px, 1fr) minmax(130px, 0.8fr) minmax(190px, 1fr);
 }
 
 .activity-log-page .table--borrow-updates .table__row {
-  grid-template-columns: minmax(180px, 1.4fr) minmax(100px, 0.85fr) minmax(140px, 1fr) minmax(140px, 1fr);
+  grid-template-columns: minmax(220px, 1.35fr) minmax(170px, 1fr) minmax(130px, 0.8fr) minmax(190px, 1fr);
 }
 
 .activity-log-page .table--reservation-updates {
@@ -1747,11 +1747,11 @@ textarea.input.input--warning {
 }
 
 .activity-log-page .table--borrow-history {
-  min-width: 620px;
+  min-width: 900px;
 }
 
 .activity-log-page .table--borrow-updates {
-  min-width: 820px;
+  min-width: 900px;
 }
 
 .activity-log-page .table--reservation-updates .table__row {
@@ -1759,20 +1759,26 @@ textarea.input.input--warning {
 }
 
 .activity-log-page .table--borrow-history .table__row {
-  grid-template-columns: minmax(160px, 1.1fr) minmax(120px, 0.85fr) minmax(230px, 1.2fr);
+  grid-template-columns: minmax(220px, 1.35fr) minmax(170px, 1fr) minmax(130px, 0.8fr) minmax(230px, 1.2fr);
 }
 
 .activity-log-page .table--borrow-updates .table__row {
-  grid-template-columns: minmax(180px, 1.2fr) minmax(100px, 0.75fr) minmax(220px, 1.1fr) minmax(220px, 1.1fr);
+  grid-template-columns: minmax(220px, 1.35fr) minmax(170px, 1fr) minmax(130px, 0.8fr) minmax(230px, 1.2fr);
 }
 
 .activity-log-page .table--reservation-updates .table__row:not(.table__head) > span:nth-child(5),
-.activity-log-page .table--borrow-history .table__row:not(.table__head) > span:nth-child(3),
-.activity-log-page .table--borrow-updates .table__row:not(.table__head) > span:nth-child(3),
+.activity-log-page .table--borrow-history .table__row:not(.table__head) > span:nth-child(4),
 .activity-log-page .table--borrow-updates .table__row:not(.table__head) > span:nth-child(4) {
   white-space: nowrap;
   overflow: visible;
   text-overflow: clip;
+}
+
+.activity-log-page .table--borrow-updates .table__row > span,
+.activity-log-page .table--borrow-history .table__row > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Ensure reservation action table shows the full "Date Requested" timestamp
@@ -3013,6 +3019,12 @@ body:has(.modal-overlay) {
   }
 
   .activity-log-page .table--borrow-history .table__row:not(.table__head) > span:nth-child(3)::before {
+    content: "Status: ";
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .activity-log-page .table--borrow-history .table__row:not(.table__head) > span:nth-child(4)::before {
     content: "Time: ";
     font-weight: 700;
     color: var(--ink);
@@ -3025,21 +3037,45 @@ body:has(.modal-overlay) {
   }
 
   .activity-log-page .table--borrow-updates .table__row:not(.table__head) > span:nth-child(2)::before {
-    content: "Status: ";
+    content: "Action: ";
     font-weight: 700;
     color: var(--ink);
   }
 
   .activity-log-page .table--borrow-updates .table__row:not(.table__head) > span:nth-child(3)::before {
-    content: "Requested: ";
+    content: "Status: ";
     font-weight: 700;
     color: var(--ink);
   }
 
   .activity-log-page .table--borrow-updates .table__row:not(.table__head) > span:nth-child(4)::before {
-    content: "Updated: ";
+    content: "Requested: ";
     font-weight: 700;
     color: var(--ink);
+  }
+
+  /* Keep borrower borrow tables in tabular mode on small screens:
+     keep headers visible and rely on horizontal/vertical scroll instead of stacked cards. */
+  .activity-log-page .table--borrow-updates,
+  .activity-log-page .table--borrow-history {
+    min-width: 960px;
+  }
+
+  .activity-log-page .table--borrow-updates .table__row.table__head,
+  .activity-log-page .table--borrow-history .table__row.table__head {
+    display: grid;
+  }
+
+  .activity-log-page .table--borrow-updates .table__row,
+  .activity-log-page .table--borrow-history .table__row {
+    grid-template-columns: minmax(220px, 1.35fr) minmax(170px, 1fr) minmax(130px, 0.8fr) minmax(230px, 1.2fr);
+    gap: 0.6rem;
+    padding: 0.72rem 0.78rem;
+  }
+
+  .activity-log-page .table--borrow-updates .table__row > span::before,
+  .activity-log-page .table--borrow-history .table__row > span::before {
+    content: none !important;
   }
 
   .form-row {

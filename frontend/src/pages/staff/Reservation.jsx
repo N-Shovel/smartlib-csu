@@ -86,10 +86,12 @@ const Reservation = () => {
     // Keep reservations and history in sync after approve/close actions.
     try {
       await autoClosePassedReservations();
+      // Force a fresh fetch for staff to avoid stale/cached borrower-scoped results
       const [reservationsData, historyData] = await Promise.all([
-        getReservations(),
+        getReservations(true),
         getReservationHistory(),
       ]);
+
       setReservations(reservationsData);
       setHistory(historyData);
     } catch (err) {
@@ -240,6 +242,7 @@ const Reservation = () => {
               <col style={{ width: "22ch" }} />
               <col style={{ width: "12ch" }} />
               <col style={{ width: "24ch" }} />
+              <col style={{ width: "11ch" }} />
               <col style={{ width: "10ch" }} />
               <col style={{ width: "10ch" }} />
             </colgroup>
@@ -249,6 +252,7 @@ const Reservation = () => {
                 <th>Time Slot</th>
                 <th>ID</th>
                 <th>Requested</th>
+                <th>Status</th>
                 <th>Reason</th>
                 <th>Action</th>
               </tr>
@@ -260,6 +264,7 @@ const Reservation = () => {
                   <td data-label="Time Slot">{formatReservationHour(reservation.reservationHour)}</td>
                   <td data-label="ID">{getStudentIdByEmail(reservation.requestedBy)}</td>
                   <td data-label="Requested">{formatDateTimeFull(reservation.createdAt)}</td>
+                  <td data-label="Status">{getReservationDisplayStatus(reservation)}</td>
                   <td data-label="Reason">
                     <button
                       className="btn btn--view"
