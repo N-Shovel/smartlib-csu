@@ -32,10 +32,18 @@ const parseEnvOrigins = (value) => {
         .filter(Boolean);
 };
 
+const isAllowedVercelPreview = (origin) => {
+    const normalized = normalizeOrigin(origin);
+    return /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(normalized);
+};
+
 app.use(express.json());
 app.use(cookieParser());
 const allowedOrigins = Array.from(new Set([
     ...parseEnvOrigins(ENV.CLIENT_URL),
+    ...parseEnvOrigins(process.env.CLIENT_URLS),
+    ...parseEnvOrigins(process.env.FRONTEND_URL),
+    "https://csu-smartlib.vercel.app",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://0.0.0.0:5173",
@@ -60,7 +68,13 @@ app.use(
                 return callback(null, true);
             }
 
-            return callback(new Error(`CORS blocked for origin: ${origin}; allowed: ${allowedOrigins.join(", ")}`));
+            // Optional safety valve for Vercel preview URLs.
+            if (process.env.ALLOW_VERCEL_PREVIEWS === "true" && isAllowedVercelPreview(normalizedOrigin)) {
+                return callback(null, true);
+            }
+
+            console.warn(`[cors] blocked origin: ${origin}`);
+            return callback(null, false);
         },
         credentials: true,
     })

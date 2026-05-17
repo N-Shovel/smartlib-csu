@@ -6,7 +6,7 @@ export const axiosInstance = axios.create({
     baseURL:
         import.meta.env.MODE === "development"
             ? devApiBaseUrl
-            : "https://smartlib-csu-backend.vercel.app/api",
+            : "https://csu-smartlib-backend.vercel.app/api",
     withCredentials: true,  
 })
 
