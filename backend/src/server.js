@@ -12,10 +12,30 @@ import historyRoutes from "./routes/history.routes.js";
 
 const app = express()
 
+const normalizeOrigin = (value) => {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+
+    try {
+        const parsed = new URL(raw);
+        return parsed.origin;
+    } catch {
+        // Fallback for values without protocol; keep a conservative normalized form.
+        return raw.replace(/\/+$/, "");
+    }
+};
+
+const parseEnvOrigins = (value) => {
+    return String(value || "")
+        .split(",")
+        .map((item) => normalizeOrigin(item))
+        .filter(Boolean);
+};
+
 app.use(express.json());
 app.use(cookieParser());
-const allowedOrigins = [
-    ENV.CLIENT_URL,
+const allowedOrigins = Array.from(new Set([
+    ...parseEnvOrigins(ENV.CLIENT_URL),
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://0.0.0.0:5173",
@@ -26,7 +46,7 @@ const allowedOrigins = [
     "http://localhost:5175",
     "http://127.0.0.1:5175",
     "http://0.0.0.0:5175",
-].filter(Boolean);
+].map((origin) => normalizeOrigin(origin)).filter(Boolean)));
 
 app.use(
     cors({
@@ -34,11 +54,13 @@ app.use(
             // Allow non-browser requests and same-origin tools with no Origin header.
             if (!origin) return callback(null, true);
 
-            if (allowedOrigins.includes(origin)) {
+            const normalizedOrigin = normalizeOrigin(origin);
+
+            if (allowedOrigins.includes(normalizedOrigin)) {
                 return callback(null, true);
             }
 
-            return callback(new Error(`CORS blocked for origin: ${origin}`));
+            return callback(new Error(`CORS blocked for origin: ${origin}; allowed: ${allowedOrigins.join(", ")}`));
         },
         credentials: true,
     })
