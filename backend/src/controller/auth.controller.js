@@ -308,6 +308,7 @@ export const refreshController = async (req, res) => {
     }
 };
 
+
 export const forgotPasswordController = async (req, res) => {
     const { email } = req.body;
 
@@ -320,20 +321,11 @@ export const forgotPasswordController = async (req, res) => {
         return res.status(400).json({ message: "Invalid email. Must be a @carsu.edu.ph address" });
     }
 
-    const resolveFrontendUrl = () => {
-        const origin = String(req.headers.origin || "").trim().replace(/\/+$/, "");
-        const configuredUrl = String(process.env.FRONTEND_URL || ENV.CLIENT_URL || "").trim().replace(/\/+$/, "");
-
-        if (origin) return origin;
-        if (configuredUrl) return configuredUrl;
-
-        return "http://localhost:5173";
-    };
-
-    const redirectUrl = `${resolveFrontendUrl()}/reset-password`;
+    const frontendUrl = String(ENV.FRONTEND_URL || ENV.CLIENT_URL || "http://localhost:5173").trim().replace(/\/+$/, "");
+    const redirectUrl = `${frontendUrl}/reset-password`;
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: redirectUrl, // frontend page
+        redirectTo: redirectUrl,
     });
 
     if (error) {
