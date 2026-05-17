@@ -7,7 +7,6 @@ const DIGITS_ONLY_PATTERN = /^\d+$/;
 const CONTACT_PATTERN = /^\d{11}$/;
 const PROGRAM_PATTERN = /^[A-Z]{2,5} - [1-4](st|nd|rd|th) Year$/;
 
-
 export const signupController = async (req, res) => {
     const {
         email,
@@ -65,7 +64,7 @@ export const signupController = async (req, res) => {
     }
 
     try {
-        // Check duplicates
+        // Check duplicates before creating auth user
         const { data: existingProfile } = await supabaseAdmin
             .from("student_profiles")
             .select("user_id")
@@ -102,7 +101,23 @@ export const signupController = async (req, res) => {
         const userId = data.user?.id;
         if (!userId) return res.status(400).json({ message: "User not returned!" });
 
-        // Step 2: Insert into users_public
+        // Check if this userId already has a student profile (orphaned auth user)
+        const { data: existingUserProfile } = await supabaseAdmin
+            .from("student_profiles")
+            .select("user_id")
+            .eq("user_id", userId)
+            .single();
+
+        if (existingUserProfile) {
+            return res.status(400).json({ message: "Email already registered." });
+        }
+
+        // Step 2: Clean up orphaned users_public then insert fresh
+        await supabaseAdmin
+            .from("users_public")
+            .delete()
+            .eq("user_id", userId);
+
         const { error: usersPublicError } = await supabaseAdmin
             .from("users_public")
             .insert([{ user_id: userId, email: String(email).trim().toLowerCase() }]);
@@ -142,6 +157,7 @@ export const signupController = async (req, res) => {
         if (access_token && refresh_token && expires_in) {
             setCookies(res, access_token, refresh_token, expires_in);
         }
+
         return res.status(201).json({
             message: "Student account created successfully",
             profile: studentProfile,
