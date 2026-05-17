@@ -5,25 +5,19 @@ import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { useStore } from "../../store/useAuthStore";
 import AuthCard from "../../components/AuthCard";
-import EmailConfirmationPopup from "../../confirmation/EmailConfirmationPopup";
-
-const isEmailVerified = (authUser) => {
-  const confirmedAt = authUser?.email_confirmed_at;
-  const metadataVerified = authUser?.user_metadata?.email_verified;
-  const appMetadataVerified = authUser?.app_metadata?.email_verified;
-
-  return Boolean(confirmedAt || metadataVerified || appMetadataVerified);
-};
+import { getVerificationEmail, needsEmailVerification } from "../../utils/authVerification";
 
 const isStaffRole = (role) => ["staff", "admin"].includes(String(role || "").toLowerCase());
+const isVerificationError = (message = "") => {
+  const normalized = String(message || "").toLowerCase();
+  return normalized.includes("confirm") || normalized.includes("verify");
+};
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-  const [isEmailPopupOpen, setIsEmailPopupOpen] = useState(false);
-  const [pendingEmail, setPendingEmail] = useState("");
   const navigate = useNavigate();
   const {Login, isLoading } = useStore();
 
@@ -38,22 +32,25 @@ const Login = () => {
       return;
     }
 
-    // UI-only behavior: always show confirmation modal first.
-    // TODO(BACKEND): Attempt login, check `email_verified` from auth provider,
-    // and only navigate to dashboard/browse when verification is true.
+    const result = await Login(email, password);
 
-    const ok = await Login(email, password);
+    if (!result.ok) {
+      if (isVerificationError(result.message)) {
+        navigate("/verify-email", { replace: true, state: { email } });
+        return;
+      }
 
-    if (!ok) {
-      setError("Login failed. Please check your credentials.");
+      setError(result.message || "Login failed. Please check your credentials.");
       return;
     }
 
     const {user} = useStore.getState();
 
-    if (!isEmailVerified(user?.user)) {
-        setPendingEmail(email);
-        setIsEmailPopupOpen(true);
+    if (needsEmailVerification(user)) {
+        navigate("/verify-email", {
+          replace: true,
+          state: { email: getVerificationEmail(user, email) },
+        });
         return;
     }
     
@@ -129,15 +126,14 @@ const Login = () => {
         >
           Create an account
         </button>
+        <button
+          className="btn btn--ghost"
+          onClick={() => navigate("/forgot-password")}
+          disabled={isLoading}
+        >
+          Forgot password?
+        </button>
     </AuthCard>
-    <EmailConfirmationPopup
-      isOpen={isEmailPopupOpen}
-      email={pendingEmail}
-      onClose={() => setIsEmailPopupOpen(false)}
-      onResend={() => {
-        // TODO(BACKEND): Call resend verification endpoint for `pendingEmail`.
-      }}
-    />
     </div>
   );
 };

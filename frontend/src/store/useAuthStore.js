@@ -118,13 +118,15 @@ export const useStore = create((set, get) => ({
             showSuccess("Account created successfully");
             set({user: res.data})
 
-            return true;
+            return { ok: true, data: res.data };
 
         }
         catch(error){
+            console.error("[auth] signup failed:", error);
+            console.error("[auth] signup response data:", error?.response?.data);
             showError(error.response?.data?.message || "An Error occurred");
             set({ user: null });
-            return false;
+            return { ok: false, message: error.response?.data?.message || "An error occurred" };
         }
         finally{
             set({isLoading: false, isSigningUp: false});
@@ -139,12 +141,13 @@ export const useStore = create((set, get) => ({
             
             set({ user: res.data});
             showSuccess("Login successful");
-            return true;
+            return { ok: true, data: res.data };
         }
         catch(error){
-            showError(error.response?.data?.message || "An error occurred");
+            const message = error.response?.data?.message || "An error occurred";
+            showError(message);
             set({ user: null });
-            return false;
+            return { ok: false, message };
         }
         finally{
             set({isLoading: false});

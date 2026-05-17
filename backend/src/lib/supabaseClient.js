@@ -7,6 +7,12 @@ if(!ENV.SUPABASE_URL || !ENV.SUPABASE_PUB_KEY){
 }
 
 export const supabase = createClient(ENV.SUPABASE_URL || "undefined", ENV.SUPABASE_PUB_KEY || "undefined");
+export const supabaseAdmin = createClient(ENV.SUPABASE_URL, ENV.SUPABASE_SERVICE_ROLE, {
+    auth: {
+        autoRefreshToken: false,
+        persistSession: false
+    }
+});
 
 export function supabaseForRequest(accessToken) {
     if(!ENV.SUPABASE_URL || !ENV.SUPABASE_PUB_KEY){

@@ -4,7 +4,10 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 import Layout from "../components/Layout";
 import ProtectedRoute from "../components/ProtectedRoute";
 import Login from "../pages/auth/Login";
+import ForgotPassword from "../pages/auth/ForgotPassword";
 import Signup from "../pages/auth/Signup";
+import VerifyEmail from "../pages/auth/VerifyEmail";
+import ResetPassword from "../pages/auth/ResetPassword";
 import ActivityLog from "../pages/borrower/ActivityLog";
 import Account from "../pages/borrower/Account";
 import BookDetails from "../pages/borrower/BookDetails";
@@ -19,21 +22,24 @@ import Reservation from "../pages/staff/Reservation";
 import { useStore } from "../store/useAuthStore";
 import { useEffect, useState } from "react";
 import PageLoader from "../components/PageLoader";
+import { getVerificationEmail, needsEmailVerification } from "../utils/authVerification";
 
-const publicAuthPaths = new Set(["/", "/login", "/signup"]);
+const publicAuthPaths = new Set(["/", "/login", "/signup", "/verify-email", "/forgot-password", "/reset-password"]);
 
 const AppRoutesContent = () => {
 	const { user, checkAuth, isCheckingAuth } = useStore();
 	const location = useLocation();
-	const isPublicAuthPath = publicAuthPaths.has(location.pathname);
+	const verificationPending = needsEmailVerification(user);
+	const isStaff = ["staff", "admin"].includes(String(user?.profile?.role || "").toLowerCase());
+	const verifiedDestination = isStaff ? "/staff/dashboard" : "/borrower/browse";
+	const normalizedPathname = location.pathname.replace(/^\/\/+/, "/");
+	const isPublicAuthPath = publicAuthPaths.has(location.pathname) || publicAuthPaths.has(normalizedPathname);
 
 	useEffect(() => {
 		if (!isPublicAuthPath) {
 			checkAuth();
 		}
 	}, [checkAuth, isPublicAuthPath, location.pathname]);
-
-	const isStaff = ["staff", "admin"].includes(String(user?.profile?.role || "").toLowerCase());
 
 	const [routeLoading, setRouteLoading] = useState(false);
 
@@ -49,6 +55,9 @@ const AppRoutesContent = () => {
 
 	if (isCheckingAuth && !isPublicAuthPath) return <PageLoader />;
 	if (routeLoading) return <PageLoader />;
+	if (normalizedPathname !== location.pathname) {
+		return <Navigate to={{ pathname: normalizedPathname, search: location.search, hash: location.hash }} replace />;
+	}
 
 	return (
 		<div className="app-root-shell">
@@ -57,8 +66,17 @@ const AppRoutesContent = () => {
 					{/* Default entry redirects to login. */}
 					<Route path="/" element={<Navigate to="/login" replace />} />
 					{/* Public authentication routes. */}
-					<Route path="/login" element={!user ? <Login /> : isStaff ? <Navigate to={"/staff/dashboard"} /> : <Navigate to={"/borrower/browse"} />} />
-					<Route path="/signup" element={!user ? <Signup /> : <Navigate to={"/borrower/browse"} />} />
+					<Route
+						path="/login"
+						element={!user ? <Login /> : verificationPending ? <Navigate to="/verify-email" replace state={{ email: getVerificationEmail(user) }} /> : <Navigate to={verifiedDestination} replace />}
+					/>
+					<Route path="/forgot-password" element={<ForgotPassword />} />
+					<Route
+						path="/signup"
+						element={!user ? <Signup /> : verificationPending ? <Navigate to="/verify-email" replace state={{ email: getVerificationEmail(user) }} /> : <Navigate to={verifiedDestination} replace />}
+					/>
+					<Route path="/verify-email" element={<VerifyEmail />} />
+					<Route path="/reset-password" element={<ResetPassword />} />
 
 					{/* Borrower-only routes guarded by role check. */}
 					<Route

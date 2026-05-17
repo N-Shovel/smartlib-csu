@@ -782,6 +782,40 @@
   margin-top: 0.55rem;
 }
 
+.auth-card--verification {
+  width: min(520px, calc(100vw - 2rem));
+  max-width: 520px;
+  height: auto;
+  min-height: 0;
+  margin: 4.5vh auto;
+  padding: 1rem 1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.auth-card--verification .auth-card__form {
+  flex: 0 0 auto;
+  overflow: visible;
+  margin-top: 0.55rem;
+}
+
+.auth-card--verification .auth-card__form .btn {
+  width: auto;
+}
+
+.verification-panel {
+  display: grid;
+  gap: 0.65rem;
+  align-content: start;
+}
+
+.verification-actions {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 0.9rem;
+}
+
 .signup-form {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.5rem 0.65rem;

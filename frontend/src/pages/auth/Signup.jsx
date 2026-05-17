@@ -6,7 +6,6 @@ import { Eye, EyeOff } from "lucide-react";
 import { useStore } from "../../store/useAuthStore";
 import { showError } from "../../utils/notification";
 import AuthCard from "../../components/AuthCard";
-import EmailConfirmationPopup from "../../confirmation/EmailConfirmationPopup";
 
 const sanitizeNameInput = (value) => String(value || "").replace(/\d/g, "");
 const sanitizeDigitsInput = (value) => String(value || "").replace(/\D/g, "");
@@ -37,10 +36,8 @@ const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
-  const [isEmailPopupOpen, setIsEmailPopupOpen] = useState(false);
-  const [pendingEmail, setPendingEmail] = useState("");
   const navigate = useNavigate();
-  const { studentSignUp, isLoading, user } = useStore();
+  const { studentSignUp, isLoading } = useStore();
 
   const handleSignup = async () => {
 
@@ -100,7 +97,7 @@ const Signup = () => {
       }
       // Backend expects digits-only ID; strip the hyphen before sending.
       const cleanedId = id.replace(/\D/g, "");
-      const success = await studentSignUp(
+      const result = await studentSignUp(
         email,
         password,
         cleanedId,
@@ -112,21 +109,12 @@ const Signup = () => {
         currentAddress
       );
 
-      if (!success) {
-        setError("Signup failed. Please try again.");
+      if (!result.ok) {
+        setError(result.message || "Signup failed. Please try again.");
         return;
       }
-    
-      if(!user?.user?.user_metadata?.email_verified){
-          setPendingEmail(email);
-          setIsEmailPopupOpen(true);
-      }
 
-      if (user?.profile?.role === "staff") {
-        navigate("/staff/dashboard");
-      } else {
-        navigate("/borrower/browse");
-      }
+      navigate("/verify-email", { replace: true, state: { email } });
   };
 
   return (
@@ -335,13 +323,6 @@ const Signup = () => {
         </p>
       </div>
     </AuthCard>
-    <EmailConfirmationPopup
-      isOpen={isEmailPopupOpen}
-      email={pendingEmail}
-      onResend={() => {
-        // TODO(BACKEND): Call resend verification endpoint for `pendingEmail`.
-      }}
-    />
     </div>
   );
 };

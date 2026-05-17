@@ -1,0 +1,4 @@
+1. System Allows double booking for the same room and time slot 
+2. Missing input validation on the registration contact number field ✅
+3. Missing forgot password functionality, prevents user recovering accounts ✅
+

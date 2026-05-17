@@ -54,3 +54,36 @@ export const updateBorrowerAccountUser = async (payload = {}) => {
     };
   }
 };
+
+export const requestPasswordReset = async (email) => {
+  try {
+    const response = await axiosInstance.post("/auth/forgot-password", {
+      email,
+    });
+
+    return { ok: true, data: response.data };
+  } catch (err) {
+    console.error(err);
+    return {
+      ok: false,
+      error: err?.response?.data?.message || err?.message || "Failed to request password reset.",
+    };
+  }
+};
+
+export const resetPasswordWithToken = async (accessToken, password) => {
+  try {
+    const response = await axiosInstance.post("/auth/reset-password", {
+      accessToken,
+      password,
+    });
+
+    return { ok: true, data: response.data };
+  } catch (err) {
+    console.error(err);
+    return {
+      ok: false,
+      error: err?.response?.data?.message || err?.message || "Failed to reset password.",
+    };
+  }
+};

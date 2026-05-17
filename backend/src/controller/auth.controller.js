@@ -1,17 +1,17 @@
-import { supabase, supabaseForRequest } from "../lib/supabaseClient.js"
+import { supabase, supabaseForRequest, supabaseAdmin } from "../lib/supabaseClient.js"
 import { setCookies } from "../lib/utils.js";
+import { ENV } from "../lib/ENV.js";
 
 const NAME_PATTERN = /^[A-Za-z\s.'-]+$/;
 const DIGITS_ONLY_PATTERN = /^\d+$/;
 const CONTACT_PATTERN = /^\d{11}$/;
 const PROGRAM_PATTERN = /^[A-Z]{2,5} - [1-4](st|nd|rd|th) Year$/;
 
+
 export const signupController = async (req, res) => {
     const {
         email,
         password,
-
-        // student fields
         idNumber,
         firstName,
         lastName,
@@ -48,40 +48,53 @@ export const signupController = async (req, res) => {
         return res.status(400).json({ message: "Contact number must contain numbers only and be 11 digits." });
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const isPhNumber = /^09\d{9}$/;
+    const isPhNumber2 = /^639\d{9}$/;
+
+    if (contactNumber && !isPhNumber.test(contactNumber) && !isPhNumber2.test(contactNumber)) {
+        return res.status(400).json({ message: "Invalid contact number. Please use PH format (e.g. 09171234567)" });
+    }
+
+    const emailRegex = /^[^\s@]+@carsu\.edu\.ph$/;
     if (!emailRegex.test(email)) {
-        return res.status(400).json({ message: "Invalid email format" });
+        return res.status(400).json({ message: "Invalid email. Must be a @carsu.edu.ph address" });
     }
 
     if (typeof password !== "string" || password.length < 8) {
         return res.status(400).json({ message: "Password must be at least 8 characters" });
     }
 
-
     try {
-        // Check if user already exists in student_profiles
-        const { data: existingProfile } = await supabase
+        // Check duplicates
+        const { data: existingProfile } = await supabaseAdmin
             .from("student_profiles")
             .select("user_id")
             .eq("id_number", String(idNumber).trim())
             .single();
-        
+
         if (existingProfile) {
             return res.status(400).json({ message: "Student ID already registered" });
         }
 
-        // 1) Create auth user (Supabase Auth)
-        const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-        });
+        if (contactNumber) {
+            const { data: existingContact } = await supabaseAdmin
+                .from("student_profiles")
+                .select("user_id")
+                .eq("contact_number", String(contactNumber).trim())
+                .single();
+
+            if (existingContact) {
+                return res.status(400).json({ message: "Contact number already registered" });
+            }
+        }
+
+        // Step 1: Create auth user
+        const { data, error } = await supabase.auth.signUp({ email, password });
 
         if (error) {
-            // Check if user already exists in auth
+            console.error("[auth] supabase signup error:", error);
             if (error.message.includes("already registered") || error.message.includes("already exists")) {
-                return res.status(400).json({ 
-                    message: "Email already registered. If you're having trouble logging in, please contact support." 
-                });
+                return res.status(400).json({ message: "Email already registered. If you're having trouble logging in, please contact support." });
             }
             return res.status(400).json({ message: error.message });
         }
@@ -89,9 +102,18 @@ export const signupController = async (req, res) => {
         const userId = data.user?.id;
         if (!userId) return res.status(400).json({ message: "User not returned!" });
 
-        // 2) Insert student profile into student_profiles (NOT "users")
-        //    user_id must match auth.users.id
-        const { data: studentProfile, error: profileError } = await supabase
+        // Step 2: Insert into users_public
+        const { error: usersPublicError } = await supabaseAdmin
+            .from("users_public")
+            .insert([{ user_id: userId, email: String(email).trim().toLowerCase() }]);
+
+        if (usersPublicError) {
+            console.error("[auth] users_public insert error:", usersPublicError);
+            return res.status(400).json({ message: usersPublicError.message });
+        }
+
+        // Step 3: Insert into student_profiles
+        const { data: studentProfile, error: profileError } = await supabaseAdmin
             .from("student_profiles")
             .insert([
                 {
@@ -106,33 +128,27 @@ export const signupController = async (req, res) => {
                     email: String(email).trim().toLowerCase(),
                 },
             ])
-            .select(
-                "user_id, id_number, first_name, last_name, suffix, role ,program, contact_number, address, created_at"
-            )
+            .select("user_id, id_number, first_name, last_name, suffix, role, program, contact_number, address, created_at")
             .single();
 
         if (profileError) {
-            console.error("Profile creation error:", profileError);
-            // Return a helpful message for the user
-            return res.status(400).json({ 
-                message: profileError.message 
-            });
+            console.error("[auth] profile creation error:", profileError);
+            return res.status(400).json({ message: profileError.message });
         }
 
-        // 3) Set cookies if session exists (depends on your Supabase email confirmation settings)
+        // Step 4: Set cookies if session exists
         const { refresh_token, access_token, expires_in } = data.session || {};
 
         if (access_token && refresh_token && expires_in) {
             setCookies(res, access_token, refresh_token, expires_in);
         }
-
         return res.status(201).json({
             message: "Student account created successfully",
             profile: studentProfile,
             user: data.user,
         });
     } catch (error) {
-        console.log("Error in signup controller: ", error);
+        console.error("[auth] error in signup controller:", error);
         return res.status(500).json({ error: "Internal server error" });
     }
 };
@@ -206,7 +222,6 @@ export const loginController = async (req, res) => {
                 message: "Account has no profile (staff or student). Contact admin.",
             });
         }
-
         return res.status(200).json({
             message: "Login successful",
             profile: studentProfile,
@@ -275,4 +290,61 @@ export const refreshController = async (req, res) => {
         console.error("refreshController error:", e);
         return res.status(500).json({ message: "Internal server error" });
     }
+};
+
+export const forgotPasswordController = async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+    }
+
+    const emailRegex = /^[^\s@]+@carsu\.edu\.ph$/;
+    if (!emailRegex.test(email)) {
+        return res.status(400).json({ message: "Invalid email. Must be a @carsu.edu.ph address" });
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${ENV.CLIENT_URL}/reset-password`, // frontend page
+    });
+
+    if (error) {
+        console.error("[auth] forgot password error:", error);
+        return res.status(400).json({ message: error.message });
+    }
+
+    return res.status(200).json({ message: "If that email exists, a reset link has been sent." });
+};
+
+export const resetPasswordController = async (req, res) => {
+    const { accessToken, password } = req.body;
+
+    if (!accessToken || !password) {
+        return res.status(400).json({ message: "Access token and password are required" });
+    }
+
+    if (typeof password !== "string" || password.length < 8) {
+        return res.status(400).json({ message: "Password must be at least 8 characters" });
+    }
+
+    // First get the user from the access token
+    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(accessToken);
+
+    if (userError || !userData?.user) {
+        console.error("[auth] get user error:", userError);
+        return res.status(400).json({ message: "Invalid or expired reset link" });
+    }
+
+    // Update password using admin with the user's id
+    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+        userData.user.id,
+        { password }
+    );
+
+    if (updateError) {
+        console.error("[auth] reset password error:", updateError);
+        return res.status(400).json({ message: updateError.message });
+    }
+
+    return res.status(200).json({ message: "Password updated successfully" });
 };
