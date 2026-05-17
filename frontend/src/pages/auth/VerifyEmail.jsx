@@ -47,18 +47,6 @@ const VerifyEmail = () => {
 					<p className="muted" style={{ marginTop: "0.75rem" }}>
 						If you have already confirmed the email, go back to login and sign in again.
 					</p>
-					<div className="verification-actions">
-						<Link className="btn btn--primary btn--block" to="/login" replace>
-							Back to login
-						</Link>
-						<button
-							type="button"
-							className="btn btn--ghost btn--block"
-							onClick={() => navigate("/signup")}
-						>
-							Create a new account
-						</button>
-					</div>
 				</div>
 			</AuthCard>
 		</div>
