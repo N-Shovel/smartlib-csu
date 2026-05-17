@@ -73,6 +73,17 @@ app.use("/api/items", booksAndthesesRoutes);
 app.use("/api/rooms", roomReservationRoutes);
 app.use("/api/history", historyRoutes);
 
+// Place this AFTER all app.use() route registrations
+app.use((err, req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+  }
+  console.error(err); // This will reveal the real error
+  res.status(500).json({ message: err.message });
+});
+
 if(!ENV.SERVERLESS){
     app.listen(ENV.PORT, () =>{
         console.log("Server is running on port ", ENV.PORT);
